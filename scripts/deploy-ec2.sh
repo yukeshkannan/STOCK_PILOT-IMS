@@ -37,6 +37,12 @@ NODE_ENV=production
 DB_ROOT_PASSWORD=rootpassword
 JWT_SECRET=stockpilot_jwt_prod_secret_key_2026
 JWT_REFRESH_SECRET=stockpilot_jwt_refresh_prod_secret_key_2026
+
+# Super Admin Credentials (Configurable)
+SUPERADMIN_EMAIL=superadmin@stockpilot.io
+SUPERADMIN_PASSWORD=adminpassword123
+SUPERADMIN_FIRST_NAME=Super
+SUPERADMIN_LAST_NAME=Admin
 EOT
 fi
 

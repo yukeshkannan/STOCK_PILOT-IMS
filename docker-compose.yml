@@ -86,6 +86,12 @@ services:
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - JWT_SECRET=${JWT_SECRET:-stockpilot_super_secret_jwt_key_2026}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_refresh_secret_key_2026}
+      - SUPERADMIN_EMAIL=${SUPERADMIN_EMAIL:-superadmin@stockpilot.io}
+      - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:-adminpassword123}
+      - SUPERADMIN_FIRST_NAME=${SUPERADMIN_FIRST_NAME:-Super}
+      - SUPERADMIN_LAST_NAME=${SUPERADMIN_LAST_NAME:-Admin}
     depends_on:
       - mysql
       - rabbitmq

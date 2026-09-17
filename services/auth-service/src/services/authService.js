@@ -472,7 +472,8 @@ class AuthService {
     let tenantInfo = null;
 
     // Check if Super Admin login
-    const isSuperAdminAttempt = formattedCode === 'PLATFORM' || formattedCode === 'SUPERADMIN' || cleanEmail === 'superadmin@stockpilot.io' || !formattedCode;
+    const envSuperAdminEmail = (process.env.SUPERADMIN_EMAIL || 'superadmin@stockpilot.io').toLowerCase().trim();
+    const isSuperAdminAttempt = formattedCode === 'PLATFORM' || formattedCode === 'SUPERADMIN' || cleanEmail === envSuperAdminEmail || !formattedCode;
     if (isSuperAdminAttempt) {
       user = await User.findOne({
         where: {
