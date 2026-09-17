@@ -43,6 +43,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const fetchSettings = async () => {
+      if (user?.isSuperAdmin || !user?.tenantId) {
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const res = await api.get('/tenants/settings');

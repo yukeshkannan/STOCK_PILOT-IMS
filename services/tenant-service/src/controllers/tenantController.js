@@ -41,6 +41,15 @@ class TenantController {
 
   async getSettings(req, res, next) {
     try {
+      if (!req.user?.tenantId) {
+        return ApiResponse.success(res, {
+          companyName: 'StockPilot Platform',
+          companyCode: 'PLATFORM',
+          plan: 'ENTERPRISE',
+          email: req.user?.email || 'superadmin@stockpilot.io',
+          status: 'ACTIVE'
+        }, 'Platform settings');
+      }
       const settings = await tenantService.getSettings(req.user.tenantId);
       return ApiResponse.success(res, settings, 'Tenant settings');
     } catch (err) {

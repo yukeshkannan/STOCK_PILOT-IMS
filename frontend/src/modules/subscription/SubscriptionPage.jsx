@@ -34,19 +34,21 @@ export default function SubscriptionPage() {
 
   // Sync latest plan from tenant settings on mount
   useEffect(() => {
-    api.get('/tenants/settings')
-      .then((res) => {
-        if (res?.data?.plan) {
-          setCurrentPlan(res.data.plan);
-          if (user && user.plan !== res.data.plan) {
-            dispatch(updateProfile({ plan: res.data.plan }));
+    if (user?.tenantId && !user?.isSuperAdmin) {
+      api.get('/tenants/settings')
+        .then((res) => {
+          if (res?.data?.plan) {
+            setCurrentPlan(res.data.plan);
+            if (user && user.plan !== res.data.plan) {
+              dispatch(updateProfile({ plan: res.data.plan }));
+            }
           }
-        }
-      })
-      .catch((err) => {
-        console.warn('Could not fetch tenant settings for plan:', err.message);
-      });
-  }, []);
+        })
+        .catch((err) => {
+          console.warn('Could not fetch tenant settings for plan:', err.message);
+        });
+    }
+  }, [user?.tenantId, user?.isSuperAdmin]);
 
   const plans = [
     {
