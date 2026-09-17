@@ -50,7 +50,7 @@ class TenantController {
           status: 'ACTIVE'
         }, 'Platform settings');
       }
-      const settings = await tenantService.getSettings(req.user.tenantId);
+      const settings = await tenantService.getSettings(req.user.tenantId, req.user);
       return ApiResponse.success(res, settings, 'Tenant settings');
     } catch (err) {
       next(err);

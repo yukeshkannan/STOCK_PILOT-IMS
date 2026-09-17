@@ -33,6 +33,34 @@ class TenantService {
         tenant = await Tenant.findOne({ where: { company_code: tenantId.toUpperCase() } });
       }
     }
+
+    // Auto-sync from auth_db TenantLookup if missing in tenant_db
+    if (!tenant && tenantId) {
+      try {
+        const authModels = require('../../../auth-service/src/models');
+        if (authModels?.TenantLookup) {
+          const lookup = await authModels.TenantLookup.findOne({
+            where: typeof tenantId === 'string' && isNaN(Number(tenantId))
+              ? { company_code: tenantId.toUpperCase() }
+              : { tenant_id: Number(tenantId) }
+          });
+          if (lookup) {
+            tenant = await Tenant.create({
+              id: lookup.tenant_id,
+              company_code: lookup.company_code,
+              company_name: lookup.company_name,
+              email: lookup.email,
+              status: lookup.status || 'ACTIVE',
+              plan: lookup.plan || 'TRIAL'
+            });
+            console.log(`🏢 Auto-synced tenant [${lookup.company_name}] into tenant_db`);
+          }
+        }
+      } catch (e) {
+        console.warn('Auto-sync tenant note:', e.message);
+      }
+    }
+
     if (!tenant) {
       throw { statusCode: 404, message: 'Tenant company not found' };
     }
@@ -45,7 +73,7 @@ class TenantService {
     return tenant;
   }
 
-  async getSettings(tenantId) {
+  async getSettings(tenantId, userContext = null) {
     if (!tenantId) {
       return {
         companyName: 'StockPilot Platform',
@@ -77,9 +105,9 @@ class TenantService {
       };
     } catch {
       return {
-        companyName: 'StockPilot Organization',
-        companyCode: 'ORG',
-        email: '',
+        companyName: userContext?.companyName || 'StockPilot Organization',
+        companyCode: userContext?.companyCode || 'ORG',
+        email: userContext?.email || '',
         phone: '',
         address: '',
         taxNumber: '',
