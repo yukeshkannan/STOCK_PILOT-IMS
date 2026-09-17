@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "http://100.57.28.253:5000/api/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "http://100.57.28.253:5000/health"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
