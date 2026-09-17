@@ -1,0 +1,44 @@
+{
+  "name": "stockpilot-ims",
+  "version": "1.0.0",
+  "description": "StockPilot — Production-Ready Multi-Tenant Inventory & Business Management SaaS",
+  "scripts": {
+    "install:all": "node scripts/install-all.js",
+    "seed": "node scripts/seed-all.js",
+    "start:gateway": "node api-gateway/server.js",
+    "start:auth": "node services/auth-service/server.js",
+    "start:tenant": "node services/tenant-service/server.js",
+    "start:product": "node services/product-service/server.js",
+    "start:inventory": "node services/inventory-service/server.js",
+    "start:warehouse": "node services/warehouse-service/server.js",
+    "start:purchase": "node services/purchase-service/server.js",
+    "start:sales": "node services/sales-service/server.js",
+    "start:finance": "node services/finance-service/server.js",
+    "start:notification": "node services/notification-service/server.js",
+    "dev:backend": "node scripts/start-all-services.js",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "node scripts/start-all-dev.js"
+  },
+  "keywords": [
+    "inventory",
+    "management",
+    "multi-tenant",
+    "saas",
+    "microservices",
+    "pos",
+    "erp"
+  ],
+  "author": "StockPilot Team",
+  "license": "MIT",
+  "dependencies": {
+    "@stockpilot/common": "file:services/common",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "mysql2": "^3.9.7",
+    "sequelize": "^6.37.3",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

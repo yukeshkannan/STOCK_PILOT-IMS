@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="shortcut icon" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>StockPilot — Multi-Tenant Inventory & Business Management SaaS</title>
+    <meta name="description" content="Production-ready multi-tenant inventory, sales, purchasing, warehouse transfers, and business management platform." />
+    <meta name="theme-color" content="#982A86" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="StockPilot" />
+    <!-- Modern Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      /* Standalone & Web App Preloader (White Canvas, Centered) */
+      #initial-app-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #ffffff;
+        z-index: 999999;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        padding: max(env(safe-area-inset-top, 0px), 1rem) 1rem max(env(safe-area-inset-bottom, 0px), 1rem) 1rem;
+        box-sizing: border-box;
+      }
+      .init-loader-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        max-width: 320px;
+        width: 100%;
+      }
+      .init-orbital-wrap {
+        position: relative;
+        width: 86px;
+        height: 86px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.25rem;
+      }
+      .init-orbit-ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        padding: 3px;
+        background: conic-gradient(from 0deg, #982A86 0%, #ec4899 50%, #6366f1 85%, #982A86 100%);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        animation: initSpin 1.4s linear infinite;
+        box-shadow: 0 0 24px rgba(152, 42, 134, 0.28);
+      }
+      .init-logo-plate {
+        width: 68px;
+        height: 68px;
+        background: #ffffff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 18px -2px rgba(152, 42, 134, 0.18), inset 0 0 0 1px rgba(152, 42, 134, 0.08);
+        position: relative;
+        z-index: 2;
+        animation: initPulse 2.4s ease-in-out infinite alternate;
+      }
+      .init-radar {
+        position: absolute;
+        inset: -8px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(152, 42, 134, 0.35);
+        animation: initRadar 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        pointer-events: none;
+      }
+      .init-title {
+        font-size: 1.35rem;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        color: #0f172a;
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .init-subtitle {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #982A86;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin-bottom: 1rem;
+      }
+      .init-progress-bar {
+        width: 140px;
+        height: 3.5px;
+        background: #f1f5f9;
+        border-radius: 9999px;
+        overflow: hidden;
+        position: relative;
+      }
+      .init-progress-fill {
+        position: absolute;
+        height: 100%;
+        width: 45%;
+        background: linear-gradient(90deg, #982A86 0%, #ec4899 50%, #6366f1 100%);
+        border-radius: 9999px;
+        animation: initShimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        box-shadow: 0 0 8px rgba(152, 42, 134, 0.5);
+      }
+      .init-tagline {
+        font-size: 0.76rem;
+        color: #94a3b8;
+        font-weight: 500;
+        margin-top: 0.75rem;
+      }
+      @keyframes initSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes initPulse {
+        0% { transform: scale(0.96); box-shadow: 0 4px 12px -2px rgba(152, 42, 134, 0.15); }
+        100% { transform: scale(1.02); box-shadow: 0 8px 22px -2px rgba(152, 42, 134, 0.28); }
+      }
+      @keyframes initRadar {
+        0% { transform: scale(0.9); opacity: 0.8; }
+        100% { transform: scale(1.45); opacity: 0; }
+      }
+      @keyframes initShimmer {
+        0% { left: -45%; }
+        100% { left: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <!-- Instant Startup Preloader (Center Screen, Pure White Canvas) -->
+      <div id="initial-app-loader">
+        <div class="init-loader-box">
+          <div class="init-orbital-wrap">
+            <div class="init-radar"></div>
+            <div class="init-orbit-ring"></div>
+            <div class="init-logo-plate">
+              <img src="/favicon.png" alt="StockPilot" width="40" height="40" style="object-fit: contain;" />
+            </div>
+          </div>
+          <div class="init-title">
+            <span>Stock</span><span style="color: #982A86;">Pilot</span>
+          </div>
+          <div class="init-subtitle">
+            Enterprise Inventory Platform
+          </div>
+          <div class="init-progress-bar">
+            <div class="init-progress-fill"></div>
+          </div>
+          <div class="init-tagline">
+            Launching Workspace & Telemetry...
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

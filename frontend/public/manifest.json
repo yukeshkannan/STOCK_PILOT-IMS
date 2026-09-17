@@ -1,0 +1,31 @@
+{
+  "name": "StockPilot — Inventory & Business Management",
+  "short_name": "StockPilot",
+  "description": "Enterprise Multi-Tenant Inventory, POS Billing & Warehouse Logistics Platform",
+  "theme_color": "#982A86",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

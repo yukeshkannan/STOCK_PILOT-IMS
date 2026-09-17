@@ -1,0 +1,290 @@
+version: '3.8'
+
+services:
+  # Infrastructure: MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: stockpilot-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - stockpilot-network
+
+  # Infrastructure: RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: stockpilot-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - stockpilot-network
+
+  # Infrastructure: Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: stockpilot-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - stockpilot-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: stockpilot-api-gateway
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - TENANT_SERVICE_URL=http://tenant-service:5002
+      - PRODUCT_SERVICE_URL=http://product-service:5003
+      - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - WAREHOUSE_SERVICE_URL=http://warehouse-service:5005
+      - PURCHASE_SERVICE_URL=http://purchase-service:5006
+      - SALES_SERVICE_URL=http://sales-service:5007
+      - FINANCE_SERVICE_URL=http://finance-service:5008
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5009
+    depends_on:
+      - auth-service
+      - tenant-service
+      - product-service
+      - inventory-service
+      - warehouse-service
+      - purchase-service
+      - sales-service
+      - finance-service
+      - notification-service
+    networks:
+      - stockpilot-network
+
+  # Microservice 1: Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    container_name: stockpilot-auth-service
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - DB_NAME=auth_db
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+    networks:
+      - stockpilot-network
+
+  # Microservice 2: Tenant & User Service
+  tenant-service:
+    build:
+      context: .
+      dockerfile: services/tenant-service/Dockerfile
+    container_name: stockpilot-tenant-service
+    restart: always
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - DB_NAME=tenant_db
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+    networks:
+      - stockpilot-network
+
+  # Microservice 3: Product Service
+  product-service:
+    build:
+      context: .
+      dockerfile: services/product-service/Dockerfile
+    container_name: stockpilot-product-service
+    restart: always
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+      - DB_NAME=product_db
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+    networks:
+      - stockpilot-network
+
+  # Microservice 4: Inventory Service
+  inventory-service:
+    build:
+      context: .
+      dockerfile: services/inventory-service/Dockerfile
+    container_name: stockpilot-inventory-service
+    restart: always
+    ports:
+      - "5004:5004"
+    environment:
+      - PORT=5004
+      - DB_NAME=inventory_db
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+    networks:
+      - stockpilot-network
+
+  # Microservice 5: Warehouse Service
+  warehouse-service:
+    build:
+      context: .
+      dockerfile: services/warehouse-service/Dockerfile
+    container_name: stockpilot-warehouse-service
+    restart: always
+    ports:
+      - "5005:5005"
+    environment:
+      - PORT=5005
+      - DB_NAME=warehouse_db
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+      - inventory-service
+    networks:
+      - stockpilot-network
+
+  # Microservice 6: Purchase Service
+  purchase-service:
+    build:
+      context: .
+      dockerfile: services/purchase-service/Dockerfile
+    container_name: stockpilot-purchase-service
+    restart: always
+    ports:
+      - "5006:5006"
+    environment:
+      - PORT=5006
+      - DB_NAME=purchase_db
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+      - inventory-service
+    networks:
+      - stockpilot-network
+
+  # Microservice 7: Sales Service
+  sales-service:
+    build:
+      context: .
+      dockerfile: services/sales-service/Dockerfile
+    container_name: stockpilot-sales-service
+    restart: always
+    ports:
+      - "5007:5007"
+    environment:
+      - PORT=5007
+      - DB_NAME=sales_db
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+      - inventory-service
+    networks:
+      - stockpilot-network
+
+  # Microservice 8: Finance Service
+  finance-service:
+    build:
+      context: .
+      dockerfile: services/finance-service/Dockerfile
+    container_name: stockpilot-finance-service
+    restart: always
+    ports:
+      - "5008:5008"
+    environment:
+      - PORT=5008
+      - DB_NAME=finance_db
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+    networks:
+      - stockpilot-network
+
+  # Microservice 9: Notification Service
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    container_name: stockpilot-notification-service
+    restart: always
+    ports:
+      - "5009:5009"
+    environment:
+      - PORT=5009
+      - DB_NAME=notification_db
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+    networks:
+      - stockpilot-network
+
+volumes:
+  mysql_data:
+
+networks:
+  stockpilot-network:
+    driver: bridge

@@ -1,0 +1,121 @@
+# ==============================================================================
+# StockPilot IMS - Comprehensive Production .gitignore
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment Variables & Secret Credentials (CRITICAL - DO NOT PUSH)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.env
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local
+
+# SSH / Cloud / SSL Keys & Certificates
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+*.pub
+*.keystore
+id_rsa*
+id_ed25519*
+secrets/
+credentials*.json
+service-account*.json
+
+# ------------------------------------------------------------------------------
+# 2. Local Databases, SQLite & Cache Data
+# ------------------------------------------------------------------------------
+.data/
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite3-journal
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+mysql_data/
+redis_data/
+rabbitmq_data/
+dump.rdb
+
+# ------------------------------------------------------------------------------
+# 3. Dependencies & Package Manager Artifacts
+# ------------------------------------------------------------------------------
+node_modules/
+*/node_modules/
+**/node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+package-lock.json.backup
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------------------------------------------------------------
+# 4. Build, Distribution & Runtime Outputs
+# ------------------------------------------------------------------------------
+dist/
+build/
+dev-dist/
+out/
+.next/
+.turbo/
+.vite/
+*.tsbuildinfo
+
+# ------------------------------------------------------------------------------
+# 5. Logs & Temporary Files
+# ------------------------------------------------------------------------------
+*.log
+logs/
+*.tmp
+*.temp
+tmp/
+temp/
+
+# ------------------------------------------------------------------------------
+# 6. Test & Coverage Reports
+# ------------------------------------------------------------------------------
+coverage/
+.nyc_output/
+*.lcov
+.clinic/
+
+# ------------------------------------------------------------------------------
+# 7. IDE, Editor & OS Configuration Files
+# ------------------------------------------------------------------------------
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ------------------------------------------------------------------------------
+# 8. Agent / AI IDE Metadata
+# ------------------------------------------------------------------------------
+.gemini/
+.agents/
+.system_generated/
