@@ -27,7 +27,9 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
-    const isTokenError = status === 401 || (status === 403 && String(error.response?.data?.message || '').toLowerCase().includes('token'));
+    const url = originalRequest?.url || '';
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/refresh');
+    const isTokenError = (status === 401 || (status === 403 && String(error.response?.data?.message || '').toLowerCase().includes('token'))) && !isAuthEndpoint;
 
     if (isTokenError && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -47,13 +49,17 @@ api.interceptors.response.use(
           localStorage.removeItem('stockpilot_token');
           localStorage.removeItem('stockpilot_refresh_token');
           localStorage.removeItem('stockpilot_user');
-          window.location.href = '/login';
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/admin/login') {
+            window.location.href = '/login';
+          }
         }
       } else {
         localStorage.removeItem('stockpilot_token');
         localStorage.removeItem('stockpilot_refresh_token');
         localStorage.removeItem('stockpilot_user');
-        window.location.href = '/login';
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/admin/login') {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error.response?.data || error);
