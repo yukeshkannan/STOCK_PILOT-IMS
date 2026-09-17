@@ -46,19 +46,49 @@ class TenantService {
   }
 
   async getSettings(tenantId) {
-    const tenant = await this.getTenant(tenantId);
-    return {
-      companyName: tenant.company_name,
-      companyCode: tenant.company_code,
-      email: tenant.email,
-      phone: tenant.phone || '',
-      address: tenant.address || '',
-      taxNumber: tenant.tax_number || '',
-      currency: tenant.currency || 'INR',
-      currencySymbol: tenant.currency_symbol || '₹',
-      timezone: tenant.timezone || 'Asia/Kolkata',
-      plan: (tenant.plan || 'TRIAL').toString().trim().toUpperCase()
-    };
+    if (!tenantId) {
+      return {
+        companyName: 'StockPilot Platform',
+        companyCode: 'PLATFORM',
+        email: 'superadmin@stockpilot.io',
+        phone: '',
+        address: '',
+        taxNumber: '',
+        currency: 'INR',
+        currencySymbol: '₹',
+        timezone: 'Asia/Kolkata',
+        plan: 'ENTERPRISE'
+      };
+    }
+
+    try {
+      const tenant = await this.getTenant(tenantId);
+      return {
+        companyName: tenant.company_name,
+        companyCode: tenant.company_code,
+        email: tenant.email,
+        phone: tenant.phone || '',
+        address: tenant.address || '',
+        taxNumber: tenant.tax_number || '',
+        currency: tenant.currency || 'INR',
+        currencySymbol: tenant.currency_symbol || '₹',
+        timezone: tenant.timezone || 'Asia/Kolkata',
+        plan: (tenant.plan || 'TRIAL').toString().trim().toUpperCase()
+      };
+    } catch {
+      return {
+        companyName: 'StockPilot Organization',
+        companyCode: 'ORG',
+        email: '',
+        phone: '',
+        address: '',
+        taxNumber: '',
+        currency: 'INR',
+        currencySymbol: '₹',
+        timezone: 'Asia/Kolkata',
+        plan: 'TRIAL'
+      };
+    }
   }
 
   async updateSettings(tenantId, settings) {
