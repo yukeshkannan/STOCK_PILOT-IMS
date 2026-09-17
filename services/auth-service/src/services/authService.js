@@ -471,53 +471,19 @@ class AuthService {
     let user = null;
     let tenantInfo = null;
 
-    // Check if Super Admin login
-    const envSuperAdminEmail = (process.env.SUPERADMIN_EMAIL || 'superadmin@stockpilot.io').toLowerCase().trim();
-    const isSuperAdminAttempt = formattedCode === 'PLATFORM' || formattedCode === 'SUPERADMIN' || cleanEmail === envSuperAdminEmail || !formattedCode;
-    if (isSuperAdminAttempt) {
-      user = await User.findOne({
-        where: {
-          email: cleanEmail,
-          is_super_admin: true
-        }
-      });
-    }
-
-    if (!user) {
-      // Check if user is registered but has not completed organization profile yet
-      const pendingUser = await User.findOne({
-        where: {
-          email: cleanEmail,
-          tenant_id: null,
-          is_super_admin: false
-        }
-      });
-
-      if (pendingUser) {
-        user = pendingUser;
+    // 1. Check if Super Admin login
+    user = await User.findOne({
+      where: {
+        email: cleanEmail,
+        is_super_admin: true
       }
-    }
+    });
 
+    // 2. Check if user is registered (tenant admin / employee / pending user)
     if (!user) {
-      // Smart Email-Based Lookup (Slack / Shopify Style)
-      if (!formattedCode) {
-        user = await User.findOne({ where: { email: cleanEmail } });
-        if (user && user.tenant_id) {
-          tenantInfo = await TenantLookup.findOne({ where: { tenant_id: user.tenant_id } });
-        }
-      } else {
-        // Legacy fallback if company code is explicitly passed
-        tenantInfo = await TenantLookup.findOne({ where: { company_code: formattedCode } });
-        if (!tenantInfo) {
-          throw { statusCode: 404, message: `Company Code [${formattedCode}] not found` };
-        }
-
-        user = await User.findOne({
-          where: {
-            tenant_id: tenantInfo.tenant_id,
-            email: cleanEmail
-          }
-        });
+      user = await User.findOne({ where: { email: cleanEmail } });
+      if (user && user.tenant_id) {
+        tenantInfo = await TenantLookup.findOne({ where: { tenant_id: user.tenant_id } });
       }
     }
 

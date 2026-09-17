@@ -23,8 +23,7 @@ export default function SuperAdminLoginPage() {
     try {
       const res = await api.post('/auth/login', {
         email: email.trim().toLowerCase(),
-        password,
-        companyCode: 'PLATFORM'
+        password
       });
 
       if (res?.success) {
