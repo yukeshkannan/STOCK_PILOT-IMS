@@ -87,6 +87,8 @@ services:
       - DB_PORT=3306
       - DB_USER=root
       - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - TENANT_SERVICE_URL=http://tenant-service:5002
+      - WAREHOUSE_SERVICE_URL=http://warehouse-service:5005
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
       - JWT_SECRET=${JWT_SECRET:-stockpilot_jwt_prod_secret_key_2026}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_jwt_refresh_prod_secret_key_2026}
@@ -116,6 +118,7 @@ services:
       - DB_PORT=3306
       - DB_USER=root
       - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - AUTH_SERVICE_URL=http://auth-service:5001
       - JWT_SECRET=${JWT_SECRET:-stockpilot_jwt_prod_secret_key_2026}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_jwt_refresh_prod_secret_key_2026}
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
@@ -124,6 +127,7 @@ services:
       - rabbitmq
     networks:
       - stockpilot-network
+
 
   # Microservice 3: Product Service
   product-service:

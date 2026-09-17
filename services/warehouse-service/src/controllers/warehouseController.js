@@ -46,7 +46,18 @@ class WarehouseController {
       next(err);
     }
   }
+
+  async initDefaultWarehouse(req, res, next) {
+    try {
+      const { tenantId, companyName, address, city } = req.body;
+      const warehouse = await warehouseService.initDefaultWarehouse({ tenantId, companyName, address, city });
+      return ApiResponse.created(res, warehouse, 'Default warehouse initialized');
+    } catch (err) {
+      next(err);
+    }
+  }
 }
+
 
 class TransferController {
   async listTransfers(req, res, next) {

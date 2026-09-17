@@ -9,7 +9,9 @@ const {
 
 // Warehouses Router
 const warehouseRouter = express.Router();
+warehouseRouter.post('/internal/init-default', (req, res, next) => warehouseController.initDefaultWarehouse(req, res, next));
 warehouseRouter.use(authenticateToken, requireTenant);
+
 
 warehouseRouter.get('/', requirePermission(PERMISSIONS.WAREHOUSE_VIEW), (req, res, next) => warehouseController.listWarehouses(req, res, next));
 warehouseRouter.post('/', requirePermission(PERMISSIONS.WAREHOUSE_MANAGE), (req, res, next) => warehouseController.createWarehouse(req, res, next));

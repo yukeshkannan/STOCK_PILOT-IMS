@@ -127,6 +127,61 @@ class AuthController {
       next(err);
     }
   }
+
+  async getTenantLookupsInternal(req, res, next) {
+    try {
+      const data = await authService.getTenantLookupsInternal();
+      return ApiResponse.success(res, data, 'Tenant lookups retrieved');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getPendingUsersInternal(req, res, next) {
+    try {
+      const data = await authService.getPendingUsersInternal();
+      return ApiResponse.success(res, data, 'Pending users retrieved');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deletePendingUserInternal(req, res, next) {
+    try {
+      const result = await authService.deletePendingUserInternal(req.params.id);
+      return ApiResponse.success(res, result, 'Pending user deleted successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async syncUserInternal(req, res, next) {
+    try {
+      const user = await authService.createInternalUser(req.body);
+      return ApiResponse.created(res, user, 'User synced in auth_db');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async syncUserUpdateInternal(req, res, next) {
+    try {
+      const user = await authService.updateInternalUser(req.params.id, req.body);
+      return ApiResponse.success(res, user, 'User updated in auth_db');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async syncUserDeleteInternal(req, res, next) {
+    try {
+      const result = await authService.deleteInternalUser(req.params.id, req.query.tenantId);
+      return ApiResponse.success(res, result, 'User deleted from auth_db');
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new AuthController();
+

@@ -2,6 +2,25 @@ const { Tenant, TenantUser, Role, Permission, AuditLog } = require('../models');
 const { ROLES, PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } = require('@stockpilot/common');
 
 const http = require('http');
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:5001';
+
+async function fetchFromAuth(endpoint, options = {}) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json?.data !== undefined ? json.data : json;
+  } catch (err) {
+    return null;
+  }
+}
 
 function pingService(url) {
   return new Promise((resolve) => {
@@ -22,6 +41,167 @@ function pingService(url) {
 }
 
 class TenantService {
+  async syncAuthLookups() {
+    let lookups = [];
+    let users = [];
+
+    // 1. Try HTTP API call to auth-service
+    const authData = await fetchFromAuth('/api/v1/auth/internal/tenant-lookups');
+    if (authData && authData.lookups) {
+      lookups = authData.lookups;
+      users = authData.users || [];
+    } else {
+      // 2. Fallback to local require if on single filesystem
+      try {
+        const authModels = require('../../../auth-service/src/models');
+        if (authModels?.TenantLookup) {
+          lookups = await authModels.TenantLookup.findAll();
+          if (authModels?.User) {
+            users = await authModels.User.findAll({ where: { is_super_admin: false } });
+          }
+        }
+      } catch (err) {
+        // Fallback to direct DB query if needed
+        try {
+          const { createDbConnection } = require('@stockpilot/common');
+          const authDb = createDbConnection('auth_db');
+          const [dbLookups] = await authDb.query('SELECT * FROM tenant_lookup;');
+          const [dbUsers] = await authDb.query('SELECT * FROM auth_users WHERE is_super_admin = 0 OR is_super_admin IS NULL;');
+          lookups = dbLookups || [];
+          users = dbUsers || [];
+        } catch {}
+      }
+    }
+
+    if (lookups && lookups.length > 0) {
+      for (const l of lookups) {
+        const tenantId = Number(l.tenant_id);
+        const [tenant, created] = await Tenant.findOrCreate({
+          where: { id: tenantId },
+          defaults: {
+            id: tenantId,
+            company_code: l.company_code,
+            company_name: l.company_name,
+            email: l.email || '',
+            status: l.status || 'ACTIVE',
+            plan: l.plan || 'TRIAL'
+          }
+        });
+
+        if (!created && l.status && tenant.status !== l.status) {
+          await tenant.update({ status: l.status, plan: l.plan || tenant.plan });
+        }
+
+        // Sync associated users
+        const tenantUsers = users.filter((u) => Number(u.tenant_id) === tenantId);
+        for (const u of tenantUsers) {
+          await TenantUser.findOrCreate({
+            where: { tenant_id: tenantId, email: u.email },
+            defaults: {
+              tenant_id: tenantId,
+              first_name: u.first_name,
+              last_name: u.last_name || '',
+              email: u.email,
+              phone: u.phone || null,
+              role_name: u.role_name || 'ADMIN',
+              status: u.status || 'ACTIVE'
+            }
+          });
+        }
+      }
+    }
+  }
+
+  async provisionTenantInternal(data) {
+    const { tenantId, companyCode, companyName, email, phone, address, city, taxNumber, plan, adminUser, managerUser, staffUser } = data;
+    const cleanPlan = (plan || 'TRIAL').toString().trim().toUpperCase();
+
+    const [tenant, created] = await Tenant.findOrCreate({
+      where: { id: tenantId },
+      defaults: {
+        id: tenantId,
+        company_code: companyCode.toUpperCase(),
+        company_name: companyName,
+        email: email || '',
+        phone: phone || null,
+        address: address || city || null,
+        tax_number: taxNumber || null,
+        status: 'ACTIVE',
+        plan: cleanPlan
+      }
+    });
+
+    if (!created) {
+      await tenant.update({
+        company_code: companyCode.toUpperCase(),
+        company_name: companyName,
+        email: email || tenant.email,
+        phone: phone || tenant.phone,
+        address: address || city || tenant.address,
+        tax_number: taxNumber || tenant.tax_number,
+        plan: cleanPlan,
+        status: 'ACTIVE'
+      });
+    }
+
+    if (adminUser) {
+      await TenantUser.findOrCreate({
+        where: { tenant_id: tenantId, email: adminUser.email.toLowerCase().trim() },
+        defaults: {
+          tenant_id: tenantId,
+          first_name: adminUser.firstName,
+          last_name: adminUser.lastName || '',
+          email: adminUser.email.toLowerCase().trim(),
+          phone: adminUser.phone || null,
+          role_name: ROLES.ADMIN,
+          status: 'ACTIVE'
+        }
+      });
+    }
+
+    if (managerUser) {
+      await TenantUser.findOrCreate({
+        where: { tenant_id: tenantId, email: managerUser.email.toLowerCase().trim() },
+        defaults: {
+          tenant_id: tenantId,
+          first_name: managerUser.firstName,
+          last_name: managerUser.lastName || '',
+          email: managerUser.email.toLowerCase().trim(),
+          role_name: ROLES.MANAGER,
+          status: 'ACTIVE'
+        }
+      });
+    }
+
+    if (staffUser) {
+      await TenantUser.findOrCreate({
+        where: { tenant_id: tenantId, email: staffUser.email.toLowerCase().trim() },
+        defaults: {
+          tenant_id: tenantId,
+          first_name: staffUser.firstName,
+          last_name: staffUser.lastName || '',
+          email: staffUser.email.toLowerCase().trim(),
+          role_name: ROLES.STAFF,
+          status: 'ACTIVE'
+        }
+      });
+    }
+
+    try {
+      await AuditLog.create({
+        tenant_id: tenantId,
+        user_id: adminUser?.id || 1,
+        user_name: adminUser?.email || 'Platform Registration',
+        action: 'TENANT_REGISTERED',
+        module: 'TENANT',
+        record_id: `ORG-${tenantId}`,
+        description: `New organization [${companyName}] (${companyCode}) registered with Admin [${adminUser?.email || email}]`
+      });
+    } catch {}
+
+    return tenant;
+  }
+
   async getTenant(tenantId) {
     let tenant = null;
     if (tenantId) {
@@ -36,28 +216,13 @@ class TenantService {
 
     // Auto-sync from auth_db TenantLookup if missing in tenant_db
     if (!tenant && tenantId) {
-      try {
-        const authModels = require('../../../auth-service/src/models');
-        if (authModels?.TenantLookup) {
-          const lookup = await authModels.TenantLookup.findOne({
-            where: typeof tenantId === 'string' && isNaN(Number(tenantId))
-              ? { company_code: tenantId.toUpperCase() }
-              : { tenant_id: Number(tenantId) }
-          });
-          if (lookup) {
-            tenant = await Tenant.create({
-              id: lookup.tenant_id,
-              company_code: lookup.company_code,
-              company_name: lookup.company_name,
-              email: lookup.email,
-              status: lookup.status || 'ACTIVE',
-              plan: lookup.plan || 'TRIAL'
-            });
-            console.log(`🏢 Auto-synced tenant [${lookup.company_name}] into tenant_db`);
-          }
-        }
-      } catch (e) {
-        console.warn('Auto-sync tenant note:', e.message);
+      await this.syncAuthLookups();
+      tenant = await Tenant.findByPk(tenantId);
+      if (!tenant) {
+        tenant = await Tenant.findOne({ where: { id: Number(tenantId) || 0 } });
+      }
+      if (!tenant && typeof tenantId === 'string') {
+        tenant = await Tenant.findOne({ where: { company_code: tenantId.toUpperCase() } });
       }
     }
 
@@ -136,43 +301,7 @@ class TenantService {
 
   // Platform Super Admin methods
   async getAllTenants() {
-    try {
-      const authModels = require('../../../auth-service/src/models');
-      if (authModels?.TenantLookup) {
-        const lookups = await authModels.TenantLookup.findAll();
-        for (const l of lookups) {
-          await Tenant.findOrCreate({
-            where: { id: l.tenant_id },
-            defaults: {
-              id: l.tenant_id,
-              company_code: l.company_code,
-              company_name: l.company_name,
-              email: l.email || '',
-              status: l.status || 'ACTIVE',
-              plan: l.plan || 'TRIAL'
-            }
-          });
-          if (authModels?.User) {
-            const authUsers = await authModels.User.findAll({ where: { tenant_id: l.tenant_id } });
-            for (const u of authUsers) {
-              await TenantUser.findOrCreate({
-                where: { tenant_id: l.tenant_id, email: u.email },
-                defaults: {
-                  tenant_id: l.tenant_id,
-                  first_name: u.first_name,
-                  last_name: u.last_name || '',
-                  email: u.email,
-                  role_name: u.role_name || 'ADMIN',
-                  status: u.status || 'ACTIVE'
-                }
-              });
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Sync lookups notice in getAllTenants:', err.message);
-    }
+    await this.syncAuthLookups();
 
     return Tenant.findAll({
       include: [
@@ -187,73 +316,108 @@ class TenantService {
   }
 
   async getPendingRegistrations() {
-    try {
-      const authModels = require('../../../auth-service/src/models');
-      if (authModels?.User) {
-        const { Op } = require('sequelize');
-        const pendingUsers = await authModels.User.findAll({
-          where: {
-            [Op.or]: [
-              { status: 'PENDING_SETUP' },
-              { tenant_id: null }
-            ],
-            is_super_admin: false
-          },
-          order: [['created_at', 'DESC']]
-        });
-        return pendingUsers.map((u) => ({
-          id: `pending-${u.id}`,
-          pending_user_id: u.id,
-          company_name: `${u.first_name} ${u.last_name || ''}`.trim() || 'Incomplete Setup',
-          company_code: 'PENDING_SETUP',
-          email: u.email,
-          phone: 'Profile Incomplete',
-          address: 'Awaiting Workspace Setup',
-          tax_number: 'Incomplete',
-          status: 'PENDING_SETUP',
-          plan: 'TRIAL',
-          users: [
-            {
-              id: u.id,
-              first_name: u.first_name,
-              last_name: u.last_name,
-              email: u.email,
-              role_name: 'ADMIN',
-              status: 'PENDING_SETUP'
-            }
-          ],
-          created_at: u.createdAt || u.created_at,
-          is_pending_setup: true
-        }));
+    let pendingUsers = [];
+
+    // 1. Try HTTP API call to auth-service
+    const authData = await fetchFromAuth('/api/v1/auth/internal/pending-users');
+    if (Array.isArray(authData)) {
+      pendingUsers = authData;
+    } else {
+      // 2. Fallback to local require
+      try {
+        const authModels = require('../../../auth-service/src/models');
+        if (authModels?.User) {
+          const { Op } = require('sequelize');
+          pendingUsers = await authModels.User.findAll({
+            where: {
+              [Op.or]: [
+                { status: 'PENDING_SETUP' },
+                { tenant_id: null }
+              ],
+              is_super_admin: false
+            },
+            order: [['created_at', 'DESC']]
+          });
+        }
+      } catch (err) {
+        try {
+          const { createDbConnection } = require('@stockpilot/common');
+          const authDb = createDbConnection('auth_db');
+          const [dbUsers] = await authDb.query("SELECT * FROM auth_users WHERE (status = 'PENDING_SETUP' OR tenant_id IS NULL) AND (is_super_admin = 0 OR is_super_admin IS NULL) ORDER BY created_at DESC;");
+          pendingUsers = dbUsers || [];
+        } catch {}
       }
-      return [];
-    } catch (err) {
-      console.warn('Error fetching pending registrations:', err.message);
-      return [];
     }
+
+    return (pendingUsers || []).map((u) => ({
+      id: `pending-${u.id}`,
+      pending_user_id: u.id,
+      company_name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Incomplete Setup',
+      company_code: 'PENDING_SETUP',
+      email: u.email,
+      phone: 'Profile Incomplete',
+      address: 'Awaiting Workspace Setup',
+      tax_number: 'Incomplete',
+      status: 'PENDING_SETUP',
+      plan: 'TRIAL',
+      users: [
+        {
+          id: u.id,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          email: u.email,
+          role_name: 'ADMIN',
+          status: 'PENDING_SETUP'
+        }
+      ],
+      created_at: u.createdAt || u.created_at,
+      is_pending_setup: true
+    }));
   }
 
   async deletePendingRegistration(userId) {
-    const authModels = require('../../../auth-service/src/models');
-    if (authModels?.User) {
-      const user = await authModels.User.findOne({
-        where: {
-          id: userId,
-          is_super_admin: false
-        }
+    // 1. Try HTTP call to auth-service
+    try {
+      const res = await fetch(`${AUTH_SERVICE_URL}/api/v1/auth/internal/pending-users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
       });
-      if (!user) {
-        throw { statusCode: 404, message: 'Pending user registration record not found' };
+      if (res.ok) {
+        const json = await res.json();
+        return json?.data || { id: userId };
       }
-      if (authModels?.RefreshToken) {
-        await authModels.RefreshToken.destroy({ where: { user_id: userId } });
+    } catch {}
+
+    // 2. Fallback to local require
+    try {
+      const authModels = require('../../../auth-service/src/models');
+      if (authModels?.User) {
+        const user = await authModels.User.findOne({
+          where: { id: userId, is_super_admin: false }
+        });
+        if (user) {
+          if (authModels?.RefreshToken) {
+            await authModels.RefreshToken.destroy({ where: { user_id: userId } });
+          }
+          const email = user.email;
+          await user.destroy();
+          return { id: userId, email, company_name: `${user.first_name} ${user.last_name || ''}`.trim() };
+        }
       }
-      const email = user.email;
-      await user.destroy();
-      return { id: userId, email, company_name: `${user.first_name} ${user.last_name || ''}`.trim() };
-    }
-    throw { statusCode: 500, message: 'Auth models unavailable' };
+    } catch {}
+
+    // 3. Fallback to direct DB
+    try {
+      const { createDbConnection } = require('@stockpilot/common');
+      const authDb = createDbConnection('auth_db');
+      await authDb.query('DELETE FROM refresh_tokens WHERE user_id = :id;', { replacements: { id: userId } });
+      await authDb.query('DELETE FROM auth_users WHERE id = :id;', { replacements: { id: userId } });
+      return { id: userId };
+    } catch {}
+
+    return { id: userId };
   }
+
 
   async setTenantStatus(tenantId, status) {
     const tenant = await this.getTenant(tenantId);
@@ -440,6 +604,8 @@ class TenantService {
   }
 
   async getPlatformDashboard() {
+    await this.syncAuthLookups();
+
     const totalTenants = await Tenant.count();
     const activeTenants = await Tenant.count({ where: { status: 'ACTIVE' } });
     const suspendedTenants = await Tenant.count({ where: { status: 'SUSPENDED' } });
@@ -447,16 +613,8 @@ class TenantService {
 
     let pendingRegistrations = 0;
     try {
-      const authModels = require('../../../auth-service/src/models');
-      if (authModels?.User) {
-        const { Op } = require('sequelize');
-        pendingRegistrations = await authModels.User.count({
-          where: {
-            [Op.or]: [{ status: 'PENDING_SETUP' }, { tenant_id: null }],
-            is_super_admin: false
-          }
-        });
-      }
+      const pendingList = await this.getPendingRegistrations();
+      pendingRegistrations = pendingList.length;
     } catch {
       pendingRegistrations = 0;
     }
@@ -465,6 +623,7 @@ class TenantService {
       limit: 5,
       order: [['created_at', 'DESC']]
     });
+
 
     const recentLogs = await AuditLog.findAll({
       limit: 10,

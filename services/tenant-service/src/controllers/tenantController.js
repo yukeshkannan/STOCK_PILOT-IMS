@@ -12,6 +12,16 @@ class TenantController {
     }
   }
 
+  async provisionTenantInternal(req, res, next) {
+    try {
+      const tenant = await tenantService.provisionTenantInternal(req.body);
+      return ApiResponse.created(res, tenant, 'Tenant provisioned in tenant_db');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+
   async getMe(req, res, next) {
     try {
       const tenant = await tenantService.getTenant(req.user.tenantId);

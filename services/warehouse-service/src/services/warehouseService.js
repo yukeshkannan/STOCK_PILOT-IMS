@@ -18,6 +18,26 @@ class WarehouseService {
     return warehouse;
   }
 
+  async initDefaultWarehouse({ tenantId, companyName, address, city }) {
+    if (!tenantId) return null;
+    const [warehouse] = await Warehouse.findOrCreate({
+      where: { tenant_id: tenantId, is_default: true },
+      defaults: {
+        tenant_id: tenantId,
+        name: `${companyName || 'Main'} Central Hub`,
+        code: 'WH-MAIN',
+        address: address || city || 'Central Logistics Facility',
+        city: city || '',
+        capacity: 10000,
+        capacity_unit: 'Pieces (Pcs)',
+        is_default: true,
+        status: 'ACTIVE'
+      }
+    });
+    return warehouse;
+  }
+
+
   async createWarehouse(tenantId, data, userPlan = 'PRO') {
     if (userPlan === 'STARTER') {
       const count = await Warehouse.count({ where: { tenant_id: tenantId } });

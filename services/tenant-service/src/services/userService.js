@@ -1,6 +1,26 @@
 const { Tenant, TenantUser, Role, Permission, AuditLog } = require('../models');
 const { DEFAULT_ROLE_PERMISSIONS, ROLES, PERMISSIONS } = require('@stockpilot/common');
 
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:5001';
+
+async function sendAuthSync(method, endpoint, data = null) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+    const options = {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal
+    };
+    if (data) options.body = JSON.stringify(data);
+    const res = await fetch(`${AUTH_SERVICE_URL}${endpoint}`, options);
+    clearTimeout(timeout);
+    return res.ok;
+  } catch (err) {
+    return false;
+  }
+}
+
 class UserService {
   async getUsers(tenantId) {
     return TenantUser.findAll({
@@ -42,14 +62,29 @@ class UserService {
       status: userData.status || 'ACTIVE'
     });
 
-    // Sync into auth_db User table
+    const tenant = await Tenant.findByPk(tenantId);
+
+    // 1. HTTP sync to auth-service
+    await sendAuthSync('POST', '/api/v1/auth/internal/sync-user', {
+      tenantId,
+      companyCode: tenant ? tenant.company_code : '',
+      firstName: userData.firstName,
+      lastName: userData.lastName || '',
+      email: cleanEmail,
+      password: userData.password || 'password123',
+      roleName: userData.roleName || ROLES.STAFF,
+      warehouseId: userData.warehouseId || null,
+      warehouseName: userData.warehouseName || null,
+      status: userData.status || 'ACTIVE'
+    });
+
+    // 2. Fallback to local require
     try {
       const authModels = require('../../../auth-service/src/models');
       if (authModels?.User) {
         const bcrypt = require('bcryptjs');
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(userData.password || 'password123', salt);
-        const tenant = await Tenant.findByPk(tenantId);
 
         const existingAuthUser = await authModels.User.findOne({
           where: { tenant_id: tenantId, email: cleanEmail }
@@ -82,7 +117,7 @@ class UserService {
         }
       }
     } catch (e) {
-      console.warn('Auth user sync note:', e.message);
+      // Safe to ignore in containerized microservices
     }
 
     return user;
@@ -101,6 +136,18 @@ class UserService {
       status: updateData.status !== undefined ? updateData.status : user.status
     });
 
+    // 1. HTTP sync to auth-service
+    await sendAuthSync('PUT', `/api/v1/auth/internal/sync-user/${userId}`, {
+      firstName: user.first_name,
+      lastName: user.last_name,
+      roleName: user.role_name,
+      warehouseId: user.warehouse_id,
+      warehouseName: user.warehouse_name,
+      status: user.status,
+      password: updateData.password
+    });
+
+    // 2. Fallback to local require
     try {
       const authModels = require('../../../auth-service/src/models');
       if (authModels?.User) {
@@ -124,7 +171,7 @@ class UserService {
         });
       }
     } catch (e) {
-      console.warn('Auth user update sync note:', e.message);
+      // Safe to ignore in containerized microservices
     }
 
     return user;
@@ -133,6 +180,7 @@ class UserService {
   async toggleUserStatus(tenantId, userId, status) {
     const user = await this.getUserById(tenantId, userId);
     await user.update({ status });
+    await sendAuthSync('PUT', `/api/v1/auth/internal/sync-user/${userId}`, { status });
     return user;
   }
 
@@ -141,6 +189,10 @@ class UserService {
     const userEmail = user.email;
     await user.destroy();
 
+    // 1. HTTP sync to auth-service
+    await sendAuthSync('DELETE', `/api/v1/auth/internal/sync-user/${userId}?tenantId=${tenantId}`);
+
+    // 2. Fallback to local require
     try {
       const authModels = require('../../../auth-service/src/models');
       if (authModels?.User) {
@@ -149,11 +201,12 @@ class UserService {
         });
       }
     } catch (e) {
-      console.warn('Auth user delete sync note:', e.message);
+      // Safe to ignore in containerized microservices
     }
 
     return true;
   }
+
 
   // Roles & Permissions
   async getRoles(tenantId) {

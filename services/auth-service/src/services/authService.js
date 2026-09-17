@@ -10,6 +10,27 @@ const {
 } = require('@stockpilot/common');
 const { User, TenantLookup, RefreshToken } = require('../models');
 
+const TENANT_SERVICE_URL = process.env.TENANT_SERVICE_URL || 'http://localhost:5002';
+const WAREHOUSE_SERVICE_URL = process.env.WAREHOUSE_SERVICE_URL || 'http://localhost:5005';
+
+async function sendInternalPost(url, data) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    return res.ok;
+  } catch (err) {
+    console.warn(`[Internal HTTP Post] ${url}:`, err.message);
+    return false;
+  }
+}
+
 class AuthService {
   async registerUser({ firstName, lastName, email, password }) {
     const cleanEmail = email.toLowerCase().trim();
@@ -156,7 +177,35 @@ class AuthService {
       status: 'ACTIVE'
     });
 
-    // Sync directly to tenant_db & create default warehouse
+    // 1. Cross-service HTTP Provision to tenant-service
+    await sendInternalPost(`${TENANT_SERVICE_URL}/api/v1/tenants/internal/provision`, {
+      tenantId,
+      companyCode: formattedCode,
+      companyName: companyName.trim(),
+      email: user.email,
+      phone: phone || null,
+      address: address || null,
+      city: city || null,
+      taxNumber: taxNumber || null,
+      plan: chosenPlan,
+      adminUser: {
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name || '',
+        email: user.email,
+        phone: phone || null
+      }
+    });
+
+    // 2. Cross-service HTTP Init to warehouse-service
+    await sendInternalPost(`${WAREHOUSE_SERVICE_URL}/api/v1/warehouses/internal/init-default`, {
+      tenantId,
+      companyName: companyName.trim(),
+      address: address || city || 'Primary Logistics Facility',
+      city: city || ''
+    });
+
+    // 3. Fallback direct local require (for monolithic local run)
     try {
       const tenantModels = require('../../../tenant-service/src/models');
       if (tenantModels?.Tenant) {
@@ -196,7 +245,6 @@ class AuthService {
         });
       }
 
-      // Create initial main warehouse
       const warehouseModels = require('../../../warehouse-service/src/models');
       if (warehouseModels?.Warehouse) {
         await warehouseModels.Warehouse.findOrCreate({
@@ -215,8 +263,20 @@ class AuthService {
         });
       }
     } catch (e) {
-      console.warn('[Sync Profile Warning]:', e.message);
+      // Safe to ignore in containerized microservices
     }
+
+    // 4. Publish EventBus Event
+    await eventBus.publish(EVENTS.TENANT_CREATED, {
+      tenantId,
+      companyCode: formattedCode,
+      companyName: companyName.trim(),
+      email: user.email,
+      phone: phone || null,
+      plan: chosenPlan,
+      adminUserId: user.id
+    });
+
 
     const permissions = DEFAULT_ROLE_PERMISSIONS[ROLES.ADMIN];
 
@@ -332,7 +392,81 @@ class AuthService {
       expires_at: expiresAt
     });
 
-    // Sync directly to tenant_db
+    const domain = email.includes('@') ? email.split('@')[1] : 'company.com';
+    const managerEmail = `manager@${domain}`;
+    const staffEmail = `staff@${domain}`;
+
+    // 1. Cross-service HTTP Provision to tenant-service
+    await sendInternalPost(`${TENANT_SERVICE_URL}/api/v1/tenants/internal/provision`, {
+      tenantId: newTenantId,
+      companyCode: formattedCode,
+      companyName,
+      email: email.toLowerCase().trim(),
+      phone: phone || null,
+      plan: chosenPlan,
+      adminUser: {
+        id: adminUser.id,
+        firstName,
+        lastName: lastName || '',
+        email: email.toLowerCase().trim(),
+        phone: phone || null
+      },
+      managerUser: {
+        email: managerEmail,
+        firstName: 'Operations',
+        lastName: 'Manager'
+      },
+      staffUser: {
+        email: staffEmail,
+        firstName: 'Point of Sale',
+        lastName: 'Staff'
+      }
+    });
+
+    // 2. Cross-service HTTP Init to warehouse-service
+    await sendInternalPost(`${WAREHOUSE_SERVICE_URL}/api/v1/warehouses/internal/init-default`, {
+      tenantId: newTenantId,
+      companyName,
+      address: 'Central Storage Yard'
+    });
+
+    // 3. Create sample manager and staff users in auth_db
+    const defaultPasswordHash = await bcrypt.hash('password123', salt);
+    try {
+      await User.findOrCreate({
+        where: { tenant_id: newTenantId, email: managerEmail },
+        defaults: {
+          tenant_id: newTenantId,
+          company_code: formattedCode,
+          first_name: 'Operations',
+          last_name: 'Manager',
+          email: managerEmail,
+          password: defaultPasswordHash,
+          role_name: ROLES.MANAGER,
+          is_super_admin: false,
+          status: 'ACTIVE'
+        }
+      });
+
+      await User.findOrCreate({
+        where: { tenant_id: newTenantId, email: staffEmail },
+        defaults: {
+          tenant_id: newTenantId,
+          company_code: formattedCode,
+          first_name: 'Point of Sale',
+          last_name: 'Staff',
+          email: staffEmail,
+          password: defaultPasswordHash,
+          role_name: ROLES.STAFF,
+          is_super_admin: false,
+          status: 'ACTIVE'
+        }
+      });
+    } catch (e) {
+      console.warn('Sample users create note in auth_db:', e.message);
+    }
+
+    // 4. Fallback direct local require (for monolithic local run)
     try {
       const tenantModels = require('../../../tenant-service/src/models');
       if (tenantModels?.Tenant) {
@@ -356,23 +490,6 @@ class AuthService {
           status: 'ACTIVE'
         });
 
-        // Also create sample manager and staff users for testing multi-role workflows
-        const defaultPasswordHash = await bcrypt.hash('password123', salt);
-        const domain = email.includes('@') ? email.split('@')[1] : 'company.com';
-        
-        // 1. Manager User
-        const managerEmail = `manager@${domain}`;
-        await User.create({
-          tenant_id: newTenantId,
-          company_code: formattedCode,
-          first_name: 'Operations',
-          last_name: 'Manager',
-          email: managerEmail,
-          password: defaultPasswordHash,
-          role_name: ROLES.MANAGER,
-          is_super_admin: false,
-          status: 'ACTIVE'
-        });
         await tenantModels.TenantUser.create({
           tenant_id: newTenantId,
           first_name: 'Operations',
@@ -382,19 +499,6 @@ class AuthService {
           status: 'ACTIVE'
         });
 
-        // 2. Staff User
-        const staffEmail = `staff@${domain}`;
-        await User.create({
-          tenant_id: newTenantId,
-          company_code: formattedCode,
-          first_name: 'Point of Sale',
-          last_name: 'Staff',
-          email: staffEmail,
-          password: defaultPasswordHash,
-          role_name: ROLES.STAFF,
-          is_super_admin: false,
-          status: 'ACTIVE'
-        });
         await tenantModels.TenantUser.create({
           tenant_id: newTenantId,
           first_name: 'Point of Sale',
@@ -404,7 +508,6 @@ class AuthService {
           status: 'ACTIVE'
         });
 
-        // Create initial default warehouse
         const warehouseModels = require('../../../warehouse-service/src/models');
         if (warehouseModels?.Warehouse) {
           await warehouseModels.Warehouse.create({
@@ -419,7 +522,6 @@ class AuthService {
           });
         }
 
-        // Write Audit Log
         if (tenantModels?.AuditLog) {
           await tenantModels.AuditLog.create({
             tenant_id: newTenantId,
@@ -433,18 +535,20 @@ class AuthService {
         }
       }
     } catch (e) {
-      console.warn('Direct tenant_db registration sync note:', e.message);
+      // Safe to ignore in containerized microservices
     }
 
-    // Publish event
+    // 5. Publish event
     await eventBus.publish(EVENTS.TENANT_CREATED, {
       tenantId: newTenantId,
       companyCode: formattedCode,
       companyName,
       email,
       phone,
+      plan: chosenPlan,
       adminUserId: adminUser.id
     });
+
 
     return {
       user: {
@@ -804,6 +908,111 @@ class AuthService {
     }
     return tenant;
   }
+
+  async getTenantLookupsInternal() {
+    const lookups = await TenantLookup.findAll({ order: [['created_at', 'DESC']] });
+    const users = await User.findAll({
+      where: { is_super_admin: false },
+      attributes: ['id', 'tenant_id', 'company_code', 'first_name', 'last_name', 'email', 'phone', 'role_name', 'status']
+    });
+    return { lookups, users };
+  }
+
+  async getPendingUsersInternal() {
+    const { Op } = require('sequelize');
+    const pendingUsers = await User.findAll({
+      where: {
+        [Op.or]: [
+          { status: 'PENDING_SETUP' },
+          { tenant_id: null }
+        ],
+        is_super_admin: false
+      },
+      order: [['created_at', 'DESC']]
+    });
+    return pendingUsers;
+  }
+
+  async deletePendingUserInternal(userId) {
+    const user = await User.findOne({
+      where: { id: userId, is_super_admin: false }
+    });
+    if (!user) {
+      throw { statusCode: 404, message: 'Pending user registration not found' };
+    }
+    await RefreshToken.destroy({ where: { user_id: userId } });
+    const email = user.email;
+    const name = `${user.first_name} ${user.last_name || ''}`.trim();
+    await user.destroy();
+    return { id: userId, email, company_name: name };
+  }
+
+  async createInternalUser(data) {
+    const { tenantId, companyCode, firstName, lastName, email, password, roleName, warehouseId, warehouseName, status } = data;
+    const cleanEmail = email.toLowerCase().trim();
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password || 'password123', salt);
+
+    const [user, created] = await User.findOrCreate({
+      where: { tenant_id: tenantId, email: cleanEmail },
+      defaults: {
+        tenant_id: tenantId,
+        company_code: companyCode || '',
+        first_name: firstName,
+        last_name: lastName || '',
+        email: cleanEmail,
+        password: hashedPassword,
+        role_name: roleName || ROLES.STAFF,
+        warehouse_id: warehouseId || null,
+        warehouse_name: warehouseName || null,
+        is_super_admin: false,
+        status: status || 'ACTIVE'
+      }
+    });
+
+    if (!created) {
+      await user.update({
+        first_name: firstName,
+        last_name: lastName || '',
+        role_name: roleName || user.role_name,
+        warehouse_id: warehouseId !== undefined ? warehouseId : user.warehouse_id,
+        warehouse_name: warehouseName !== undefined ? warehouseName : user.warehouse_name,
+        status: status || user.status
+      });
+    }
+
+    return user;
+  }
+
+  async updateInternalUser(userId, data) {
+    const user = await User.findByPk(userId);
+    if (!user) return null;
+
+    const updateFields = {};
+    if (data.firstName !== undefined) updateFields.first_name = data.firstName;
+    if (data.lastName !== undefined) updateFields.last_name = data.lastName;
+    if (data.roleName !== undefined) updateFields.role_name = data.roleName;
+    if (data.warehouseId !== undefined) updateFields.warehouse_id = data.warehouseId;
+    if (data.warehouseName !== undefined) updateFields.warehouse_name = data.warehouseName;
+    if (data.status !== undefined) updateFields.status = data.status;
+
+    if (data.password && data.password.trim().length >= 4) {
+      const salt = await bcrypt.genSalt(10);
+      updateFields.password = await bcrypt.hash(data.password.trim(), salt);
+    }
+
+    await user.update(updateFields);
+    return user;
+  }
+
+  async deleteInternalUser(userId, tenantId) {
+    const where = { id: userId };
+    if (tenantId) where.tenant_id = tenantId;
+    await RefreshToken.destroy({ where: { user_id: userId } });
+    await User.destroy({ where });
+    return true;
+  }
 }
 
 module.exports = new AuthService();
+
