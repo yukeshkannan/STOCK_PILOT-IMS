@@ -136,6 +136,44 @@ class TenantService {
 
   // Platform Super Admin methods
   async getAllTenants() {
+    try {
+      const authModels = require('../../../auth-service/src/models');
+      if (authModels?.TenantLookup) {
+        const lookups = await authModels.TenantLookup.findAll();
+        for (const l of lookups) {
+          await Tenant.findOrCreate({
+            where: { id: l.tenant_id },
+            defaults: {
+              id: l.tenant_id,
+              company_code: l.company_code,
+              company_name: l.company_name,
+              email: l.email || '',
+              status: l.status || 'ACTIVE',
+              plan: l.plan || 'TRIAL'
+            }
+          });
+          if (authModels?.User) {
+            const authUsers = await authModels.User.findAll({ where: { tenant_id: l.tenant_id } });
+            for (const u of authUsers) {
+              await TenantUser.findOrCreate({
+                where: { tenant_id: l.tenant_id, email: u.email },
+                defaults: {
+                  tenant_id: l.tenant_id,
+                  first_name: u.first_name,
+                  last_name: u.last_name || '',
+                  email: u.email,
+                  role_name: u.role_name || 'ADMIN',
+                  status: u.status || 'ACTIVE'
+                }
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Sync lookups notice in getAllTenants:', err.message);
+    }
+
     return Tenant.findAll({
       include: [
         {
