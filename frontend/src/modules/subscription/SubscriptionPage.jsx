@@ -89,7 +89,7 @@ export default function SubscriptionPage() {
       features: [
         '5 Warehouses & stores',
         'Up to 15 team members',
-        'Barcode scanning & quick POS',
+        'High-speed POS & instant billing',
         'Purchase return (RMA) workflow',
         'Financial analytics & GST reports',
         'Priority support'

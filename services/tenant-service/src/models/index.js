@@ -53,6 +53,10 @@ const Tenant = sequelize.define('Tenant', {
   plan: {
     type: DataTypes.STRING(50),
     defaultValue: 'TRIAL'
+  },
+  store_config: {
+    type: DataTypes.TEXT,
+    allowNull: true
   }
 }, {
   tableName: 'tenants',
@@ -238,6 +242,162 @@ const AuditLog = sequelize.define('AuditLog', {
   underscored: true
 });
 
+const SupportTicket = sequelize.define('SupportTicket', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
+  },
+  ticket_id: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    unique: true
+  },
+  tenant_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  company_name: {
+    type: DataTypes.STRING(150),
+    allowNull: false
+  },
+  company_code: {
+    type: DataTypes.STRING(30),
+    allowNull: false
+  },
+  user_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  user_name: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  user_email: {
+    type: DataTypes.STRING(150),
+    allowNull: false
+  },
+  user_phone: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  category: {
+    type: DataTypes.STRING(50),
+    defaultValue: 'GENERAL'
+  },
+  priority: {
+    type: DataTypes.STRING(50),
+    defaultValue: 'MEDIUM'
+  },
+  status: {
+    type: DataTypes.STRING(50),
+    defaultValue: 'OPEN'
+  },
+  subject: {
+    type: DataTypes.STRING(255),
+    allowNull: false
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  assigned_to: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    defaultValue: 'Unassigned'
+  },
+  resolution_notes: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  }
+}, {
+  tableName: 'support_tickets',
+  timestamps: true,
+  underscored: true
+});
+
+const TicketMessage = sequelize.define('TicketMessage', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
+  },
+  ticket_id: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  sender_type: {
+    type: DataTypes.STRING(50),
+    defaultValue: 'CLIENT'
+  },
+  sender_name: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  sender_email: {
+    type: DataTypes.STRING(150),
+    allowNull: false
+  },
+  message: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  is_internal_note: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  }
+}, {
+  tableName: 'ticket_messages',
+  timestamps: true,
+  underscored: true
+});
+
+const SupportMember = sequelize.define('SupportMember', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
+  },
+  name: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  email: {
+    type: DataTypes.STRING(150),
+    allowNull: false
+  },
+  role: {
+    type: DataTypes.STRING(100),
+    defaultValue: 'Core Developer'
+  },
+  specialization: {
+    type: DataTypes.STRING(255),
+    defaultValue: 'Full Stack & APIs'
+  },
+  phone: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  password: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  status: {
+    type: DataTypes.STRING(30),
+    defaultValue: 'ACTIVE'
+  }
+}, {
+  tableName: 'support_members',
+  timestamps: true,
+  underscored: true
+});
+
+SupportTicket.hasMany(TicketMessage, { foreignKey: 'ticket_id', sourceKey: 'ticket_id', as: 'messages' });
+TicketMessage.belongsTo(SupportTicket, { foreignKey: 'ticket_id', targetKey: 'ticket_id', as: 'ticket' });
+
+AuditLog.belongsTo(Tenant, { foreignKey: 'tenant_id', as: 'tenant' });
+Tenant.hasMany(AuditLog, { foreignKey: 'tenant_id', as: 'audit_logs' });
+
 module.exports = {
   sequelize,
   Tenant,
@@ -245,5 +405,8 @@ module.exports = {
   Permission,
   RolePermission,
   TenantUser,
-  AuditLog
+  AuditLog,
+  SupportTicket,
+  TicketMessage,
+  SupportMember
 };

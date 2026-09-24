@@ -120,8 +120,124 @@ class SalesService {
     saleJson.company_gstin = companyGstin || '29ABCDE1234F1Z5';
     saleJson.company_address = companyAddress || '';
     saleJson.company_phone = companyPhone || '';
-
     return saleJson;
+  }
+
+  async createPublicOrder(orderData) {
+    const {
+      companyCode,
+      customerName,
+      customerPhone,
+      customerEmail,
+      customerAddress,
+      items,
+      paymentMethod = 'COD',
+      notes
+    } = orderData;
+
+    const cleanCode = (companyCode || '').trim().toUpperCase();
+    let tenantInfo = null;
+
+    try {
+      const { createDatabaseConnection } = require('@stockpilot/common');
+      const authDb = createDatabaseConnection('auth_db');
+      const [lookups] = await authDb.query(
+        'SELECT tenant_id, company_code, company_name FROM tenant_lookup WHERE UPPER(company_code) = :code LIMIT 1;',
+        { replacements: { code: cleanCode } }
+      );
+      if (lookups && lookups.length > 0) {
+        tenantInfo = {
+          tenantId: Number(lookups[0].tenant_id),
+          companyCode: lookups[0].company_code,
+          companyName: lookups[0].company_name
+        };
+      }
+    } catch (e) {}
+
+    if (!tenantInfo) {
+      try {
+        const { createDatabaseConnection } = require('@stockpilot/common');
+        const tenantDb = createDatabaseConnection('tenant_db');
+        const [tenants] = await tenantDb.query(
+          'SELECT id, company_code, company_name FROM tenants WHERE UPPER(company_code) = :code LIMIT 1;',
+          { replacements: { code: cleanCode } }
+        );
+        if (tenants && tenants.length > 0) {
+          tenantInfo = {
+            tenantId: Number(tenants[0].id),
+            companyCode: tenants[0].company_code,
+            companyName: tenants[0].company_name
+          };
+        }
+      } catch (e) {}
+    }
+
+    if (!tenantInfo) {
+      throw { statusCode: 404, message: `Store with code '${companyCode}' not found` };
+    }
+
+    const tenantId = tenantInfo.tenantId;
+
+    // Resolve primary warehouse
+    let warehouseId = 1;
+    let warehouseName = 'Main Outlet Store';
+    try {
+      const { createDatabaseConnection } = require('@stockpilot/common');
+      const whDb = createDatabaseConnection('warehouse_db');
+      const [whs] = await whDb.query(
+        'SELECT id, name FROM warehouses WHERE tenant_id = :tenantId ORDER BY is_default DESC, id ASC LIMIT 1;',
+        { replacements: { tenantId } }
+      );
+      if (whs && whs.length > 0) {
+        warehouseId = whs[0].id;
+        warehouseName = whs[0].name;
+      }
+    } catch (e) {}
+
+    // Find or create customer
+    let customer = null;
+    if (customerPhone) {
+      customer = await Customer.findOne({
+        where: { tenant_id: tenantId, phone: customerPhone }
+      });
+      if (!customer) {
+        customer = await Customer.create({
+          tenant_id: tenantId,
+          name: customerName || 'Online Customer',
+          phone: customerPhone,
+          email: customerEmail || null,
+          address: customerAddress || '',
+          credit_limit: 10000,
+          status: 'ACTIVE'
+        });
+      }
+    }
+
+    // Prepare sale
+    const sale = await this.createSale(tenantId, {
+      customerId: customer?.id,
+      customerName: customerName || customer?.name || 'Online Customer',
+      customerPhone: customerPhone || customer?.phone || '',
+      warehouseId,
+      warehouseName,
+      items,
+      paymentMethod: paymentMethod === 'UPI' ? 'UPI' : 'CASH',
+      paidAmount: paymentMethod === 'UPI' ? 0 : 0, // Mark paid or COD
+      discountAmount: 0,
+      notes: `[Online Storefront Order] ${notes || ''} | Delivery Addr: ${customerAddress || 'Direct Store Pickup'}`,
+      createdBy: 'Online Customer'
+    });
+
+    return {
+      success: true,
+      saleId: sale.id,
+      invoiceNumber: sale.invoice_number,
+      grandTotal: sale.grand_total,
+      subtotal: sale.subtotal,
+      taxAmount: sale.tax_amount,
+      customerName: sale.customer_name,
+      ebillUrl: `/e-bill/${sale.invoice_number}`
+    };
   }
 
   async createSale(tenantId, saleData) {

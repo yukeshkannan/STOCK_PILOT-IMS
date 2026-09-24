@@ -11,8 +11,9 @@ const {
 // Sales Router
 const salesRouter = express.Router();
 
-// Public Unauthenticated E-Invoice Route (For WhatsApp Zudio-style e-bill PDF viewer)
+// Public Unauthenticated Routes (E-Bill viewer & Online Storefront Checkout)
 salesRouter.get('/public/invoice/:invoiceNumber', (req, res, next) => salesController.getPublicInvoice(req, res, next));
+salesRouter.post('/public/order', (req, res, next) => salesController.createPublicOrder(req, res, next));
 
 // Authenticated Routes
 salesRouter.use(authenticateToken, requireTenant);

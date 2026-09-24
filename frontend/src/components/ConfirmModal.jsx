@@ -15,26 +15,31 @@ export default function ConfirmModal({
   confirmText = 'Delete',
   cancelText = 'Cancel',
   variant = 'danger', // 'danger' | 'warning' | 'primary'
+  confirmVariant,
   loading = false,
-  maxWidth = '420px'
+  isLoading = false,
+  maxWidth = '440px'
 }) {
+  const isBusy = loading || isLoading;
+  const activeVariant = confirmVariant || variant;
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen && !loading) {
+      if (e.key === 'Escape' && isOpen && !isBusy) {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, loading]);
+  }, [isOpen, onClose, isBusy]);
 
   if (!isOpen) return null;
 
-  const isDanger = variant === 'danger';
-  const isWarning = variant === 'warning';
+  const isDanger = activeVariant === 'danger';
+  const isWarning = activeVariant === 'warning';
 
   return (
-    <div className="modal-overlay confirm-modal-overlay" onClick={() => !loading && onClose()}>
+    <div className="modal-overlay confirm-modal-overlay" onClick={() => !isBusy && onClose()}>
       <div
         className="modal-content confirm-modal-content"
         style={{ maxWidth }}
@@ -44,7 +49,7 @@ export default function ConfirmModal({
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', marginBottom: '0.85rem' }}>
           <div
-            className={`confirm-modal-icon-badge ${variant}`}
+            className={`confirm-modal-icon-badge ${activeVariant}`}
             style={{
               width: '38px',
               height: '38px',
@@ -87,7 +92,7 @@ export default function ConfirmModal({
           <button
             type="button"
             onClick={onClose}
-            disabled={loading}
+            disabled={isBusy}
             className="btn btn-ghost btn-sm"
             style={{ padding: '0.25rem', borderRadius: '50%', color: '#94a3b8' }}
             title="Close"
@@ -128,7 +133,7 @@ export default function ConfirmModal({
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={onClose}
-            disabled={loading}
+            disabled={isBusy}
           >
             {cancelText}
           </button>
@@ -136,10 +141,10 @@ export default function ConfirmModal({
             type="button"
             className={`btn ${isDanger ? 'btn-danger' : isWarning ? 'btn-warning' : 'btn-primary'} btn-sm`}
             onClick={onConfirm}
-            disabled={loading}
+            disabled={isBusy}
             style={{ minWidth: '85px' }}
           >
-            {loading ? 'Deleting...' : confirmText}
+            {isBusy ? 'Deleting...' : confirmText}
           </button>
         </div>
       </div>

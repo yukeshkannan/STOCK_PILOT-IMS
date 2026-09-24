@@ -257,7 +257,6 @@ async function seedDatabase() {
           tax_rate: 18.00,
           minimum_stock: p.minStock,
           maximum_stock: p.maxStock,
-          barcode: p.code,
           status: 'ACTIVE'
         }
       });

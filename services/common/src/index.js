@@ -9,6 +9,7 @@ const idempotency = require('./middleware/idempotency');
 const response = require('./utils/response');
 const logger = require('./utils/logger');
 const sequence = require('./utils/sequence');
+const cache = require('./cache/cacheClient');
 
 module.exports = {
   ...constants,
@@ -21,5 +22,6 @@ module.exports = {
   ...idempotency,
   ...response,
   ...logger,
-  ...sequence
+  ...sequence,
+  ...cache
 };

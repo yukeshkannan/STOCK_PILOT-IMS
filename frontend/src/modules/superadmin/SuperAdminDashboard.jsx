@@ -7,21 +7,18 @@ import {
   ShieldCheck,
   Plus,
   RefreshCw,
-  Server,
   X,
   Search,
   Mail,
   ChevronRight,
-  PieChart as PieChartIcon
+  Shield,
+  Activity,
+  CheckCircle2,
+  Clock,
+  Layers,
+  AlertCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -53,7 +50,7 @@ export default function SuperAdminDashboard() {
       setStats(res?.data || null);
     } catch (err) {
       console.error('Error fetching admin dashboard:', err);
-      toast.error('Failed to update telemetry statistics');
+      toast.error('Failed to load platform statistics');
     } finally {
       setLoading(false);
     }
@@ -61,11 +58,6 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => {
     fetchStats();
-    // Live telemetry auto-polling every 3 seconds
-    const interval = setInterval(() => {
-      fetchStats();
-    }, 3000);
-    return () => clearInterval(interval);
   }, []);
 
   const handleInputChange = (e) => {
@@ -132,47 +124,14 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  // Distinct Vibrant Colors for Microservices Pie Chart
-  const piePalette = [
-    '#982A86', // Gateway (Berry)
-    '#06b6d4', // Auth (Cyan)
-    '#10b981', // Tenant (Emerald)
-    '#f59e0b', // Product (Amber)
-    '#e11d48', // Inventory (Rose)
-    '#3b82f6', // Warehouse (Blue)
-    '#8b5cf6', // Purchase (Purple)
-    '#0d9488', // Sales (Teal)
-    '#d97706', // Finance (Gold)
-    '#ec4899'  // Notification (Pink)
-  ];
-
-  // Microservices Latency Chart & List Data
-  const rawServices = stats?.telemetry?.services?.length > 0
-    ? stats.telemetry.services
-    : [
-        { name: 'Gateway', latency: 4 },
-        { name: 'Auth', latency: 6 },
-        { name: 'Tenant', latency: 5 },
-        { name: 'Product', latency: 7 },
-        { name: 'Inventory', latency: 5 },
-        { name: 'Warehouse', latency: 8 },
-        { name: 'Purchase', latency: 9 },
-        { name: 'Sales', latency: 6 },
-        { name: 'Finance', latency: 7 },
-        { name: 'Notification', latency: 4 }
-      ];
-
-  const microserviceLatencyData = rawServices.map((s, idx) => ({
-    ...s,
-    fill: piePalette[idx % piePalette.length]
-  }));
-
   // Tenants List & Filtering
   const tenantsList = stats?.recentTenants || [
     { id: 1, company_code: 'ABC001', company_name: 'ABC Electronics Ltd', email: 'admin@abc.com', phone: '+91 98765 00001', address: 'Bengaluru, Karnataka', status: 'ACTIVE', users: [1, 2, 3, 4], tax_number: '29ABCDE1234F1Z5' },
     { id: 2, company_code: 'SLT002', company_name: 'Sri Lakshmi Traders', email: 'admin@lakshmi.com', phone: '+91 98765 00002', address: 'Chennai, Tamil Nadu', status: 'ACTIVE', users: [1, 2], tax_number: '33AABCL5678P1Z3' },
     { id: 3, company_code: 'KUM003', company_name: 'Kumar Industrial Distributors', email: 'admin@kumar.com', phone: '+91 98765 00003', address: 'Peenya, Bengaluru', status: 'SUSPENDED', users: [1, 2], tax_number: '29KUMAR9876Q1Z9' }
   ];
+
+  const recentLogs = stats?.recentLogs || [];
 
   const filteredTenants = tenantsList.filter((t) => {
     const matchesSearch =
@@ -192,13 +151,13 @@ export default function SuperAdminDashboard() {
         <div>
           <h1 className="page-title">Super Admin Portal</h1>
           <p className="page-subtitle">
-            Global Multi-Tenant SaaS Infrastructure Analytics & Workspace Provisioning Command Center
+            Global Multi-Tenant SaaS Infrastructure & Organization Provisioning Command Center
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap' }}>
-          <button onClick={fetchStats} className="btn btn-secondary">
-            <RefreshCw size={16} className={loading ? 'spin' : ''} /> Refresh Telemetry
+          <button onClick={fetchStats} className="btn btn-secondary" disabled={loading}>
+            <RefreshCw size={16} className={loading ? 'spin' : ''} /> Refresh Data
           </button>
           <button onClick={() => setIsModalOpen(true)} className="btn btn-primary">
             <Plus size={18} /> Provision New Tenant
@@ -206,16 +165,16 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
-      {/* 2 Core Focused Executive Cards (Streamlined & Uncluttered) */}
+      {/* 4 Core Executive KPI Cards */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
           gap: '1.25rem',
           marginBottom: '1.75rem'
         }}
       >
-        {/* Core Card 1: Organizations & Active Workspaces */}
+        {/* KPI 1: Active Organizations */}
         <div
           className="card kpi-card"
           style={{
@@ -226,13 +185,14 @@ export default function SuperAdminDashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <span style={{ fontSize: '0.725rem', fontWeight: 700, color: '#982A86', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Tenant Organizations & Workspaces
+                Active Organizations
               </span>
               <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem', letterSpacing: '-0.02em' }}>
-                {stats?.activeTenants || tenantsList.filter(t => t.status === 'ACTIVE').length} Active <span style={{ fontSize: '1rem', fontWeight: 500, color: '#64748b' }}>/ {stats?.totalTenants || tenantsList.length} Total</span>
+                {stats?.activeTenants ?? tenantsList.filter(t => t.status === 'ACTIVE').length}
+                <span style={{ fontSize: '1rem', fontWeight: 500, color: '#64748b' }}> / {stats?.totalTenants ?? tenantsList.length} Total</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', color: '#64748b', fontWeight: 500, marginTop: '0.45rem' }}>
-                <Users size={14} color="#982A86" /> {stats?.totalUsers || 12} Registered platform users across organizations
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#059669', fontWeight: 600, marginTop: '0.45rem' }}>
+                <CheckCircle2 size={13} /> {stats?.suspendedTenants ? `${stats.suspendedTenants} Suspended` : 'All Systems Active'}
               </div>
             </div>
 
@@ -248,8 +208,7 @@ export default function SuperAdminDashboard() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#982A86',
-                boxShadow: '0 2px 8px rgba(152, 42, 134, 0.12)',
-                transition: 'transform 0.2s ease'
+                boxShadow: '0 2px 8px rgba(152, 42, 134, 0.12)'
               }}
             >
               <Building size={22} />
@@ -257,7 +216,7 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
 
-        {/* Core Card 2: Ecosystem Performance & Health */}
+        {/* KPI 2: Total Registered Users */}
         <div
           className="card kpi-card"
           style={{
@@ -268,13 +227,13 @@ export default function SuperAdminDashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <span style={{ fontSize: '0.725rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Microservices Ecosystem Health & Speed
+                Platform Users
               </span>
               <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem', letterSpacing: '-0.02em' }}>
-                {stats?.telemetry?.avgLatency || 5.8} ms <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#059669' }}>(Optimal)</span>
+                {stats?.totalUsers ?? 12}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', color: '#64748b', fontWeight: 500, marginTop: '0.45rem' }}>
-                <ShieldCheck size={14} color="#059669" /> 10 / 10 Microservices & API Gateway operational
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#64748b', fontWeight: 500, marginTop: '0.45rem' }}>
+                <Users size={13} color="#059669" /> Across all business tenants
               </div>
             </div>
 
@@ -290,17 +249,98 @@ export default function SuperAdminDashboard() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#059669',
-                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.12)',
-                transition: 'transform 0.2s ease'
+                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.12)'
               }}
             >
-              <Server size={22} />
+              <Users size={22} />
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 3: Pending Onboardings */}
+        <div
+          className="card kpi-card"
+          style={{
+            padding: '1.4rem 1.6rem',
+            background: 'linear-gradient(135deg, #ffffff 70%, #fffbeb 100%)'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <span style={{ fontSize: '0.725rem', fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Pending Approvals
+              </span>
+              <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem', letterSpacing: '-0.02em' }}>
+                {stats?.pendingRegistrations ?? 0}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#64748b', fontWeight: 500, marginTop: '0.45rem' }}>
+                <Clock size={13} color="#d97706" /> Self-serve onboarding queue
+              </div>
+            </div>
+
+            <div
+              className="kpi-icon-box"
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#d97706',
+                boxShadow: '0 2px 8px rgba(217, 119, 6, 0.12)'
+              }}
+            >
+              <Layers size={22} />
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 4: Security & Compliance Health */}
+        <div
+          className="card kpi-card"
+          style={{
+            padding: '1.4rem 1.6rem',
+            background: 'linear-gradient(135deg, #ffffff 70%, #f8fafc 100%)'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <span style={{ fontSize: '0.725rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Security & Audit Status
+              </span>
+              <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem', letterSpacing: '-0.02em' }}>
+                100% <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#059669' }}>Verified</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#64748b', fontWeight: 500, marginTop: '0.45rem' }}>
+                <ShieldCheck size={13} color="#059669" /> Multi-tenant RBAC enforced
+              </div>
+            </div>
+
+            <div
+              className="kpi-icon-box"
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: '#f1f5f9',
+                border: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#475569',
+                boxShadow: '0 2px 8px rgba(71, 85, 105, 0.12)'
+              }}
+            >
+              <Shield size={22} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* FIRST: 100% Full-Width Registered Business Tenants Directory */}
+      {/* MAIN: Registered Business Tenants Directory */}
       <div
         className="card"
         style={{
@@ -481,162 +521,89 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
-      {/* SECOND: Microservices Latency Split View (Left: Donut Chart, Right: Latency Speed List) */}
-      <div style={{ marginBottom: '1.85rem' }}>
-        <div className="card">
-          <div className="card-header" style={{ marginBottom: '1.25rem' }}>
-            <div>
-              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                <PieChartIcon size={20} color="#982A86" /> Microservices Latency Distribution & Live Speed Telemetry
-              </h3>
-              <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
-                Real-time HTTP response speeds across 9 backend microservices & API Gateway
-              </p>
-            </div>
-            <button
-              onClick={fetchStats}
-              title="Refresh Telemetry Speeds"
-              style={{
-                background: '#fdf2fb',
-                border: '1px solid #f3c7ec',
-                borderRadius: '8px',
-                padding: '0.45rem 0.65rem',
-                color: '#982A86',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <RefreshCw size={16} className={loading ? 'spin' : ''} />
-            </button>
+      {/* SECONDARY: Real-Time Audit & Security Activity Stream */}
+      <div className="card" style={{ marginBottom: '1.85rem' }}>
+        <div className="card-header" style={{ marginBottom: '1rem' }}>
+          <div>
+            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+              <Activity size={18} color="#982A86" /> Recent Platform Audit & Security Events
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.15rem' }}>
+              Live security trails and administrative events across organizations
+            </p>
           </div>
-
-          <div
+          <Link
+            to="/admin/audit"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '1.75rem',
-              alignItems: 'center'
+              fontSize: '0.825rem',
+              color: '#982A86',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.25rem'
             }}
           >
-            {/* LEFT COLUMN: Colorful Donut / Pie Chart */}
-            <div
-              style={{
-                position: 'relative',
-                height: 260,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: '#faf5ff',
-                borderRadius: '12px',
-                border: '1px solid #f3e8ff',
-                padding: '1rem'
-              }}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={microserviceLatencyData}
-                    dataKey="latency"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={88}
-                    paddingAngle={3}
-                    cornerRadius={4}
-                    isAnimationActive={false}
-                  >
-                    {microserviceLatencyData.map((entry, index) => (
-                      <Cell key={`pie-cell-${index}`} fill={entry.fill} stroke="#ffffff" strokeWidth={2} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-
-              {/* Center Overlay Donut Text */}
-              <div
-                style={{
-                  position: 'absolute',
-                  textAlign: 'center',
-                  pointerEvents: 'none'
-                }}
-              >
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#982A86', letterSpacing: '-0.02em' }}>
-                  {stats?.telemetry?.avgLatency || 5.8} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>ms</span>
-                </div>
-                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#982A86', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Avg Latency
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT COLUMN: Microservices Latency List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#982A86', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>
-                Service Response Speeds ({microserviceLatencyData.length} Services)
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '0.5rem',
-                  maxHeight: '250px',
-                  overflowY: 'auto',
-                  paddingRight: '0.25rem'
-                }}
-              >
-                {microserviceLatencyData.map((s, idx) => (
-                  <div
-                    key={s.name}
-                    style={{
-                      padding: '0.55rem 0.8rem',
-                      background: '#f8fafc',
-                      border: '1px solid #f1f5f9',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontSize: '0.825rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                      <span
-                        style={{
-                          width: '10px',
-                          height: '10px',
-                          borderRadius: '50%',
-                          backgroundColor: s.fill,
-                          display: 'inline-block'
-                        }}
-                      />
-                      <span style={{ fontWeight: 600, color: '#334155' }}>{s.name}</span>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          color: s.latency <= 5 ? '#059669' : s.latency <= 8 ? '#d97706' : '#dc2626',
-                          background: s.latency <= 5 ? '#ecfdf5' : s.latency <= 8 ? '#fffbeb' : '#fef2f2',
-                          padding: '0.15rem 0.45rem',
-                          borderRadius: '4px',
-                          fontFamily: 'monospace'
-                        }}
-                      >
-                        {s.latency} ms
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+            View Full Audit Logs <ChevronRight size={14} />
+          </Link>
         </div>
+
+        {recentLogs && recentLogs.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            {recentLogs.slice(0, 5).map((log, idx) => (
+              <div
+                key={log.id || idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem 1rem',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  fontSize: '0.825rem',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: '1', minWidth: '280px' }}>
+                  <div
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: log.action?.includes('SUSPEND') ? '#ef4444' : log.action?.includes('ACTIVE') || log.action?.includes('PROVISION') ? '#10b981' : '#982A86',
+                      flexShrink: 0
+                    }}
+                  />
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                        {log.action}
+                      </span>
+                      {log.tenant_name && (
+                        <span style={{ fontSize: '0.72rem', background: '#f5f3ff', color: '#7c3aed', padding: '0.1rem 0.45rem', borderRadius: '4px', fontWeight: 600, border: '1px solid #ddd6fe' }}>
+                          {log.tenant_name}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ color: '#475569', fontSize: '0.8rem', marginTop: '2px' }}>{log.description}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem', color: '#94a3b8' }}>
+                  <span style={{ fontWeight: 600, color: '#64748b' }}>{log.user_name || 'System'}</span>
+                  <span>•</span>
+                  <span>{log.created_at ? new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+            <Activity size={24} style={{ margin: '0 auto 0.5rem', opacity: 0.5 }} />
+            <div>No recent platform audit logs recorded yet.</div>
+          </div>
+        )}
       </div>
 
       {/* Provision New Tenant Modal */}

@@ -102,6 +102,33 @@ class TenantController {
       next(err);
     }
   }
+
+  async getStoreConfig(req, res, next) {
+    try {
+      const config = await tenantService.getStoreConfig(req.user.tenantId);
+      return ApiResponse.success(res, config, 'Storefront configuration loaded');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateStoreConfig(req, res, next) {
+    try {
+      const updated = await tenantService.updateStoreConfig(req.user.tenantId, req.body);
+      await auditService.logAction({
+        tenantId: req.user.tenantId,
+        userId: req.user.userId,
+        userName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim(),
+        action: 'UPDATE_STOREFRONT_CONFIG',
+        module: 'STOREFRONT',
+        recordId: req.user.tenantId,
+        description: `Updated online storefront theme and modular configurations`
+      });
+      return ApiResponse.success(res, updated, 'Storefront configuration published successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new TenantController();

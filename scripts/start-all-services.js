@@ -13,7 +13,8 @@ const services = [
   { name: 'Purchase', port: 5006, script: 'services/purchase-service/server.js', color: '\x1b[32m' },
   { name: 'Sales', port: 5007, script: 'services/sales-service/server.js', color: '\x1b[33m' },
   { name: 'Finance', port: 5008, script: 'services/finance-service/server.js', color: '\x1b[34m' },
-  { name: 'Notification', port: 5009, script: 'services/notification-service/server.js', color: '\x1b[35m' }
+  { name: 'Notification', port: 5009, script: 'services/notification-service/server.js', color: '\x1b[35m' },
+  { name: 'AI-Copilot', port: 5010, script: 'services/ai-service/server.js', color: '\x1b[36m' }
 ];
 
 console.log('Launching all StockPilot backend microservices and API Gateway...\n');

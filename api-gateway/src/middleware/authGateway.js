@@ -15,7 +15,9 @@ function authGatewayMiddleware(req, res, next) {
       req.headers['x-company-name'] = decoded.companyName || '';
       req.headers['x-user-role'] = decoded.roleName || decoded.role || '';
       req.headers['x-is-super-admin'] = decoded.isSuperAdmin ? 'true' : 'false';
+      req.headers['x-is-developer'] = (decoded.isDeveloper || decoded.role === 'DEVELOPER') ? 'true' : 'false';
       req.headers['x-user-email'] = decoded.email || '';
+      req.headers['x-user-name'] = decoded.name || `${decoded.firstName || decoded.first_name || ''} ${decoded.lastName || decoded.last_name || ''}`.trim() || '';
       if (decoded.permissions) {
         req.headers['x-user-permissions'] = JSON.stringify(decoded.permissions);
       }

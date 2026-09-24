@@ -133,6 +133,7 @@ export default function CustomSelect({
     if (option.disabled) return;
     
     // Create standard synthetic event so it's drop-in compatible with e.target.value
+    // and also resilient if passed directly to string methods or state setters
     const syntheticEvent = {
       target: {
         name: name || id || '',
@@ -142,12 +143,17 @@ export default function CustomSelect({
         name: name || id || '',
         value: option.value
       },
+      value: option.value,
       preventDefault: () => {},
-      stopPropagation: () => {}
+      stopPropagation: () => {},
+      toString: () => String(option.value),
+      valueOf: () => option.value,
+      toLowerCase: () => String(option.value).toLowerCase(),
+      toUpperCase: () => String(option.value).toUpperCase()
     };
 
     if (typeof onChange === 'function') {
-      onChange(syntheticEvent);
+      onChange(syntheticEvent, option.value);
     }
 
     setIsOpen(false);

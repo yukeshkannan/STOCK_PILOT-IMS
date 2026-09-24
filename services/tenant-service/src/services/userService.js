@@ -279,8 +279,8 @@ class AuditService {
     const { Op } = require('sequelize');
     const where = {};
 
-    if (tenantId) {
-      where.tenant_id = tenantId;
+    if (tenantId && tenantId !== 'ALL') {
+      where.tenant_id = parseInt(tenantId, 10);
     }
     if (module && module !== 'ALL') {
       where.module = module;
@@ -298,19 +298,36 @@ class AuditService {
       ];
     }
 
-    const parsedLimit = Math.min(parseInt(limit, 10) || 100, 200);
+    const parsedLimit = Math.min(parseInt(limit, 10) || 100, 500);
     const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
     const offset = (parsedPage - 1) * parsedLimit;
 
     const { rows, count } = await AuditLog.findAndCountAll({
       where,
+      include: [
+        {
+          model: Tenant,
+          as: 'tenant',
+          attributes: ['id', 'company_name', 'company_code'],
+          required: false
+        }
+      ],
       limit: parsedLimit,
       offset,
       order: [['created_at', 'DESC']]
     });
 
+    const formattedLogs = rows.map((r) => {
+      const data = r.toJSON ? r.toJSON() : r;
+      return {
+        ...data,
+        tenant_name: data.tenant?.company_name || (data.tenant_id ? `Organization #${data.tenant_id}` : 'Global Platform'),
+        tenant_code: data.tenant?.company_code || 'GLOBAL'
+      };
+    });
+
     return {
-      logs: rows,
+      logs: formattedLogs,
       totalCount: count,
       page: parsedPage,
       totalPages: Math.ceil(count / parsedLimit) || 1

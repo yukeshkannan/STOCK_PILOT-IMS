@@ -7,9 +7,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logo.png', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
-        name: 'StockPilot',
+        id: '/',
+        name: 'StockPilot — Enterprise Inventory & POS Platform',
         short_name: 'StockPilot',
         description: 'Enterprise Multi-Tenant Inventory, POS Billing & Warehouse Logistics Platform',
         theme_color: '#982A86',
@@ -18,6 +19,30 @@ export default defineConfig({
         orientation: 'portrait-primary',
         scope: '/',
         start_url: '/',
+        categories: ['business', 'productivity', 'shopping', 'utilities'],
+        shortcuts: [
+          {
+            name: 'POS Terminal',
+            short_name: 'POS',
+            description: 'Launch fast counter billing & digital invoicing',
+            url: '/sales/new',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
+          },
+          {
+            name: 'Inventory Hub',
+            short_name: 'Inventory',
+            description: 'Check real-time stock levels & warehouse alerts',
+            url: '/inventory',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
+          },
+          {
+            name: 'Dashboard Analytics',
+            short_name: 'Dashboard',
+            description: 'View sales velocity and KPI metrics',
+            url: '/dashboard',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
+          }
+        ],
         icons: [
           {
             src: '/pwa-192x192.png',

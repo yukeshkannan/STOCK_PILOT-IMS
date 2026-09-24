@@ -123,10 +123,6 @@ const Product = sequelize.define('Product', {
     type: DataTypes.INTEGER,
     defaultValue: 1000
   },
-  barcode: {
-    type: DataTypes.STRING(100),
-    allowNull: true
-  },
   image_url: {
     type: DataTypes.STRING(500),
     allowNull: true

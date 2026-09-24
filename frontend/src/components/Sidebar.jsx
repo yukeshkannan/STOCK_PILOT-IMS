@@ -22,6 +22,10 @@ import {
   LogOut,
   ShieldCheck,
   Sparkles,
+  Store,
+  LifeBuoy,
+  Terminal,
+  Download,
   X
 } from 'lucide-react';
 
@@ -125,7 +129,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
 
   const allNavItems = [
     {
-      group: 'Inventory',
+      group: 'Inventory & Catalog',
       items: [
         { label: 'Products & Catalog', to: '/products', icon: Package },
         { label: 'Live Stock & History', to: '/inventory', icon: Layers },
@@ -133,10 +137,11 @@ export default function Sidebar({ isOpen = false, onClose }) {
       ]
     },
     {
-      group: 'Operations',
+      group: 'E-Commerce & Sales',
       items: [
-        { label: 'Purchases & Suppliers', to: '/purchases', icon: ShoppingCart },
-        { label: 'Sales & POS Invoicing', to: '/sales', icon: ShoppingBag }
+        { label: 'Online Store Builder', to: '/store-builder', icon: Store },
+        { label: 'Sales & POS Invoicing', to: '/sales', icon: ShoppingBag },
+        { label: 'Purchases & Suppliers', to: '/purchases', icon: ShoppingCart }
       ]
     },
     {
@@ -152,7 +157,8 @@ export default function Sidebar({ isOpen = false, onClose }) {
         { label: 'Users & RBAC', to: '/users', icon: Users },
         { label: 'Notifications', to: '/notifications', icon: Bell },
         { label: 'Subscription & Plans', to: '/subscription', icon: Sparkles },
-        { label: 'Company Settings', to: '/settings', icon: Settings }
+        { label: 'Company Settings', to: '/settings', icon: Settings },
+        { label: 'Help & Support', to: '/support', icon: LifeBuoy }
       ]
     }
   ];
@@ -433,6 +439,26 @@ export default function Sidebar({ isOpen = false, onClose }) {
               <Bell size={18} />
               <span>Notifications</span>
             </NavLink>
+
+            {/* Link 5: Support Helpdesk */}
+            <NavLink
+              to="/admin/tickets"
+              onClick={handleNavClick}
+              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            >
+              <LifeBuoy size={18} />
+              <span>Support Helpdesk</span>
+            </NavLink>
+
+            {/* Link 6: Dev & Support Team */}
+            <NavLink
+              to="/admin/team"
+              onClick={handleNavClick}
+              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            >
+              <Users size={18} />
+              <span>Dev &amp; Support Team</span>
+            </NavLink>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
@@ -512,7 +538,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
         )}
       </div>
 
-      {/* Sidebar Bottom Footer: Seamless High-Visibility Sign Out Button */}
+      {/* Sidebar Bottom Footer: Install App & Seamless High-Visibility Sign Out Button */}
       <div
         className="sidebar-bottom-footer"
         style={{
@@ -523,9 +549,42 @@ export default function Sidebar({ isOpen = false, onClose }) {
           marginTop: 'auto',
           position: 'sticky',
           bottom: 0,
-          zIndex: 20
+          zIndex: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem'
         }}
       >
+        <button
+          onClick={() => {
+            if (onClose) onClose();
+            window.dispatchEvent(new CustomEvent('open_pwa_install'));
+          }}
+          className="sidebar-install-pwa-btn"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.55rem',
+            width: '100%',
+            padding: '0.55rem 0.85rem',
+            background: 'rgba(255, 255, 255, 0.18)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            borderRadius: '10px',
+            cursor: 'pointer',
+            letterSpacing: '0.01em',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+          aria-label="Install StockPilot App"
+          type="button"
+        >
+          <Download size={16} />
+          <span>Install App</span>
+        </button>
+
         <button
           onClick={handleLogout}
           className="sidebar-logout-btn"

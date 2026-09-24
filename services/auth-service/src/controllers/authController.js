@@ -69,6 +69,19 @@ class AuthController {
     }
   }
 
+  async devLogin(req, res, next) {
+    try {
+      const { email, password } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Developer email is required' });
+      }
+      const result = await authService.devLogin({ email, password });
+      return ApiResponse.success(res, result, 'Developer logged in successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async refresh(req, res, next) {
     try {
       const { refreshToken } = req.body;

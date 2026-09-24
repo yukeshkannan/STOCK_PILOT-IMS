@@ -14,7 +14,6 @@ const productSchema = z.object({
   taxRate: z.number().nonnegative().optional(),
   minimumStock: z.number().int().nonnegative().optional(),
   maximumStock: z.number().int().optional(),
-  barcode: z.string().optional(),
   imageUrl: z.string().optional(),
   status: z.enum(['ACTIVE', 'INACTIVE', 'DISCONTINUED']).optional(),
   initialStock: z.number().int().nonnegative().optional(),
@@ -165,6 +164,16 @@ class ProductController {
     try {
       await productService.deleteBrand(req.user.tenantId, req.params.id);
       return ApiResponse.success(res, null, 'Brand deleted');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getPublicStoreCatalog(req, res, next) {
+    try {
+      const { companyCode } = req.params;
+      const catalog = await productService.getPublicStoreCatalog(companyCode);
+      return ApiResponse.success(res, catalog, 'Public store catalog retrieved');
     } catch (err) {
       next(err);
     }

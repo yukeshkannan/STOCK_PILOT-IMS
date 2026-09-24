@@ -651,7 +651,7 @@ export default function CompleteProfilePage() {
                   ₹499 <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#64748b' }}>/mo</span>
                 </div>
                 <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.3 }}>
-                  1 Warehouse • 2 Staff
+                  2 Warehouses • 5 Staff
                 </div>
               </div>
 
@@ -718,7 +718,7 @@ export default function CompleteProfilePage() {
                   ₹3,999 <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#64748b' }}>/mo</span>
                 </div>
                 <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.3 }}>
-                  Unlimited • 24/7 Priority
+                  Unlimited Warehouses • SLA
                 </div>
               </div>
             </div>

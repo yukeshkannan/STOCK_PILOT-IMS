@@ -36,9 +36,12 @@ function authenticateToken(req, res, next) {
       tenantId: req.headers['x-tenant-id'] || null,
       companyCode: req.headers['x-company-code'] || null,
       companyName: req.headers['x-company-name'] || null,
+      name: req.headers['x-user-name'] || null,
+      email: req.headers['x-user-email'] || '',
       role: req.headers['x-user-role'],
       permissions: req.headers['x-user-permissions'] ? JSON.parse(req.headers['x-user-permissions']) : [],
-      isSuperAdmin: req.headers['x-is-super-admin'] === 'true'
+      isSuperAdmin: req.headers['x-is-super-admin'] === 'true',
+      isDeveloper: req.headers['x-is-developer'] === 'true' || req.headers['x-user-role'] === 'DEVELOPER'
     };
     return next();
   }

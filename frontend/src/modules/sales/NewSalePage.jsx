@@ -20,7 +20,7 @@ import {
   CheckCircle,
   ArrowLeft,
   DollarSign,
-  Barcode,
+  PackageSearch,
   Zap,
   Receipt,
   QrCode,
@@ -483,8 +483,7 @@ export default function NewSalePage() {
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.product_code.toLowerCase().includes(productSearch.toLowerCase()) ||
-      (p.barcode && p.barcode.toLowerCase().includes(productSearch.toLowerCase()));
+      p.product_code.toLowerCase().includes(productSearch.toLowerCase());
 
     const categoryName = p.category?.name || p.category_name || (typeof p.category === 'string' ? p.category : '');
     const matchesCategory = selectedCategory === 'ALL' || categoryName === selectedCategory;
@@ -622,7 +621,7 @@ export default function NewSalePage() {
                   }}
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  placeholder="Scan barcode or type SKU / item name..."
+                  placeholder="Search SKU or item name..."
                   autoFocus
                 />
                 {productSearch && (
@@ -721,7 +720,7 @@ export default function NewSalePage() {
                   color: '#64748b'
                 }}
               >
-                <Barcode size={32} color="#94a3b8" style={{ margin: '0 auto 0.5rem' }} />
+                <PackageSearch size={32} color="#94a3b8" style={{ margin: '0 auto 0.5rem' }} />
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#334155' }}>No items match your search</div>
                 <div style={{ fontSize: '0.775rem', marginTop: '2px' }}>Try typing a different product SKU or code</div>
               </div>

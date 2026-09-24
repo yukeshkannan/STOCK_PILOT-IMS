@@ -3,6 +3,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
+import CopilotDrawer from '../components/copilot/CopilotDrawer';
 
 export default function TenantLayout() {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
@@ -30,6 +31,7 @@ export default function TenantLayout() {
           <Outlet />
         </main>
       </div>
+      <CopilotDrawer />
     </div>
   );
 }

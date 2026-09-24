@@ -26,127 +26,43 @@ import {
 
 export default function SuperAdminAuditLogs() {
   const [logs, setLogs] = useState([]);
+  const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTenant, setSelectedTenant] = useState('ALL');
   const [selectedModule, setSelectedModule] = useState('ALL');
   const [selectedAction, setSelectedAction] = useState('ALL');
   const [selectedLog, setSelectedLog] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const itemsPerPage = 12; // Clean fixed page size (without cumbersome per-page dropdown)
+
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     log: null,
     loading: false
   });
 
-  // Fallback demo seed data if database has fresh/empty logs
-  const defaultFallbackLogs = [
-    {
-      id: 101,
-      tenant_id: 1,
-      tenant_name: 'ABC Electronics Ltd',
-      user_id: 1,
-      user_name: 'admin@stockpilot.io',
-      action: 'TENANT_PROVISIONED',
-      module: 'TENANT',
-      record_id: 'ORG-001',
-      description: 'New organization ABC Electronics Ltd (ABC001) provisioned with Pro Tier subscription',
-      ip_address: '103.21.244.12',
-      created_at: new Date(Date.now() - 1000 * 60 * 12).toISOString()
-    },
-    {
-      id: 102,
-      tenant_id: 2,
-      tenant_name: 'Sri Lakshmi Traders',
-      user_id: 2,
-      user_name: 'admin@stockpilot.io',
-      action: 'TENANT_ACTIVATED',
-      module: 'SECURITY',
-      record_id: 'ORG-002',
-      description: 'Organization Sri Lakshmi Traders (SLT002) reactivated by Super Admin',
-      ip_address: '103.21.244.12',
-      created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString()
-    },
-    {
-      id: 103,
-      tenant_id: 3,
-      tenant_name: 'Kumar Industrial Distributors',
-      user_id: 1,
-      user_name: 'admin@stockpilot.io',
-      action: 'TENANT_SUSPENDED',
-      module: 'SECURITY',
-      record_id: 'ORG-003',
-      description: 'Organization Kumar Industrial Distributors (KUM003) suspended due to compliance check',
-      ip_address: '103.21.244.12',
-      created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString()
-    },
-    {
-      id: 104,
-      tenant_id: 1,
-      tenant_name: 'ABC Electronics Ltd',
-      user_id: 4,
-      user_name: 'rajesh@abcelec.com',
-      action: 'CREATE_USER',
-      module: 'USERS',
-      record_id: 'USR-882',
-      description: 'Created tenant staff user vinoth@abcelec.com with role INVENTORY_MANAGER',
-      ip_address: '49.37.142.98',
-      created_at: new Date(Date.now() - 1000 * 60 * 320).toISOString()
-    },
-    {
-      id: 105,
-      tenant_id: null,
-      tenant_name: 'Global Platform',
-      user_id: 1,
-      user_name: 'superadmin@stockpilot.io',
-      action: 'SERVICE_CONFIG_UPDATE',
-      module: 'SYSTEM',
-      record_id: 'SYS-CFG',
-      description: 'Updated rate limiting policy and Redis telemetry caching threshold to 15000ms',
-      ip_address: '127.0.0.1',
-      created_at: new Date(Date.now() - 1000 * 60 * 650).toISOString()
-    },
-    {
-      id: 106,
-      tenant_id: 1,
-      tenant_name: 'ABC Electronics Ltd',
-      user_id: 4,
-      user_name: 'rajesh@abcelec.com',
-      action: 'STOCK_BULK_IMPORT',
-      module: 'INVENTORY',
-      record_id: 'IMP-4091',
-      description: 'Imported 150 SKU catalog items into Central Peenya Warehouse',
-      ip_address: '49.37.142.98',
-      created_at: new Date(Date.now() - 1000 * 60 * 1400).toISOString()
-    },
-    {
-      id: 107,
-      tenant_id: 2,
-      tenant_name: 'Sri Lakshmi Traders',
-      user_id: 5,
-      user_name: 'admin@lakshmi.com',
-      action: 'PASSWORD_RESET',
-      module: 'AUTH',
-      record_id: 'USR-201',
-      description: 'Completed secure password reset via verified magic token authentication',
-      ip_address: '157.48.21.6',
-      created_at: new Date(Date.now() - 1000 * 60 * 2100).toISOString()
-    }
-  ];
-
-  const fetchLogs = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/admin/audit-logs');
-      if (res?.data?.logs && Array.isArray(res.data.logs)) {
-        setLogs(res.data.logs);
-      } else if (Array.isArray(res?.data)) {
-        setLogs(res.data);
+      const [logsRes, tenantsRes] = await Promise.all([
+        api.get('/admin/audit-logs'),
+        api.get('/admin/tenants').catch(() => ({ data: [] }))
+      ]);
+
+      if (logsRes?.data?.logs && Array.isArray(logsRes.data.logs)) {
+        setLogs(logsRes.data.logs);
+      } else if (Array.isArray(logsRes?.data)) {
+        setLogs(logsRes.data);
       } else {
         setLogs([]);
       }
+
+      const tenantsData = Array.isArray(tenantsRes?.data) ? tenantsRes.data : [];
+      setTenants(tenantsData);
     } catch (err) {
-      console.error('Error fetching audit logs:', err);
+      console.error('Error fetching audit logs or tenants:', err);
+      toast.error('Failed to fetch real-time audit logs');
       setLogs([]);
     } finally {
       setLoading(false);
@@ -154,25 +70,57 @@ export default function SuperAdminAuditLogs() {
   };
 
   useEffect(() => {
-    fetchLogs();
+    fetchData();
   }, []);
 
-  // Export logs to CSV
+  // Filter logs dynamically based on search, tenant/organization, module, and action
+  const filteredLogs = logs.filter((log) => {
+    const q = searchTerm.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      log.action?.toLowerCase().includes(q) ||
+      log.description?.toLowerCase().includes(q) ||
+      log.user_name?.toLowerCase().includes(q) ||
+      log.module?.toLowerCase().includes(q) ||
+      String(log.record_id || '').toLowerCase().includes(q) ||
+      String(log.tenant_name || '').toLowerCase().includes(q) ||
+      String(log.tenant_code || '').toLowerCase().includes(q);
+
+    // Organization filter
+    let matchesTenant = true;
+    if (selectedTenant === 'GLOBAL') {
+      matchesTenant = !log.tenant_id;
+    } else if (selectedTenant !== 'ALL') {
+      matchesTenant = String(log.tenant_id) === String(selectedTenant);
+    }
+
+    const matchesModule = selectedModule === 'ALL' || log.module === selectedModule;
+    const matchesAction = selectedAction === 'ALL' || log.action === selectedAction;
+
+    return matchesSearch && matchesTenant && matchesModule && matchesAction;
+  });
+
+  // Dynamic KPI Metrics calculated on the current organization/module scope
+  const securityEventsCount = filteredLogs.filter((l) => l.module === 'SECURITY' || l.action?.includes('SUSPEND') || l.action?.includes('AUTH')).length;
+  const tenantEventsCount = filteredLogs.filter((l) => l.module === 'TENANT' || l.action?.includes('PROVISION') || l.action?.includes('STOREFRONT')).length;
+  const activeActorsCount = new Set(filteredLogs.map((l) => l.user_name)).size;
+
+  // Export filtered logs to CSV
   const handleExportCSV = () => {
     try {
       if (filteredLogs.length === 0) {
-        toast.warning('No audit logs to export');
+        toast.warning('No audit logs available to export');
         return;
       }
 
-      const headers = ['ID', 'Timestamp', 'Module', 'Action', 'Actor Email', 'Organization', 'IP Address', 'Record ID', 'Description'];
+      const headers = ['ID', 'Timestamp', 'Organization', 'Module', 'Action', 'Actor Email', 'IP Address', 'Record ID', 'Description'];
       const rows = filteredLogs.map((l) => [
         l.id,
         new Date(l.created_at || l.createdAt).toISOString(),
+        `"${(l.tenant_name || (l.tenant_id ? `Organization #${l.tenant_id}` : 'Global Platform')).replace(/"/g, '""')}"`,
         l.module,
         l.action,
         l.user_name || 'System',
-        l.tenant_name || (l.tenant_id ? `Tenant #${l.tenant_id}` : 'Global Platform'),
         l.ip_address || 'N/A',
         l.record_id || 'N/A',
         `"${(l.description || '').replace(/"/g, '""')}"`
@@ -182,7 +130,7 @@ export default function SuperAdminAuditLogs() {
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement('a');
       link.setAttribute('href', encodedUri);
-      link.setAttribute('download', `StockPilot_Audit_Logs_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute('download', `StockPilot_Audit_Logs_${selectedTenant !== 'ALL' ? `Org_${selectedTenant}_` : ''}${new Date().toISOString().slice(0, 10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -193,24 +141,6 @@ export default function SuperAdminAuditLogs() {
       toast.error('Failed to export audit logs');
     }
   };
-
-  // Filter logs based on search and module
-  const filteredLogs = logs.filter((log) => {
-    const q = searchTerm.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      log.action?.toLowerCase().includes(q) ||
-      log.description?.toLowerCase().includes(q) ||
-      log.user_name?.toLowerCase().includes(q) ||
-      log.module?.toLowerCase().includes(q) ||
-      String(log.record_id || '').toLowerCase().includes(q) ||
-      String(log.tenant_name || '').toLowerCase().includes(q);
-
-    const matchesModule = selectedModule === 'ALL' || log.module === selectedModule;
-    const matchesAction = selectedAction === 'ALL' || log.action === selectedAction;
-
-    return matchesSearch && matchesModule && matchesAction;
-  });
 
   // Helper badge renderers
   const getModuleBadge = (module) => {
@@ -231,7 +161,7 @@ export default function SuperAdminAuditLogs() {
   };
 
   const getActionBadge = (action) => {
-    const isDanger = action?.includes('SUSPEND') || action?.includes('DELETE');
+    const isDanger = action?.includes('SUSPEND') || action?.includes('DELETE') || action?.includes('PURGE');
     const isSuccess = action?.includes('CREATE') || action?.includes('PROVISION') || action?.includes('ACTIVATE');
     const isWarning = action?.includes('UPDATE') || action?.includes('RESET') || action?.includes('ROLE');
 
@@ -258,10 +188,6 @@ export default function SuperAdminAuditLogs() {
     return date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  const securityEventsCount = logs.filter((l) => l.module === 'SECURITY' || l.action?.includes('SUSPEND')).length;
-  const tenantEventsCount = logs.filter((l) => l.module === 'TENANT' || l.action?.includes('PROVISION')).length;
-  const activeActorsCount = new Set(logs.map((l) => l.user_name)).size;
-
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
@@ -272,10 +198,16 @@ export default function SuperAdminAuditLogs() {
     setCurrentPage(1);
   };
 
+  const handleTenantSelect = (tenantVal) => {
+    setSelectedTenant(tenantVal);
+    setCurrentPage(1);
+  };
+
   const handleCardClick = (filterType) => {
     if (filterType === 'ALL') {
       setSelectedModule('ALL');
       setSelectedAction('ALL');
+      setSelectedTenant('ALL');
       setSearchTerm('');
     } else if (filterType === 'SECURITY') {
       setSelectedModule('SECURITY');
@@ -351,7 +283,7 @@ export default function SuperAdminAuditLogs() {
         {/* Header Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <button
-            onClick={fetchLogs}
+            onClick={fetchData}
             disabled={loading}
             style={{
               padding: '0.6rem 1rem',
@@ -368,7 +300,7 @@ export default function SuperAdminAuditLogs() {
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
             }}
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={loading ? 'spin' : ''} />
             <span>Refresh</span>
           </button>
 
@@ -378,7 +310,7 @@ export default function SuperAdminAuditLogs() {
               padding: '0.6rem 1.15rem',
               borderRadius: '8px',
               border: 'none',
-              background: 'linear-gradient(135deg, #982A86 0%, #761867 100%)',
+              background: '#982A86',
               color: '#ffffff',
               fontSize: '0.82rem',
               fontWeight: 700,
@@ -386,7 +318,7 @@ export default function SuperAdminAuditLogs() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              boxShadow: '0 4px 12px rgba(152, 42, 134, 0.25)'
+              boxShadow: '0 2px 4px rgba(152, 42, 134, 0.2)'
             }}
           >
             <Download size={16} />
@@ -395,34 +327,35 @@ export default function SuperAdminAuditLogs() {
         </div>
       </div>
 
-      {/* 2. Top Metric KPI Cards (Interactive Filters) */}
+      {/* 2. Top Interactive KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
         <div
           onClick={() => handleCardClick('ALL')}
-          title="Click to view all audit records"
+          title="Click to view all audit logs"
           style={{
             background: '#ffffff',
-            border: selectedModule === 'ALL' && !searchTerm ? '2px solid #982A86' : '1px solid #e2e8f0',
+            border: selectedModule === 'ALL' && selectedTenant === 'ALL' ? '2px solid #982A86' : '1px solid #e2e8f0',
             borderRadius: '12px',
             padding: '1.25rem',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            transform: selectedModule === 'ALL' && !searchTerm ? 'translateY(-2px)' : 'none'
+            transition: 'all 0.2s ease'
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Audit Records</span>
-            <div style={{ background: '#f5f3ff', padding: '0.4rem', borderRadius: '8px' }}><FileText size={18} color="#7c3aed" /></div>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {selectedTenant === 'ALL' ? 'Total Logged Events' : 'Organization Events'}
+            </span>
+            <div style={{ background: '#f5f3ff', padding: '0.4rem', borderRadius: '8px' }}><Activity size={18} color="#982A86" /></div>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '0.5rem' }}>
-            {logs.length}
+            {filteredLogs.length}
           </div>
         </div>
 
         <div
           onClick={() => handleCardClick('SECURITY')}
-          title="Click to filter by Security Operations"
+          title="Click to filter by Security Events"
           style={{
             background: '#ffffff',
             border: selectedModule === 'SECURITY' ? '2px solid #dc2626' : '1px solid #e2e8f0',
@@ -430,15 +363,14 @@ export default function SuperAdminAuditLogs() {
             padding: '1.25rem',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            transform: selectedModule === 'SECURITY' ? 'translateY(-2px)' : 'none'
+            transition: 'all 0.2s ease'
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Security Operations</span>
-            <div style={{ background: '#fef2f2', padding: '0.4rem', borderRadius: '8px' }}><AlertTriangle size={18} color="#dc2626" /></div>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Security Events</span>
+            <div style={{ background: '#fef2f2', padding: '0.4rem', borderRadius: '8px' }}><ShieldCheck size={18} color="#dc2626" /></div>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#dc2626', marginTop: '0.5rem' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginTop: '0.5rem' }}>
             {securityEventsCount}
           </div>
         </div>
@@ -453,8 +385,7 @@ export default function SuperAdminAuditLogs() {
             padding: '1.25rem',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            transform: selectedModule === 'TENANT' ? 'translateY(-2px)' : 'none'
+            transition: 'all 0.2s ease'
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -496,7 +427,7 @@ export default function SuperAdminAuditLogs() {
           background: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '12px',
-          padding: '1rem 1.25rem',
+          padding: '1.1rem 1.25rem',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -506,12 +437,12 @@ export default function SuperAdminAuditLogs() {
         }}
       >
         {/* Left: Search input */}
-        <div style={{ position: 'relative', flex: '1', minWidth: '280px', maxWidth: '420px' }}>
+        <div style={{ position: 'relative', flex: '1', minWidth: '260px', maxWidth: '380px' }}>
           <Search size={17} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
           <input
             id="audit-search-input"
             type="text"
-            placeholder="Search by action, email, module, or description..."
+            placeholder="Search action, email, description, IP..."
             value={searchTerm}
             onChange={handleSearchChange}
             style={{
@@ -538,20 +469,52 @@ export default function SuperAdminAuditLogs() {
           )}
         </div>
 
-        {/* Right: Module Pill Filter Buttons */}
+        {/* Center: Dynamic Organization Filter (Company Selector) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Building size={15} color="#982A86" /> Organization:
+          </span>
+          <select
+            value={selectedTenant}
+            onChange={(e) => handleTenantSelect(e.target.value)}
+            style={{
+              padding: '0.55rem 0.85rem',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              fontSize: '0.825rem',
+              fontWeight: 700,
+              color: '#0f172a',
+              cursor: 'pointer',
+              minWidth: '220px',
+              outline: 'none',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+            }}
+          >
+            <option value="ALL">All Organizations</option>
+            <option value="GLOBAL">Global Platform / System</option>
+            {tenants.map((t) => (
+              <option key={t.id} value={t.id}>
+                [{t.company_code || `ORG-${t.id}`}] {t.company_name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Right: Module Filter Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginRight: '0.35rem' }}>Module:</span>
-          {['ALL', 'TENANT', 'SECURITY', 'USERS', 'INVENTORY', 'AUTH', 'SYSTEM'].map((mod) => (
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginRight: '0.25rem' }}>Module:</span>
+          {['ALL', 'SECURITY', 'TENANT', 'USERS', 'INVENTORY', 'AUTH', 'SYSTEM'].map((mod) => (
             <button
               key={mod}
               onClick={() => handleModuleSelect(mod)}
               style={{
                 padding: '0.4rem 0.75rem',
                 borderRadius: '6px',
-                border: selectedModule === mod ? '1px solid #982A86' : '1px solid #e2e8f0',
+                border: selectedModule === mod ? '1px solid #982A86' : '1px solid #cbd5e1',
                 background: selectedModule === mod ? '#982A86' : '#ffffff',
                 color: selectedModule === mod ? '#ffffff' : '#475569',
-                fontSize: '0.76rem',
+                fontSize: '0.75rem',
                 fontWeight: selectedModule === mod ? 700 : 600,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
@@ -563,139 +526,156 @@ export default function SuperAdminAuditLogs() {
         </div>
       </div>
 
-      {/* 4. Audit Trail Data Table */}
-      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.02)' }}>
+      {/* 4. Main Audit Logs Data Table */}
+      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <th style={{ padding: '0.9rem 1.25rem' }}>Timestamp</th>
-                <th style={{ padding: '0.9rem 1rem' }}>Action Event</th>
-                <th style={{ padding: '0.9rem 1rem' }}>Actor</th>
-                <th style={{ padding: '0.9rem 1rem' }}>Workspace</th>
-                <th style={{ padding: '0.9rem 1.25rem' }}>Event Details</th>
-                <th style={{ padding: '0.9rem 1.25rem', textAlign: 'right' }}>Actions</th>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', width: '60px' }}>ID</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', width: '130px' }}>Timestamp</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', width: '180px' }}>Organization</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', width: '110px' }}>Module</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', width: '200px' }}>Action</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Description</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', width: '170px' }}>Actor</th>
+                <th style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', width: '110px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {loading && logs.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '3.5rem', color: '#94a3b8' }}>
-                    <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 0.75rem auto', color: '#982A86' }} />
-                    <div>Loading platform audit trail...</div>
+                  <td colSpan="8" style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                      <RefreshCw size={24} className="spin" color="#982A86" />
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Loading real-time audit trail...</div>
+                    </div>
                   </td>
                 </tr>
-              ) : filteredLogs.length === 0 ? (
+              ) : paginatedLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '3.5rem', color: '#94a3b8' }}>
-                    <ShieldCheck size={32} style={{ margin: '0 auto 0.5rem auto', color: '#cbd5e1' }} />
-                    <div style={{ fontWeight: 600, color: '#475569', fontSize: '0.95rem' }}>No Audit Records Found</div>
-                    <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>Try adjusting your search keywords or module filters.</div>
+                  <td colSpan="8" style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <Activity size={32} color="#cbd5e1" />
+                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#334155' }}>No audit events found</div>
+                      <div style={{ fontSize: '0.8rem', color: '#94a3b8', maxWidth: '400px' }}>
+                        {selectedTenant !== 'ALL'
+                          ? 'No security or operational events recorded yet for this selected organization.'
+                          : 'Try modifying your search keywords or switching module filters.'}
+                      </div>
+                      {(selectedTenant !== 'ALL' || selectedModule !== 'ALL' || searchTerm) && (
+                        <button
+                          onClick={() => handleCardClick('ALL')}
+                          style={{
+                            marginTop: '0.5rem',
+                            padding: '0.4rem 0.85rem',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            background: '#ffffff',
+                            color: '#982A86',
+                            fontWeight: 700,
+                            fontSize: '0.78rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Clear All Filters
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
-                paginatedLogs.map((item, idx) => (
+                paginatedLogs.map((log) => (
                   <tr
-                    key={item.id || idx}
+                    key={log.id}
+                    onClick={() => setSelectedLog(log)}
                     style={{
                       borderBottom: '1px solid #f1f5f9',
+                      cursor: 'pointer',
                       transition: 'background 0.15s ease'
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#faf5ff')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
                   >
-                    {/* Timestamp */}
-                    <td style={{ padding: '0.9rem 1.25rem', whiteSpace: 'nowrap' }}>
-                      <div style={{ fontWeight: 600, color: '#0f172a' }}>
-                        {formatRelativeTime(item.created_at || item.createdAt)}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>
-                        {new Date(item.created_at || item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.78rem', fontFamily: 'monospace', color: '#64748b' }}>
+                      #{log.id}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.78rem', color: '#475569', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 600, color: '#0f172a' }}>{formatRelativeTime(log.created_at || log.createdAt)}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                        {new Date(log.created_at || log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </td>
-
-                    {/* Action & Module */}
-                    <td style={{ padding: '0.9rem 1rem', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        {getModuleBadge(item.module)}
-                        {getActionBadge(item.action)}
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem' }}>
+                      <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                        {log.tenant_name || (log.tenant_id ? `Organization #${log.tenant_id}` : 'Global Platform')}
                       </div>
+                      {log.tenant_code && log.tenant_code !== 'GLOBAL' && (
+                        <span style={{ fontSize: '0.7rem', background: '#f1f5f9', color: '#475569', padding: '0.1rem 0.35rem', borderRadius: '4px', fontFamily: 'monospace' }}>
+                          {log.tenant_code}
+                        </span>
+                      )}
                     </td>
-
-                    {/* Actor */}
-                    <td style={{ padding: '0.9rem 1rem', whiteSpace: 'nowrap' }}>
-                      <div style={{ fontWeight: 700, color: '#1e293b' }}>
-                        {item.user_name || 'Super Admin'}
+                    <td style={{ padding: '0.85rem 1rem' }}>
+                      {getModuleBadge(log.module)}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem' }}>
+                      {getActionBadge(log.action)}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#334155', maxWidth: '340px' }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {log.description}
                       </div>
-                      {item.ip_address && (
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>
-                          IP: {item.ip_address}
+                      {log.record_id && (
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px', fontFamily: 'monospace' }}>
+                          ID: {log.record_id}
                         </div>
                       )}
                     </td>
-
-                    {/* Workspace */}
-                    <td style={{ padding: '0.9rem 1rem', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <Building size={14} color="#94a3b8" />
-                        <span style={{ fontWeight: 600, color: '#334155', fontSize: '0.8rem' }}>
-                          {item.tenant_name || (item.tenant_id ? `Tenant #${item.tenant_id}` : 'Global Platform')}
-                        </span>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem' }}>
+                      <div style={{ fontWeight: 600, color: '#0f172a' }}>
+                        {log.user_name || 'System'}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>
+                        {log.ip_address || '127.0.0.1'}
                       </div>
                     </td>
-
-                    {/* Description */}
-                    <td style={{ padding: '0.9rem 1.25rem', maxWidth: '400px' }}>
-                      <div style={{ color: '#334155', lineHeight: 1.45, fontSize: '0.825rem' }}>
-                        {item.description}
-                      </div>
-                    </td>
-
-                    {/* Actions: Inspect & Delete */}
-                    <td style={{ padding: '0.9rem 1.25rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem' }}>
+                    <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
                         <button
-                          onClick={() => setSelectedLog(item)}
+                          onClick={() => setSelectedLog(log)}
+                          title="Inspect Event Details"
                           style={{
-                            padding: '0.35rem 0.65rem',
+                            padding: '0.35rem 0.55rem',
                             borderRadius: '6px',
-                            border: '1px solid #e2e8f0',
+                            border: '1px solid #cbd5e1',
                             background: '#ffffff',
-                            color: '#982A86',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
+                            color: '#475569',
                             cursor: 'pointer',
-                            display: 'inline-flex',
+                            display: 'flex',
                             alignItems: 'center',
                             gap: '4px',
-                            transition: 'all 0.15s ease'
+                            fontSize: '0.75rem',
+                            fontWeight: 600
                           }}
-                          title="Inspect audit details"
                         >
-                          <Eye size={13} />
-                          <span>Inspect</span>
+                          <Eye size={13} /> View
                         </button>
-
                         <button
-                          onClick={(e) => openDeleteModal(item, e)}
+                          onClick={(e) => openDeleteModal(log, e)}
+                          title="Delete Audit Record"
                           style={{
-                            padding: '0.35rem 0.6rem',
+                            padding: '0.35rem 0.55rem',
                             borderRadius: '6px',
                             border: '1px solid #fecaca',
                             background: '#fef2f2',
                             color: '#dc2626',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
                             cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            transition: 'all 0.15s ease'
+                            display: 'flex',
+                            alignItems: 'center'
                           }}
-                          title="Permanently delete audit log"
                         >
                           <Trash2 size={13} />
-                          <span>Delete</span>
                         </button>
                       </div>
                     </td>
@@ -706,10 +686,10 @@ export default function SuperAdminAuditLogs() {
           </table>
         </div>
 
-        {/* Footer Pagination Bar */}
+        {/* Clean Footer Pagination Bar (Per page dropdown completely removed) */}
         <div
           style={{
-            padding: '0.85rem 1.25rem',
+            padding: '0.9rem 1.25rem',
             background: '#f8fafc',
             borderTop: '1px solid #e2e8f0',
             display: 'flex',
@@ -721,40 +701,12 @@ export default function SuperAdminAuditLogs() {
             color: '#475569'
           }}
         >
-          {/* Left: Counts & Rows Per Page */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <div>
-              Showing <b>{filteredLogs.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</b> to <b>{Math.min(currentPage * itemsPerPage, filteredLogs.length)}</b> of <b>{filteredLogs.length}</b> records
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Per page:</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  color: '#334155',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
+          {/* Left: Summary Count */}
+          <div>
+            Showing <b>{filteredLogs.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</b> to <b>{Math.min(currentPage * itemsPerPage, filteredLogs.length)}</b> of <b>{filteredLogs.length}</b> records
           </div>
 
-          {/* Right: Next & Previous Page Navigation Controls (Always Visible) */}
+          {/* Right: Clean Page Navigation Controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <button
               onClick={() => handlePageChange(currentPage - 1)}
@@ -778,9 +730,12 @@ export default function SuperAdminAuditLogs() {
               <ChevronLeft size={16} /> Previous
             </button>
 
-            {/* Page number pill */}
+            {/* Page number buttons */}
             <div style={{ display: 'flex', gap: '0.25rem', margin: '0 0.25rem' }}>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(
+                Math.max(0, currentPage - 3),
+                Math.min(totalPages, currentPage + 2)
+              ).map((pageNum) => (
                 <button
                   key={pageNum}
                   onClick={() => handlePageChange(pageNum)}
@@ -906,9 +861,9 @@ export default function SuperAdminAuditLogs() {
               </div>
 
               <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Target Workspace / Record</div>
-                <div style={{ marginTop: '0.35rem', fontWeight: 600, fontSize: '0.85rem', color: '#0f172a' }}>
-                  {selectedLog.tenant_name || (selectedLog.tenant_id ? `Tenant #${selectedLog.tenant_id}` : 'Global Platform')}
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Target Workspace / Organization</div>
+                <div style={{ marginTop: '0.35rem', fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>
+                  {selectedLog.tenant_name || (selectedLog.tenant_id ? `Organization #${selectedLog.tenant_id}` : 'Global Platform')}
                 </div>
                 {selectedLog.record_id && (
                   <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px', fontFamily: 'monospace' }}>

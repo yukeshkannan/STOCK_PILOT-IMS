@@ -58,6 +58,15 @@ class SalesController {
     }
   }
 
+  async createPublicOrder(req, res, next) {
+    try {
+      const order = await salesService.createPublicOrder(req.body);
+      return ApiResponse.created(res, order, 'Online customer order placed successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async sendInvoiceEmail(req, res, next) {
     try {
       const result = await salesService.sendInvoiceEmail(req.user.tenantId, req.params.id, {

@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
 const bcrypt = require('bcryptjs');
 const app = require('./src/app');
 const { sequelize, User } = require('./src/models');

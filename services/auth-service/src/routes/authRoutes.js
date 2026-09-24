@@ -5,6 +5,7 @@ const { authenticateToken } = require('@stockpilot/common');
 
 router.post('/register', (req, res, next) => authController.register(req, res, next));
 router.post('/login', (req, res, next) => authController.login(req, res, next));
+router.post('/dev-login', (req, res, next) => authController.devLogin(req, res, next));
 router.post('/refresh', (req, res, next) => authController.refresh(req, res, next));
 router.post('/logout', (req, res, next) => authController.logout(req, res, next));
 router.post('/forgot-password', (req, res, next) => authController.forgotPassword(req, res, next));

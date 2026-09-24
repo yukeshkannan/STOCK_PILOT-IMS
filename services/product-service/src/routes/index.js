@@ -9,6 +9,11 @@ const {
 
 // Products Router
 const productRouter = express.Router();
+
+// Public Unauthenticated Store Catalog Route (for customer-facing storefront)
+productRouter.get('/public/store/:companyCode', (req, res, next) => productController.getPublicStoreCatalog(req, res, next));
+
+// Authenticated Routes
 productRouter.use(authenticateToken, requireTenant);
 
 productRouter.get('/', requirePermission(PERMISSIONS.PRODUCT_VIEW), (req, res, next) => productController.getProducts(req, res, next));

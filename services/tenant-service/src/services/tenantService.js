@@ -22,26 +22,17 @@ async function fetchFromAuth(endpoint, options = {}) {
   }
 }
 
-function pingService(url) {
-  return new Promise((resolve) => {
-    const start = Date.now();
-    const req = http.get(url, { timeout: 1500 }, (res) => {
-      res.resume();
-      const latency = Date.now() - start;
-      resolve({ online: res.statusCode === 200, latency: latency === 0 ? 1 : latency });
-    });
-    req.on('error', () => {
-      resolve({ online: false, latency: 0 });
-    });
-    req.on('timeout', () => {
-      req.destroy();
-      resolve({ online: false, latency: 0 });
-    });
-  });
-}
+let lastSyncTime = 0;
+const SYNC_COOLDOWN_MS = 60000; // 1 minute cooldown to prevent hammering DB and timeout
 
 class TenantService {
-  async syncAuthLookups() {
+  async syncAuthLookups(force = false) {
+    const now = Date.now();
+    if (!force && now - lastSyncTime < SYNC_COOLDOWN_MS) {
+      return;
+    }
+    lastSyncTime = now;
+
     let lookups = [];
     let users = [];
 
@@ -297,6 +288,137 @@ class TenantService {
       timezone: settings.timezone || tenant.timezone
     });
     return this.getSettings(tenantId);
+  }
+
+  async getStoreConfig(tenantId) {
+    const tenant = await this.getTenant(tenantId);
+    let parsedConfig = null;
+    if (tenant.store_config) {
+      try {
+        parsedConfig = typeof tenant.store_config === 'string' ? JSON.parse(tenant.store_config) : tenant.store_config;
+      } catch (e) {
+        parsedConfig = null;
+      }
+    }
+
+    const defaultConfig = {
+      template: 'DEFAULT',
+      theme: 'CLEAN_LIGHT',
+      branding: {
+        storeName: tenant.company_name || 'Online Store',
+        tagline: 'Quality Products Delivered Directly to Your Doorstep',
+        primaryColor: '#982A86',
+        accentColor: '#10b981',
+        bgColor: '#ffffff',
+        cardColor: '#ffffff',
+        textColor: '#0f172a',
+        logoUrl: '',
+        bannerUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
+      },
+      announcement: {
+        enabled: false,
+        text: 'Free express delivery on orders above ₹499 | 100% Genuine Quality Guaranteed'
+      },
+      navbar: {
+        enabled: true,
+        showPhone: true,
+        showAddress: true,
+        showWhatsApp: true,
+        showCart: true
+      },
+      hero: {
+        enabled: true,
+        badge: 'Official Online Store',
+        title: `Welcome to ${tenant.company_name || 'Our Online Store'}`,
+        subtitle: 'Shop the freshest arrivals, exclusive store offers, and verified products delivered quickly.',
+        ctaText: 'Explore Catalog',
+        secondaryCtaText: 'Contact Store',
+        imageUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=1200&q=80'
+      },
+      productsSection: {
+        enabled: true,
+        title: 'Featured Catalog',
+        subtitle: 'Browse all available products in real-time inventory',
+        showSearch: true,
+        showCategories: true,
+        showStockBadge: true
+      },
+      testimonials: {
+        enabled: true,
+        title: 'Customer Stories & Reviews',
+        subtitle: 'Trusted by thousands of happy shoppers',
+        reviews: [
+          { id: 1, name: 'Priya Sharma', rating: 5, comment: 'Outstanding quality and super fast delivery. The ordering process was seamless!', role: 'Verified Buyer', location: 'Chennai' },
+          { id: 2, name: 'Rajesh Kumar', rating: 5, comment: '100% authentic products. Direct WhatsApp updates made the whole purchase effortless.', role: 'Verified Customer', location: 'Bengaluru' },
+          { id: 3, name: 'Sneha Patel', rating: 5, comment: 'Best pricing and prompt customer assistance. Will definitely order regularly!', role: 'Verified Buyer', location: 'Mumbai' }
+        ]
+      },
+      contact: {
+        enabled: true,
+        title: 'Visit Our Store & Contact',
+        subtitle: 'Reach out to our team directly for inquiries and orders',
+        address: tenant.address || 'Retail Center, Main High Street',
+        phone: tenant.phone || '',
+        email: tenant.email || '',
+        hours: 'Mon - Sat: 9:00 AM - 9:00 PM',
+        whatsappNumber: tenant.phone || '',
+        whatsappMessage: `Hello! I would like to inquire about products from ${tenant.company_name || 'your store'}.`
+      },
+      sections: {
+        categoriesEnabled: true,
+        featuredProductsEnabled: true,
+        trustBadgesEnabled: true,
+        testimonialsEnabled: true,
+        contactFooterEnabled: true
+      },
+      trustBadges: [
+        { icon: 'Zap', title: 'Express Dispatch', desc: 'Fast doorstep delivery' },
+        { icon: 'ShieldCheck', title: '100% Genuine', desc: 'Verified from authorized stock' },
+        { icon: 'CreditCard', title: 'UPI & COD', desc: 'Secure & flexible payments' },
+        { icon: 'Phone', title: 'Direct Support', desc: 'WhatsApp & phone assistance' }
+      ],
+      whatsapp: {
+        enabled: true,
+        phoneNumber: tenant.phone || '',
+        defaultMessage: `Hello! I would like to inquire about products from ${tenant.company_name || 'your store'}.`
+      }
+    };
+
+    return {
+      companyCode: tenant.company_code,
+      companyName: tenant.company_name,
+      email: tenant.email,
+      phone: tenant.phone,
+      address: tenant.address,
+      currency: tenant.currency || 'INR',
+      currencySymbol: tenant.currency_symbol || '₹',
+      ...(parsedConfig
+        ? {
+            ...defaultConfig,
+            ...parsedConfig,
+            branding: { ...defaultConfig.branding, ...(parsedConfig.branding || {}) },
+            navbar: { ...defaultConfig.navbar, ...(parsedConfig.navbar || {}) },
+            hero: { ...defaultConfig.hero, ...(parsedConfig.hero || {}) },
+            productsSection: { ...defaultConfig.productsSection, ...(parsedConfig.productsSection || {}) },
+            testimonials: {
+              ...defaultConfig.testimonials,
+              ...(parsedConfig.testimonials || {}),
+              reviews: parsedConfig.testimonials?.reviews || defaultConfig.testimonials.reviews
+            },
+            contact: { ...defaultConfig.contact, ...(parsedConfig.contact || {}) },
+            announcement: { ...defaultConfig.announcement, ...(parsedConfig.announcement || {}) },
+            sections: { ...defaultConfig.sections, ...(parsedConfig.sections || {}) },
+            whatsapp: { ...defaultConfig.whatsapp, ...(parsedConfig.whatsapp || {}) }
+          }
+        : defaultConfig)
+    };
+  }
+
+  async updateStoreConfig(tenantId, storeConfig) {
+    const tenant = await this.getTenant(tenantId);
+    const serialized = typeof storeConfig === 'string' ? storeConfig : JSON.stringify(storeConfig);
+    await tenant.update({ store_config: serialized });
+    return this.getStoreConfig(tenantId);
   }
 
   // Platform Super Admin methods
@@ -559,88 +681,48 @@ class TenantService {
     return tenant;
   }
 
-  async getPlatformTelemetry() {
-    const services = [
-      { name: 'Gateway', port: 5000 },
-      { name: 'Auth', port: 5001 },
-      { name: 'Tenant', port: 5002 },
-      { name: 'Product', port: 5003 },
-      { name: 'Inventory', port: 5004 },
-      { name: 'Warehouse', port: 5005 },
-      { name: 'Purchase', port: 5006 },
-      { name: 'Sales', port: 5007 },
-      { name: 'Finance', port: 5008 },
-      { name: 'Notification', port: 5009 }
-    ];
-
-    const results = await Promise.all(
-      services.map(async (svc) => {
-        const ping = await pingService(`http://localhost:${svc.port}/health`);
-        const color = svc.name === 'Auth' || svc.name === 'Warehouse' || svc.name === 'Finance'
-          ? '#7c3aed'
-          : (svc.name === 'Purchase' ? '#0284c7' : '#059669');
-
-        return {
-          name: svc.name,
-          port: svc.port,
-          status: ping.online ? 'ONLINE' : 'OFFLINE',
-          latency: ping.online ? ping.latency : 0,
-          fill: ping.online ? color : '#ef4444'
-        };
-      })
-    );
-
-    const onlineServices = results.filter((r) => r.status === 'ONLINE');
-    const avgLatency = Math.round(
-      onlineServices.reduce((sum, r) => sum + r.latency, 0) / (onlineServices.length || 1)
-    );
-
-    return {
-      services: results,
-      activeCount: onlineServices.length,
-      totalCount: services.length,
-      avgLatency
-    };
-  }
-
   async getPlatformDashboard() {
     await this.syncAuthLookups();
 
-    const totalTenants = await Tenant.count();
-    const activeTenants = await Tenant.count({ where: { status: 'ACTIVE' } });
-    const suspendedTenants = await Tenant.count({ where: { status: 'SUSPENDED' } });
-    const totalUsers = await TenantUser.count({ where: { is_super_admin: false } });
+    const [
+      totalTenants,
+      activeTenants,
+      suspendedTenants,
+      totalUsers,
+      recentTenants,
+      recentLogs,
+      pendingList
+    ] = await Promise.all([
+      Tenant.count(),
+      Tenant.count({ where: { status: 'ACTIVE' } }),
+      Tenant.count({ where: { status: 'SUSPENDED' } }),
+      TenantUser.count({ where: { is_super_admin: false } }),
+      Tenant.findAll({ limit: 10, order: [['created_at', 'DESC']] }),
+      AuditLog.findAll({
+        limit: 10,
+        include: [{ model: Tenant, as: 'tenant', attributes: ['id', 'company_name', 'company_code'], required: false }],
+        order: [['created_at', 'DESC']]
+      }),
+      this.getPendingRegistrations().catch(() => [])
+    ]);
 
-    let pendingRegistrations = 0;
-    try {
-      const pendingList = await this.getPendingRegistrations();
-      pendingRegistrations = pendingList.length;
-    } catch {
-      pendingRegistrations = 0;
-    }
-
-    const recentTenants = await Tenant.findAll({
-      limit: 5,
-      order: [['created_at', 'DESC']]
+    const formattedRecentLogs = (recentLogs || []).map((r) => {
+      const data = r.toJSON ? r.toJSON() : r;
+      return {
+        ...data,
+        tenant_name: data.tenant?.company_name || (data.tenant_id ? `Organization #${data.tenant_id}` : 'Global Platform'),
+        tenant_code: data.tenant?.company_code || 'GLOBAL'
+      };
     });
-
-
-    const recentLogs = await AuditLog.findAll({
-      limit: 10,
-      order: [['created_at', 'DESC']]
-    });
-
-    const telemetry = await this.getPlatformTelemetry();
 
     return {
       totalTenants,
       activeTenants,
       suspendedTenants,
-      pendingRegistrations,
+      pendingRegistrations: pendingList?.length || 0,
       totalUsers,
       recentTenants,
-      recentLogs,
-      telemetry
+      recentLogs: formattedRecentLogs
     };
   }
 

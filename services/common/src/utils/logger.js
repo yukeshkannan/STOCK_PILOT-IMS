@@ -22,7 +22,10 @@ function createLogger(moduleName = 'App') {
   };
 }
 
-module.exports = {
-  logger,
-  createLogger
-};
+logger.logger = logger;
+logger.createLogger = createLogger;
+
+module.exports = logger;
+module.exports.logger = logger;
+module.exports.createLogger = createLogger;
+

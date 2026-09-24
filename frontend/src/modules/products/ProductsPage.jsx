@@ -25,7 +25,10 @@ export default function ProductsPage() {
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [deletingProduct, setDeletingProduct] = useState(null);
+  const [deletingCategory, setDeletingCategory] = useState(null);
+  const [deletingBrand, setDeletingBrand] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
 
   // Form states
   const [productForm, setProductForm] = useState({
@@ -40,7 +43,6 @@ export default function ProductsPage() {
     taxRate: 18,
     minimumStock: 5,
     maximumStock: 500,
-    barcode: '',
     initialStock: 0,
     warehouseId: ''
   });
@@ -97,7 +99,6 @@ export default function ProductsPage() {
       taxRate: 18,
       minimumStock: 5,
       maximumStock: 500,
-      barcode: '',
       initialStock: 0,
       warehouseId: warehouses[0]?.id || ''
     });
@@ -113,8 +114,7 @@ export default function ProductsPage() {
       const generatedCode = res?.data?.nextCode || 'PRD-0001';
       setProductForm((prev) => ({
         ...prev,
-        productCode: generatedCode,
-        barcode: prev.barcode || generatedCode
+        productCode: generatedCode
       }));
     } catch (err) {
       console.warn('Auto code fetch failed, falling back:', err);
@@ -143,7 +143,6 @@ export default function ProductsPage() {
       taxRate: parseFloat(p.tax_rate) || 18,
       minimumStock: p.minimum_stock || 5,
       maximumStock: p.maximum_stock || 500,
-      barcode: p.barcode || '',
       initialStock: 0,
       warehouseId: ''
     });
@@ -228,6 +227,36 @@ export default function ProductsPage() {
     }
   };
 
+  const executeDeleteCategory = async () => {
+    if (!deletingCategory) return;
+    setIsDeletingItem(true);
+    try {
+      await api.delete(`/categories/${deletingCategory.id}`);
+      toast.success(`Category "${deletingCategory.name}" deleted successfully`);
+      setDeletingCategory(null);
+      fetchCatalogData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete category');
+    } finally {
+      setIsDeletingItem(false);
+    }
+  };
+
+  const executeDeleteBrand = async () => {
+    if (!deletingBrand) return;
+    setIsDeletingItem(true);
+    try {
+      await api.delete(`/brands/${deletingBrand.id}`);
+      toast.success(`Brand "${deletingBrand.name}" deleted successfully`);
+      setDeletingBrand(null);
+      fetchCatalogData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete brand');
+    } finally {
+      setIsDeletingItem(false);
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -261,7 +290,7 @@ export default function ProductsPage() {
               style={{ paddingLeft: '2.2rem', fontSize: '0.825rem' }}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by SKU, Product Name, Barcode..."
+              placeholder="Search by SKU, Product Name..."
             />
           </div>
 
@@ -563,21 +592,41 @@ export default function ProductsPage() {
           </div>
         </form>
 
-        <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+        <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
           <table className="data-table">
             <thead>
               <tr>
                 <th>Category Name</th>
                 <th>Code</th>
+                <th style={{ textAlign: 'right', width: '70px' }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {categories.map((c) => (
-                <tr key={c.id}>
-                  <td style={{ fontWeight: 600 }}>{c.name}</td>
-                  <td><code>{c.code}</code></td>
+              {categories.length === 0 ? (
+                <tr>
+                  <td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1.5rem' }}>
+                    No categories found.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                categories.map((c) => (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: 600 }}>{c.name}</td>
+                    <td><code>{c.code || '—'}</code></td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingCategory(c)}
+                        className="btn btn-danger btn-sm"
+                        style={{ padding: '0.25rem 0.5rem' }}
+                        title="Delete Category"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -606,27 +655,47 @@ export default function ProductsPage() {
           </div>
         </form>
 
-        <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+        <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
           <table className="data-table">
             <thead>
               <tr>
                 <th>Brand Name</th>
                 <th>Description</th>
+                <th style={{ textAlign: 'right', width: '70px' }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {brands.map((b) => (
-                <tr key={b.id}>
-                  <td style={{ fontWeight: 600 }}>{b.name}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{b.description || '—'}</td>
+              {brands.length === 0 ? (
+                <tr>
+                  <td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1.5rem' }}>
+                    No brands found.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                brands.map((b) => (
+                  <tr key={b.id}>
+                    <td style={{ fontWeight: 600 }}>{b.name}</td>
+                    <td style={{ color: 'var(--text-muted)' }}>{b.description || '—'}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingBrand(b)}
+                        className="btn btn-danger btn-sm"
+                        style={{ padding: '0.25rem 0.5rem' }}
+                        title="Delete Brand"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal for Product */}
       <ConfirmModal
         isOpen={!!deletingProduct}
         onClose={() => setDeletingProduct(null)}
@@ -636,6 +705,30 @@ export default function ProductsPage() {
         itemName={deletingProduct ? `${deletingProduct.name} (${deletingProduct.product_code})` : ''}
         confirmText="Delete Product"
         loading={isDeleting}
+      />
+
+      {/* Delete Confirmation Modal for Category */}
+      <ConfirmModal
+        isOpen={!!deletingCategory}
+        onClose={() => setDeletingCategory(null)}
+        onConfirm={executeDeleteCategory}
+        title="Delete Category?"
+        message="Are you sure you want to delete this category? Products currently assigned to this category will become unassigned."
+        itemName={deletingCategory ? deletingCategory.name : ''}
+        confirmText="Delete Category"
+        loading={isDeletingItem}
+      />
+
+      {/* Delete Confirmation Modal for Brand */}
+      <ConfirmModal
+        isOpen={!!deletingBrand}
+        onClose={() => setDeletingBrand(null)}
+        onConfirm={executeDeleteBrand}
+        title="Delete Brand?"
+        message="Are you sure you want to delete this brand? Products currently assigned to this brand will become unassigned."
+        itemName={deletingBrand ? deletingBrand.name : ''}
+        confirmText="Delete Brand"
+        loading={isDeletingItem}
       />
     </div>
   );

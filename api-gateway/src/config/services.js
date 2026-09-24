@@ -92,6 +92,10 @@ const SERVICES = {
   notifications: {
     url: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5009',
     prefix: '/api/v1/notifications'
+  },
+  ai: {
+    url: process.env.AI_SERVICE_URL || 'http://localhost:5010',
+    prefix: '/api/v1/ai'
   }
 };
 

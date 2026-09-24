@@ -1,20 +1,13 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { updateProfile, logout } from '../app/authSlice';
+import { updateProfile } from '../app/authSlice';
 import api from '../services/api';
 import NotificationDropdown from './NotificationDropdown';
-import { Menu, LogOut } from 'lucide-react';
+import { Menu } from 'lucide-react';
 
 export default function Navbar({ onMenuToggle }) {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login');
-  };
 
   const syncLivePlan = () => {
     if (user && !user.isSuperAdmin && user.tenantId) {
@@ -130,15 +123,6 @@ export default function Navbar({ onMenuToggle }) {
                 : (user?.roleName || 'User')}
             </span>
           </div>
-
-          <button
-            onClick={handleLogout}
-            className="navbar-quick-logout-btn"
-            title="Sign Out"
-            aria-label="Sign Out"
-          >
-            <LogOut size={16} />
-          </button>
         </div>
       </div>
     </header>

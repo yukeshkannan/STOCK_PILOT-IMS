@@ -1,0 +1,191 @@
+.dev-login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top right, rgba(152, 42, 134, 0.08), transparent 45%),
+              radial-gradient(circle at bottom left, rgba(152, 42, 134, 0.05), transparent 45%),
+              #f8fafc;
+  padding: 1.5rem;
+  font-family: inherit;
+}
+
+.dev-login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 2.25rem 2rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+}
+
+.dev-login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.dev-logo-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(152, 42, 134, 0.15);
+  margin-bottom: 0.85rem;
+}
+
+.dev-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.dev-badge-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #982A86;
+  background: rgba(152, 42, 134, 0.08);
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.dev-login-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.35rem 0;
+  letter-spacing: -0.02em;
+}
+
+.dev-login-subtitle {
+  font-size: 0.84rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+  max-width: 320px;
+}
+
+.dev-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  margin-bottom: 1.25rem;
+}
+
+.dev-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.dev-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dev-form-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.dev-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dev-input-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.dev-input {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem 0.7rem 2.4rem;
+  color: #0f172a;
+  font-size: 0.88rem;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.dev-input:focus {
+  border-color: #982A86;
+  box-shadow: 0 0 0 3px rgba(152, 42, 134, 0.1);
+}
+
+.dev-input::placeholder {
+  color: #94a3b8;
+}
+
+.dev-toggle-pw {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.dev-toggle-pw:hover {
+  color: #475569;
+}
+
+.dev-submit-btn {
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  background: #982A86;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(152, 42, 134, 0.2);
+  margin-top: 0.35rem;
+}
+
+.dev-submit-btn:hover:not(:disabled) {
+  background: #7a1f6a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(152, 42, 134, 0.3);
+}
+
+.dev-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

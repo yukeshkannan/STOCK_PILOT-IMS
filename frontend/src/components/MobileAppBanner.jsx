@@ -56,6 +56,13 @@ export default function MobileAppBanner() {
       }
     };
 
+    // 5. Global trigger to open modal anytime (e.g. from Sidebar/Navbar Install button)
+    const handleManualOpen = () => {
+      setIsDismissed(false);
+      setShowPrompt(true);
+    };
+    window.addEventListener('open_pwa_install', handleManualOpen);
+
     // Initial check after short delay
     const initialTimer = setTimeout(() => {
       handleResizeOrCheck();
@@ -71,6 +78,7 @@ export default function MobileAppBanner() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('resize', handleResizeOrCheck);
+      window.removeEventListener('open_pwa_install', handleManualOpen);
       clearTimeout(initialTimer);
     };
   }, [checkIfMobile, isDismissed]);
@@ -142,7 +150,7 @@ export default function MobileAppBanner() {
 
         {/* Description */}
         <p className="mobile-app-desc">
-          Install the official StockPilot app for fast barcode scanning, offline counter sales, and instant receipt printing.
+          Install the official StockPilot app for fast stock lookup, offline counter sales, and instant receipt printing.
         </p>
 
         {/* iOS Safari 2-Step Instructions */}

@@ -5,7 +5,9 @@ import api from '../../services/api';
 import StatCard from '../../components/StatCard';
 import Badge from '../../components/Badge';
 import PrintInvoiceModal from '../../components/PrintInvoiceModal';
+import OnboardingWizardModal from '../../components/OnboardingWizardModal';
 import Preloader from '../../components/Preloader';
+import { toast } from 'react-toastify';
 import {
   TrendingUp,
   DollarSign,
@@ -25,7 +27,13 @@ import {
   Truck,
   CheckCheck,
   ShoppingBag,
-  Receipt
+  Receipt,
+  Sparkles,
+  Globe,
+  ExternalLink,
+  Copy,
+  Store,
+  Sliders
 } from 'lucide-react';
 import {
   AreaChart,
@@ -50,6 +58,17 @@ export default function DashboardPage() {
   const [allStocks, setAllStocks] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+
+  const handleCopyStoreUrl = () => {
+    if (!user?.companyCode) return;
+    const storeUrl = `${window.location.origin}/store/${user.companyCode}`;
+    navigator.clipboard.writeText(storeUrl);
+    setCopiedUrl(true);
+    toast.success('Storefront URL copied to clipboard!');
+    setTimeout(() => setCopiedUrl(false), 2000);
+  };
 
   // Role & Branch scoping flags
   const userRole = (user?.roleName || user?.role || 'ADMIN').toUpperCase();
@@ -176,6 +195,14 @@ export default function DashboardPage() {
   }, [scopedStocks]);
 
   const isFreshWorkspace = scopedSales.length === 0 && scopedStocks.length === 0;
+
+  // Auto-prompt onboarding wizard for fresh workspaces
+  useEffect(() => {
+    const isCompleted = localStorage.getItem('stockpilot_onboarding_completed');
+    if (!isCompleted && !loading && isFreshWorkspace) {
+      setShowOnboarding(true);
+    }
+  }, [loading, isFreshWorkspace]);
 
   const kpis = {
     totalRevenue: totalSalesRevenue > 0 ? totalSalesRevenue : (reportData?.kpis?.totalRevenue || 0),
@@ -444,6 +471,186 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Live Online Storefront Banner */}
+      {user?.companyCode && !isStaff && (
+        <div
+          style={{
+            background: 'var(--bg-card, #ffffff)',
+            border: '1px solid #e2e8f0',
+            borderRadius: '14px',
+            padding: '1rem 1.4rem',
+            marginBottom: '1.25rem',
+            boxShadow: '0 2px 10px -2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Subtle brand left accent line */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: '4px',
+              background: '#982A86'
+            }}
+          />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.95rem', minWidth: '280px' }}>
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: '#982A86',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 3px 10px rgba(152, 42, 134, 0.25)'
+              }}
+            >
+              <Store size={22} strokeWidth={2.2} />
+            </div>
+
+            <div>
+              <div>
+                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary, #0f172a)', letterSpacing: '-0.01em' }}>
+                  Your Public E-Commerce Storefront is Live!
+                </span>
+              </div>
+
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <span>Catalog URL:</span>
+                <span
+                  style={{
+                    fontFamily: 'SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                    fontWeight: 700,
+                    color: 'var(--text-primary, #0f172a)',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    padding: '0.1rem 0.45rem',
+                    borderRadius: '5px',
+                    fontSize: '0.78rem'
+                  }}
+                >
+                  {window.location.origin}/store/{user.companyCode}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handleCopyStoreUrl}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                padding: '0.45rem 0.85rem',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                background: '#ffffff',
+                color: '#334155',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f8fafc';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#ffffff';
+                e.currentTarget.style.borderColor = '#e2e8f0';
+              }}
+            >
+              {copiedUrl ? (
+                <>
+                  <CheckCheck size={14} color="#059669" />
+                  <span style={{ color: '#059669' }}>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={14} />
+                  <span>Copy Link</span>
+                </>
+              )}
+            </button>
+
+            <Link
+              to="/store-builder"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                padding: '0.45rem 0.85rem',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                background: '#ffffff',
+                color: '#334155',
+                textDecoration: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f8fafc';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#ffffff';
+                e.currentTarget.style.borderColor = '#e2e8f0';
+              }}
+            >
+              <Sliders size={14} /> Customize Theme
+            </Link>
+
+            <a
+              href={`/store/${user.companyCode}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                padding: '0.45rem 0.95rem',
+                borderRadius: '8px',
+                background: '#982A86',
+                color: '#ffffff',
+                border: '1px solid #982A86',
+                textDecoration: 'none',
+                boxShadow: '0 2px 8px rgba(152, 42, 134, 0.25)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#832072';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#982A86';
+                e.currentTarget.style.transform = 'none';
+              }}
+            >
+              <span>Visit Store</span> <ExternalLink size={13} />
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Fresh Workspace Setup Guide (Only if no stock and no sales) */}
       {isFreshWorkspace && isGlobalAdmin && (
         <div
@@ -456,13 +663,22 @@ export default function DashboardPage() {
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)'
           }}
         >
-          <div style={{ marginBottom: '1.1rem' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.25rem 0' }}>
-              Getting Started with {user?.companyName || 'Your Workspace'}
-            </h2>
-            <p style={{ fontSize: '0.825rem', color: '#64748b', margin: 0 }}>
-              Complete these steps to set up your product catalog, record stock quantities, and begin point-of-sale billing.
-            </p>
+          <div style={{ marginBottom: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.25rem 0' }}>
+                Getting Started with {user?.companyName || 'Your Workspace'}
+              </h2>
+              <p style={{ fontSize: '0.825rem', color: '#64748b', margin: 0 }}>
+                Complete these steps to set up your product catalog, record stock quantities, and begin point-of-sale billing.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowOnboarding(true)}
+              className="btn btn-primary btn-sm"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#982A86', border: 'none', fontWeight: 700, padding: '0.5rem 0.95rem' }}
+            >
+              <Sparkles size={14} /> Launch 3-Step Setup Wizard
+            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
@@ -1147,6 +1363,18 @@ export default function DashboardPage() {
           tenant={user}
         />
       )}
+
+      {/* 3-Step Store Onboarding Wizard */}
+      <OnboardingWizardModal
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={() => {
+          fetchDashboardData();
+          setShowOnboarding(false);
+        }}
+        defaultWarehouseId={warehouses[0]?.id}
+        companyName={user?.companyName}
+      />
     </div>
   );
 }

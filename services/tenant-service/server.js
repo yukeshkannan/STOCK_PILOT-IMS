@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
 const app = require('./src/app');
 const { sequelize, Tenant, TenantUser, Role, Permission } = require('./src/models');
 const { initDatabase, eventBus, EVENTS, PERMISSIONS, ROLES, DEFAULT_ROLE_PERMISSIONS } = require('@stockpilot/common');
