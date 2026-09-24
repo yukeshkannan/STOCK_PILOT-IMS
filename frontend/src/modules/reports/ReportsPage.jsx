@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
+import Preloader from '../../components/Preloader';
 import {
   BarChart3,
   Download,
@@ -400,6 +401,15 @@ export default function ReportsPage() {
     a.download = `StockPilot_Analytics_${activeTableTab}_${dateStamp}.csv`;
     a.click();
   };
+
+  if (loading) {
+    return (
+      <Preloader
+        message="Generating Intelligence Reports..."
+        submessage="Synthesizing real-time sales curves, margins, and expense logs"
+      />
+    );
+  }
 
   return (
     <div style={{ maxWidth: '1440px', margin: '0 auto', paddingBottom: '2.5rem' }}>

@@ -122,8 +122,7 @@ export default function DashboardPage() {
   // Scoped Sales Records
   const scopedSales = useMemo(() => {
     if (isBranchScoped && assignedWhId) {
-      const filtered = recentSales.filter((s) => String(s.warehouse_id) === String(assignedWhId));
-      return filtered.length > 0 ? filtered : recentSales;
+      return recentSales.filter((s) => String(s.warehouse_id) === String(assignedWhId));
     }
     return recentSales;
   }, [recentSales, isBranchScoped, assignedWhId]);
@@ -131,8 +130,7 @@ export default function DashboardPage() {
   // Scoped Stock Records
   const scopedStocks = useMemo(() => {
     if (isBranchScoped && assignedWhId) {
-      const filtered = allStocks.filter((s) => String(s.warehouse_id) === String(assignedWhId));
-      return filtered.length > 0 ? filtered : allStocks;
+      return allStocks.filter((s) => String(s.warehouse_id) === String(assignedWhId));
     }
     return allStocks;
   }, [allStocks, isBranchScoped, assignedWhId]);
@@ -140,8 +138,7 @@ export default function DashboardPage() {
   // Scoped Low Stock Items
   const scopedLowStock = useMemo(() => {
     if (isBranchScoped && assignedWhId) {
-      const filtered = lowStockItems.filter((s) => String(s.warehouse_id) === String(assignedWhId));
-      return filtered.length > 0 ? filtered : lowStockItems;
+      return lowStockItems.filter((s) => String(s.warehouse_id) === String(assignedWhId));
     }
     return lowStockItems;
   }, [lowStockItems, isBranchScoped, assignedWhId]);
