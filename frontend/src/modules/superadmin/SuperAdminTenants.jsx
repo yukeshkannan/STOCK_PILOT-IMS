@@ -366,7 +366,7 @@ export default function SuperAdminTenants() {
                     <td>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.825rem', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
                         <Users size={14} color={t.is_pending_setup ? '#d97706' : '#7c3aed'} />
-                        <span>{t.is_pending_setup ? '1 Pending User' : `${(t.users || []).length || 4} Users`}</span>
+                        <span>{t.is_pending_setup ? '1 Pending User' : `${(t.users || []).length || 0} Users`}</span>
                       </div>
                     </td>
 

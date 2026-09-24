@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
+import Preloader from '../../components/Preloader';
 import {
   Building,
   Users,
@@ -124,12 +125,17 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  // Tenants List & Filtering
-  const tenantsList = stats?.recentTenants || [
-    { id: 1, company_code: 'ABC001', company_name: 'ABC Electronics Ltd', email: 'admin@abc.com', phone: '+91 98765 00001', address: 'Bengaluru, Karnataka', status: 'ACTIVE', users: [1, 2, 3, 4], tax_number: '29ABCDE1234F1Z5' },
-    { id: 2, company_code: 'SLT002', company_name: 'Sri Lakshmi Traders', email: 'admin@lakshmi.com', phone: '+91 98765 00002', address: 'Chennai, Tamil Nadu', status: 'ACTIVE', users: [1, 2], tax_number: '33AABCL5678P1Z3' },
-    { id: 3, company_code: 'KUM003', company_name: 'Kumar Industrial Distributors', email: 'admin@kumar.com', phone: '+91 98765 00003', address: 'Peenya, Bengaluru', status: 'SUSPENDED', users: [1, 2], tax_number: '29KUMAR9876Q1Z9' }
-  ];
+  if (loading && !stats) {
+    return (
+      <Preloader
+        message="Loading Super Admin Command Center..."
+        submessage="Fetching real-time platform organizations, telemetry, and system stats"
+      />
+    );
+  }
+
+  // Tenants List & Filtering - Pure live data from API
+  const tenantsList = stats?.recentTenants || [];
 
   const recentLogs = stats?.recentLogs || [];
 
@@ -230,7 +236,7 @@ export default function SuperAdminDashboard() {
                 Platform Users
               </span>
               <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem', letterSpacing: '-0.02em' }}>
-                {stats?.totalUsers ?? 12}
+                {stats?.totalUsers ?? 0}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#64748b', fontWeight: 500, marginTop: '0.45rem' }}>
                 <Users size={13} color="#059669" /> Across all business tenants
@@ -493,7 +499,7 @@ export default function SuperAdminDashboard() {
                     <td>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.825rem', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
                         <Users size={14} color="#982A86" />
-                        <span>{(t.users || []).length || 4} Users</span>
+                        <span>{(t.users || []).length} Users</span>
                       </div>
                     </td>
 
