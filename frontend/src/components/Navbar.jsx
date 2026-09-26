@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { updateProfile } from '../app/authSlice';
 import api from '../services/api';
 import NotificationDropdown from './NotificationDropdown';
-import { Menu } from 'lucide-react';
+import { Menu, Clock } from 'lucide-react';
 
 export default function Navbar({ onMenuToggle }) {
   const dispatch = useDispatch();
@@ -15,8 +16,16 @@ export default function Navbar({ onMenuToggle }) {
         .then((res) => {
           const livePlan = (res?.data?.plan || '').toString().trim().toUpperCase();
           const currentPlan = (user.plan || '').toString().trim().toUpperCase();
+          const liveCreatedAt = res?.data?.createdAt;
+          const updates = {};
           if (livePlan && livePlan !== currentPlan) {
-            dispatch(updateProfile({ plan: livePlan }));
+            updates.plan = livePlan;
+          }
+          if (liveCreatedAt && user.tenantCreatedAt !== liveCreatedAt) {
+            updates.tenantCreatedAt = liveCreatedAt;
+          }
+          if (Object.keys(updates).length > 0) {
+            dispatch(updateProfile(updates));
           }
         })
         .catch(() => {});
@@ -31,16 +40,62 @@ export default function Navbar({ onMenuToggle }) {
     };
   }, [user?.tenantId, user?.plan]);
 
-  const getPlanBadgeConfig = () => {
-    const rawPlan = (user?.plan || 'TRIAL').toString().trim().toUpperCase();
-    if (rawPlan === 'TRIAL' || rawPlan === 'FREE_TRIAL') {
-      return {
-        label: '14-DAY FREE TRIAL',
-        color: '#059669',
-        bg: '#ecfdf5',
-        border: '1px solid #a7f3d0'
-      };
+  // Calculate 14-Day Free Trial remaining Days + Hours
+  const getTrialRemaining = () => {
+    const rawDate = user?.tenantCreatedAt || user?.createdAt;
+    let startDate;
+    if (rawDate) {
+      startDate = new Date(rawDate);
+    } else {
+      const storageKey = `stockpilot_trial_start_${user?.tenantId || user?.id || 'org'}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        startDate = new Date(saved);
+      } else {
+        startDate = new Date();
+        localStorage.setItem(storageKey, startDate.toISOString());
+      }
     }
+
+    if (isNaN(startDate.getTime())) {
+      startDate = new Date();
+    }
+
+    const TRIAL_MS = 14 * 24 * 60 * 60 * 1000;
+    const endDate = new Date(startDate.getTime() + TRIAL_MS);
+    const now = new Date();
+    const remainingMs = endDate.getTime() - now.getTime();
+
+    if (remainingMs <= 0) {
+      return { days: 0, hours: 0, isExpired: true, text: 'Trial Expired' };
+    }
+
+    const totalHours = Math.floor(remainingMs / (1000 * 60 * 60));
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+
+    return {
+      days,
+      hours,
+      isExpired: false,
+      text: `${days}d ${hours}h Trial`
+    };
+  };
+
+  const [trialTime, setTrialTime] = useState(() => getTrialRemaining());
+
+  useEffect(() => {
+    setTrialTime(getTrialRemaining());
+    const interval = setInterval(() => {
+      setTrialTime(getTrialRemaining());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [user?.tenantCreatedAt, user?.createdAt, user?.tenantId]);
+
+  const rawPlan = (user?.plan || 'TRIAL').toString().trim().toUpperCase();
+  const isTrial = rawPlan === 'TRIAL' || rawPlan === 'FREE_TRIAL';
+
+  const getPlanBadgeConfig = () => {
     if (rawPlan === 'STARTER') {
       return {
         label: 'STARTER PLAN',
@@ -92,9 +147,20 @@ export default function Navbar({ onMenuToggle }) {
         </span>
 
         {!user?.isSuperAdmin && (
-          <span className="navbar-plan-badge" style={{ color: planBadge.color, background: planBadge.bg, border: planBadge.border }}>
-            {planBadge.label}
-          </span>
+          isTrial ? (
+            <Link
+              to="/subscription"
+              className="navbar-trial-pill"
+              title={`${trialTime.days} days and ${trialTime.hours} hours remaining in your 14-day free trial. Click to view subscription plans.`}
+            >
+              <Clock size={12} strokeWidth={2.5} className="trial-pill-icon" />
+              <span className="trial-pill-text">{trialTime.text}</span>
+            </Link>
+          ) : (
+            <span className="navbar-plan-badge" style={{ color: planBadge.color, background: planBadge.bg, border: planBadge.border }}>
+              {planBadge.label}
+            </span>
+          )
         )}
       </div>
 

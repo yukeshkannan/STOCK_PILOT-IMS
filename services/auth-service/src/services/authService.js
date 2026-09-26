@@ -292,7 +292,8 @@ class AuthService {
       isSuperAdmin: false,
       isProfileCompleted: true,
       permissions,
-      plan: chosenPlan
+      plan: chosenPlan,
+      tenantCreatedAt: tenantLookup?.created_at || tenantLookup?.createdAt || user.created_at || new Date().toISOString()
     };
 
     const { accessToken, refreshToken } = generateTokens(tokenPayload);
@@ -318,7 +319,8 @@ class AuthService {
         companyCode: formattedCode,
         companyName: companyName.trim(),
         permissions,
-        plan: chosenPlan
+        plan: chosenPlan,
+        tenantCreatedAt: tenantLookup?.created_at || tenantLookup?.createdAt || user.created_at || new Date().toISOString()
       },
       tokens: { accessToken, refreshToken }
     };
@@ -710,7 +712,8 @@ class AuthService {
       warehouseId: user.is_super_admin ? null : (user.warehouse_id || null),
       warehouseName: user.is_super_admin ? null : (user.warehouse_name || null),
       permissions,
-      plan: activePlan
+      plan: activePlan,
+      tenantCreatedAt: tenantInfo?.created_at || tenantInfo?.createdAt || user.created_at || null
     };
 
     const { accessToken, refreshToken } = generateTokens(tokenPayload);
@@ -739,7 +742,8 @@ class AuthService {
         warehouseId: user.is_super_admin ? null : (user.warehouse_id || null),
         warehouseName: user.is_super_admin ? null : (user.warehouse_name || null),
         permissions,
-        plan: activePlan
+        plan: activePlan,
+        tenantCreatedAt: tenantInfo?.created_at || tenantInfo?.createdAt || user.created_at || null
       },
       tokens: { accessToken, refreshToken }
     };

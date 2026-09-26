@@ -14,7 +14,8 @@ import {
   ArrowRight,
   LogOut,
   ArrowLeft,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react';
 
 const POPULAR_CITIES = [
@@ -136,10 +137,6 @@ export default function CompleteProfilePage() {
       city: `${cityItem.city}, ${cityItem.state}`
     }));
     setShowCityDropdown(false);
-  };
-
-  const handleSelectPlan = (planKey) => {
-    setFormData((prev) => ({ ...prev, plan: planKey }));
   };
 
   const handleSubmit = async (e) => {
@@ -575,150 +572,80 @@ export default function CompleteProfilePage() {
             </div>
           </div>
 
-          {/* Section 2: Choose Workspace Plan */}
+          {/* Section 2: 14-Day Free Trial Activation */}
           <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem', marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
-              <label className="form-label" style={{ fontWeight: 700, fontSize: '0.85rem', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Select Workspace Plan
+              <label className="form-label" style={{ fontWeight: 700, fontSize: '0.85rem', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#0f172a' }}>
+                Workspace Plan
               </label>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                Change or upgrade anytime from settings
+              <span style={{ fontSize: '0.75rem', color: '#982A86', fontWeight: 700 }}>
+                14 Days Full Access Free
               </span>
             </div>
 
-            {/* Plan Cards Grid: Responsive (2x2 on mobile, 4 in a row on tablet/desktop) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
-              {/* 14-Day Free Trial */}
-              <div
-                onClick={() => handleSelectPlan('TRIAL')}
-                style={{
-                  border: formData.plan === 'TRIAL' ? '2px solid #982A86' : '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '0.85rem 0.75rem',
-                  cursor: 'pointer',
-                  background: formData.plan === 'TRIAL' ? '#fdf4fc' : '#ffffff',
-                  position: 'relative',
-                  transition: 'all 0.15s ease',
-                  textAlign: 'left',
-                  boxShadow: formData.plan === 'TRIAL' ? '0 4px 14px rgba(152, 42, 134, 0.12)' : 'none'
-                }}
-              >
+            <div
+              style={{
+                border: '2px solid #982A86',
+                borderRadius: '14px',
+                padding: '1.1rem 1.25rem',
+                background: 'linear-gradient(135deg, #fdf4fc 0%, #ffffff 100%)',
+                position: 'relative',
+                boxShadow: '0 4px 18px rgba(152, 42, 134, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                 <div
                   style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '6px',
-                    background: '#059669',
-                    color: '#ffffff',
-                    fontSize: '0.55rem',
-                    fontWeight: 800,
-                    padding: '0.1rem 0.35rem',
-                    borderRadius: '4px',
-                    letterSpacing: '0.04em'
-                  }}
-                >
-                  RECOMMENDED
-                </div>
-                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#059669', marginBottom: '0.2rem' }}>
-                  14-DAY TRIAL
-                </div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
-                  ₹0 <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#64748b' }}>/14 days</span>
-                </div>
-                <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.3 }}>
-                  Full Pro Access • 5 Warehouses
-                </div>
-              </div>
-
-              {/* STARTER */}
-              <div
-                onClick={() => handleSelectPlan('STARTER')}
-                style={{
-                  border: formData.plan === 'STARTER' ? '2px solid #982A86' : '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '0.85rem 0.75rem',
-                  cursor: 'pointer',
-                  background: formData.plan === 'STARTER' ? '#fdf4fc' : '#ffffff',
-                  transition: 'all 0.15s ease',
-                  textAlign: 'left',
-                  boxShadow: formData.plan === 'STARTER' ? '0 4px 14px rgba(152, 42, 134, 0.12)' : 'none'
-                }}
-              >
-                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#059669', marginBottom: '0.2rem' }}>
-                  STARTER
-                </div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
-                  ₹499 <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#64748b' }}>/mo</span>
-                </div>
-                <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.3 }}>
-                  2 Warehouses • 5 Staff
-                </div>
-              </div>
-
-              {/* PRO GROWTH */}
-              <div
-                onClick={() => handleSelectPlan('PRO')}
-                style={{
-                  border: formData.plan === 'PRO' ? '2px solid #982A86' : '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '0.85rem 0.75rem',
-                  cursor: 'pointer',
-                  background: formData.plan === 'PRO' ? '#fdf4fc' : '#ffffff',
-                  position: 'relative',
-                  transition: 'all 0.15s ease',
-                  textAlign: 'left',
-                  boxShadow: formData.plan === 'PRO' ? '0 4px 14px rgba(152, 42, 134, 0.12)' : 'none'
-                }}
-              >
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '6px',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '10px',
                     background: '#982A86',
                     color: '#ffffff',
-                    fontSize: '0.55rem',
-                    fontWeight: 800,
-                    padding: '0.1rem 0.35rem',
-                    borderRadius: '4px',
-                    letterSpacing: '0.04em'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 12px rgba(152, 42, 134, 0.3)'
                   }}
                 >
-                  POPULAR
+                  <Sparkles size={20} />
                 </div>
-                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#982A86', marginBottom: '0.2rem' }}>
-                  PRO GROWTH
-                </div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
-                  ₹1,499 <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#64748b' }}>/mo</span>
-                </div>
-                <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.3 }}>
-                  5 Warehouses • 15 Staff
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.98rem', color: '#0f172a' }}>
+                      14-Day Full Access Free Trial
+                    </span>
+                    <span
+                      style={{
+                        background: '#982A86',
+                        color: '#ffffff',
+                        fontSize: '0.62rem',
+                        fontWeight: 800,
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '9999px',
+                        letterSpacing: '0.04em'
+                      }}
+                    >
+                      SELECTED
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: 1.4 }}>
+                    Full Pro features • Multi-Warehouse • POS Billing • No credit card required
+                  </div>
                 </div>
               </div>
 
-              {/* ENTERPRISE */}
-              <div
-                onClick={() => handleSelectPlan('ENTERPRISE')}
-                style={{
-                  border: formData.plan === 'ENTERPRISE' ? '2px solid #982A86' : '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '0.85rem 0.75rem',
-                  cursor: 'pointer',
-                  background: formData.plan === 'ENTERPRISE' ? '#fdf4fc' : '#ffffff',
-                  transition: 'all 0.15s ease',
-                  textAlign: 'left',
-                  boxShadow: formData.plan === 'ENTERPRISE' ? '0 4px 14px rgba(152, 42, 134, 0.12)' : 'none'
-                }}
-              >
-                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#d97706', marginBottom: '0.2rem' }}>
-                  ENTERPRISE
+              <div style={{ textAlign: 'right', minWidth: '90px' }}>
+                <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#982A86', lineHeight: 1 }}>
+                  ₹0
                 </div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
-                  ₹3,999 <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#64748b' }}>/mo</span>
-                </div>
-                <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.3 }}>
-                  Unlimited Warehouses • SLA
+                <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>
+                  for 14 days
                 </div>
               </div>
             </div>

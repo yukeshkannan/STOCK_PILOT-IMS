@@ -296,7 +296,8 @@ class TenantService {
         currency: tenant.currency || 'INR',
         currencySymbol: tenant.currency_symbol || '₹',
         timezone: tenant.timezone || 'Asia/Kolkata',
-        plan: (tenant.plan || 'TRIAL').toString().trim().toUpperCase()
+        plan: (tenant.plan || 'TRIAL').toString().trim().toUpperCase(),
+        createdAt: tenant.created_at || tenant.createdAt
       };
     } catch {
       return {
@@ -309,7 +310,8 @@ class TenantService {
         currency: 'INR',
         currencySymbol: '₹',
         timezone: 'Asia/Kolkata',
-        plan: 'TRIAL'
+        plan: 'TRIAL',
+        createdAt: userContext?.tenantCreatedAt || userContext?.createdAt || null
       };
     }
   }

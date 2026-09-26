@@ -5,7 +5,6 @@ import api from '../../services/api';
 import StatCard from '../../components/StatCard';
 import Badge from '../../components/Badge';
 import PrintInvoiceModal from '../../components/PrintInvoiceModal';
-import OnboardingWizardModal from '../../components/OnboardingWizardModal';
 import Preloader from '../../components/Preloader';
 import { toast } from 'react-toastify';
 import {
@@ -28,7 +27,6 @@ import {
   CheckCheck,
   ShoppingBag,
   Receipt,
-  Sparkles,
   Globe,
   ExternalLink,
   Copy,
@@ -58,7 +56,6 @@ export default function DashboardPage() {
   const [allStocks, setAllStocks] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
 
   const storeSlug = user?.companyCode || user?.company_code || (user?.companyName ? user.companyName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : 'STORE');
@@ -194,14 +191,6 @@ export default function DashboardPage() {
   }, [scopedStocks]);
 
   const isFreshWorkspace = scopedSales.length === 0 && scopedStocks.length === 0;
-
-  // Auto-prompt onboarding wizard for fresh workspaces
-  useEffect(() => {
-    const isCompleted = localStorage.getItem('stockpilot_onboarding_completed');
-    if (!isCompleted && !loading && isFreshWorkspace) {
-      setShowOnboarding(true);
-    }
-  }, [loading, isFreshWorkspace]);
 
   const kpis = {
     totalRevenue: totalSalesRevenue > 0 ? totalSalesRevenue : (reportData?.kpis?.totalRevenue || 0),
@@ -662,7 +651,7 @@ export default function DashboardPage() {
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)'
           }}
         >
-          <div style={{ marginBottom: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ marginBottom: '1.1rem' }}>
             <div>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.25rem 0' }}>
                 Getting Started with {user?.companyName || 'Your Workspace'}
@@ -671,13 +660,6 @@ export default function DashboardPage() {
                 Complete these steps to set up your product catalog, record stock quantities, and begin point-of-sale billing.
               </p>
             </div>
-            <button
-              onClick={() => setShowOnboarding(true)}
-              className="btn btn-primary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#982A86', border: 'none', fontWeight: 700, padding: '0.5rem 0.95rem' }}
-            >
-              <Sparkles size={14} /> Launch 3-Step Setup Wizard
-            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
@@ -1362,18 +1344,6 @@ export default function DashboardPage() {
           tenant={user}
         />
       )}
-
-      {/* 3-Step Store Onboarding Wizard */}
-      <OnboardingWizardModal
-        isOpen={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-        onComplete={() => {
-          fetchDashboardData();
-          setShowOnboarding(false);
-        }}
-        defaultWarehouseId={warehouses[0]?.id}
-        companyName={user?.companyName}
-      />
     </div>
   );
 }
