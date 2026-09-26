@@ -430,17 +430,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
               <span>Audit Logs & Trail</span>
             </NavLink>
 
-            {/* Link 4: Notifications */}
-            <NavLink
-              to="/admin/notifications"
-              onClick={handleNavClick}
-              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-            >
-              <Bell size={18} />
-              <span>Notifications</span>
-            </NavLink>
-
-            {/* Link 5: Support Helpdesk */}
+            {/* Link 4: Support Helpdesk */}
             <NavLink
               to="/admin/tickets"
               onClick={handleNavClick}
@@ -490,11 +480,11 @@ export default function Sidebar({ isOpen = false, onClose }) {
                 {grp.items.map((item) => {
                   let badge = null;
                   if (item.to === '/notifications' && badgeCounts.notifications > 0) {
-                    badge = { count: badgeCounts.notifications, bg: '#ef4444' };
+                    badge = { count: badgeCounts.notifications > 99 ? '99+' : badgeCounts.notifications, variant: 'danger' };
                   } else if (item.to === '/purchases' && badgeCounts.purchases > 0) {
-                    badge = { count: badgeCounts.purchases, bg: '#f59e0b' };
+                    badge = { count: badgeCounts.purchases > 99 ? '99+' : badgeCounts.purchases, variant: 'warning' };
                   } else if (item.to === '/warehouses' && badgeCounts.transfers > 0) {
-                    badge = { count: badgeCounts.transfers, bg: '#06b6d4' };
+                    badge = { count: badgeCounts.transfers > 99 ? '99+' : badgeCounts.transfers, variant: 'info' };
                   }
 
                   return (
@@ -508,23 +498,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
                       <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}>
                         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
                         {badge && (
-                          <span
-                            style={{
-                              background: badge.bg,
-                              color: '#ffffff',
-                              fontSize: '0.65rem',
-                              fontWeight: 800,
-                              minWidth: '18px',
-                              height: '18px',
-                              borderRadius: '9999px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: '0 5px',
-                              marginLeft: 'auto',
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                            }}
-                          >
+                          <span className={`sidebar-nav-badge ${badge.variant}`}>
                             {badge.count}
                           </span>
                         )}

@@ -31,7 +31,7 @@ class AdminController {
         action: 'TENANT_SUSPENDED',
         module: 'SECURITY',
         recordId: tenant.id,
-        description: `Organization [${tenant.company_name}] (${tenant.company_code}) suspended by Super Admin`,
+        description: `Organization [${tenant.company_name}] suspended by Super Admin`,
         ipAddress: req.ip
       });
       return ApiResponse.success(res, tenant, `Tenant [${tenant.company_name}] suspended`);
@@ -50,7 +50,7 @@ class AdminController {
         action: 'TENANT_ACTIVATED',
         module: 'SECURITY',
         recordId: tenant.id,
-        description: `Organization [${tenant.company_name}] (${tenant.company_code}) reactivated by Super Admin`,
+        description: `Organization [${tenant.company_name}] reactivated by Super Admin`,
         ipAddress: req.ip
       });
       return ApiResponse.success(res, tenant, `Tenant [${tenant.company_name}] activated`);
@@ -89,7 +89,7 @@ class AdminController {
         action: 'TENANT_PROVISIONED',
         module: 'TENANT',
         recordId: tenant.id,
-        description: `New tenant organization [${tenant.company_name}] (${tenant.company_code}) provisioned`,
+        description: `New tenant organization [${tenant.company_name}] provisioned`,
         ipAddress: req.ip
       });
       return ApiResponse.created(res, tenant, `Tenant [${tenant.company_name}] registered successfully`);
@@ -108,7 +108,7 @@ class AdminController {
         action: 'TENANT_PURGED',
         module: 'SECURITY',
         recordId: result.id,
-        description: `Tenant organization [${result.company_name}] (${result.company_code}) and all related microservice records permanently purged by Super Admin`,
+        description: `Tenant organization [${result.company_name}] and all related microservice records permanently purged by Super Admin`,
         ipAddress: req.ip
       });
       return ApiResponse.success(res, result, `Tenant [${result.company_name}] and all associated data permanently deleted`);

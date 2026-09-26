@@ -643,14 +643,25 @@ class TenantService {
   }
 
   async createTenant(tenantData) {
-    const { company_name, company_code, email, phone, address, tax_number } = tenantData;
-    const existing = await Tenant.findOne({ where: { company_code: company_code.toUpperCase() } });
+    let { company_name, company_code, email, phone, address, tax_number } = tenantData;
+    let formattedCode = (company_code || '').trim().toUpperCase();
+    if (!formattedCode) {
+      const cleanBase = company_name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'ORG';
+      formattedCode = cleanBase;
+      let suffix = 1;
+      while (await Tenant.findOne({ where: { company_code: formattedCode } })) {
+        formattedCode = `${cleanBase}${suffix}`;
+        suffix++;
+      }
+    }
+
+    const existing = await Tenant.findOne({ where: { company_code: formattedCode } });
     if (existing) {
-      throw { statusCode: 400, message: `Company code [${company_code}] already registered` };
+      throw { statusCode: 400, message: `Organization [${formattedCode}] already registered` };
     }
 
     const tenant = await Tenant.create({
-      company_code: company_code.toUpperCase(),
+      company_code: formattedCode,
       company_name,
       email,
       phone: phone || null,
@@ -674,7 +685,7 @@ class TenantService {
       user_id: 1,
       user_name: 'Super Admin',
       module: 'TENANT',
-      action: `Provisioned new tenant company [${company_name} (${company_code})]`,
+      action: `Provisioned new tenant company [${company_name}]`,
       ip_address: '127.0.0.1'
     });
 

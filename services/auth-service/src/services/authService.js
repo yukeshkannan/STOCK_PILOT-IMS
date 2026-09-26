@@ -325,14 +325,23 @@ class AuthService {
   }
 
   async registerTenant({ companyName, companyCode, email, password, firstName, lastName, phone, plan }) {
-    const formattedCode = companyCode.trim().toUpperCase();
+    let formattedCode = (companyCode || '').trim().toUpperCase();
+    if (!formattedCode) {
+      const cleanBase = companyName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'ORG';
+      formattedCode = cleanBase;
+      let suffix = 1;
+      while (await TenantLookup.findOne({ where: { company_code: formattedCode } })) {
+        formattedCode = `${cleanBase}${suffix}`;
+        suffix++;
+      }
+    }
     const cleanPlan = (plan || '').toString().trim().toUpperCase();
     const chosenPlan = ['TRIAL', 'STARTER', 'PRO', 'ENTERPRISE'].includes(cleanPlan) ? cleanPlan : 'TRIAL';
 
     // Check if company code already exists
     const existingCode = await TenantLookup.findOne({ where: { company_code: formattedCode } });
     if (existingCode) {
-      throw { statusCode: 409, message: `Company Code [${formattedCode}] is already registered. Please choose another.` };
+      throw { statusCode: 409, message: `Organization Code [${formattedCode}] is already registered. Please choose another.` };
     }
 
     // Auto-generate numeric tenant ID

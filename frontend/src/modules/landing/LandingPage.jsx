@@ -145,7 +145,7 @@ export default function LandingPage() {
       features: [
         'Unlimited Warehouses & Outlets',
         'Unlimited Team Members',
-        'Multi-Branch GSTIN & Company Code Hub',
+        'Multi-Branch GSTIN & Multi-Location Hub',
         'Dedicated Tenant Database & Auto-Backups',
         'Custom Hardware & Weighing Scale API',
         'Full Audit Trail & Security Logs',

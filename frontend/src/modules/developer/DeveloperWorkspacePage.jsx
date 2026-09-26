@@ -512,7 +512,6 @@ export default function DeveloperWorkspacePage() {
                   <span className="dev-diag-pill">
                     <Building2 size={13} color="#982A86" />
                     <strong>{selectedTicket.tenant?.company_name || selectedTicket.company_name || 'Organization'}</strong>
-                    <span style={{ color: '#94a3b8' }}>({selectedTicket.company_code || 'CODE'})</span>
                   </span>
 
                   <span

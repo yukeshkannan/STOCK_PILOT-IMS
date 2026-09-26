@@ -37,7 +37,6 @@ export default function SuperAdminDashboard() {
 
   const [formData, setFormData] = useState({
     company_name: '',
-    company_code: '',
     email: '',
     phone: '',
     address: '',
@@ -65,14 +64,14 @@ export default function SuperAdminDashboard() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'company_code' ? value.toUpperCase() : value
+      [name]: value
     }));
   };
 
   const handleCreateTenant = async (e) => {
     e.preventDefault();
-    if (!formData.company_name || !formData.company_code || !formData.email) {
-      toast.warning('Please fill in Company Name, Code, and Primary Admin Email');
+    if (!formData.company_name || !formData.email) {
+      toast.warning('Please fill in Company Name and Primary Admin Email');
       return;
     }
 
@@ -83,7 +82,6 @@ export default function SuperAdminDashboard() {
       setIsModalOpen(false);
       setFormData({
         company_name: '',
-        company_code: '',
         email: '',
         phone: '',
         address: '',
@@ -142,8 +140,8 @@ export default function SuperAdminDashboard() {
   const filteredTenants = tenantsList.filter((t) => {
     const matchesSearch =
       t.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.company_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.email.toLowerCase().includes(searchTerm.toLowerCase());
+      (t.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.tax_number || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     if (statusFilter === 'ACTIVE') return matchesSearch && t.status === 'ACTIVE';
     if (statusFilter === 'SUSPENDED') return matchesSearch && t.status === 'SUSPENDED';
@@ -407,7 +405,7 @@ export default function SuperAdminDashboard() {
             <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
-              placeholder="Search by Company Code, Name, or Email..."
+              placeholder="Search by Organization Name, Email, or GSTIN..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="form-input"
@@ -435,7 +433,6 @@ export default function SuperAdminDashboard() {
             <thead>
               <tr>
                 <th>Organization & Tax ID</th>
-                <th>Company Code</th>
                 <th>Primary Admin Email</th>
                 <th>Location & Contact</th>
                 <th>Active Users</th>
@@ -446,7 +443,7 @@ export default function SuperAdminDashboard() {
             <tbody>
               {filteredTenants.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
                     No tenant businesses match the selected search or filter criteria.
                   </td>
                 </tr>
@@ -462,23 +459,6 @@ export default function SuperAdminDashboard() {
                           GSTIN: <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{t.tax_number || 'Standard Registration'}</span>
                         </div>
                       </div>
-                    </td>
-
-                    <td>
-                      <span
-                        style={{
-                          fontFamily: 'monospace',
-                          fontWeight: 700,
-                          color: '#982A86',
-                          fontSize: '0.85rem',
-                          background: '#fdf2fb',
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '4px',
-                          border: '1px solid #f3c7ec'
-                        }}
-                      >
-                        {t.company_code}
-                      </span>
                     </td>
 
                     <td>
@@ -649,22 +629,6 @@ export default function SuperAdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="form-label">Company Code *</label>
-                  <input
-                    type="text"
-                    name="company_code"
-                    value={formData.company_code}
-                    onChange={handleInputChange}
-                    placeholder="e.g. ACM001"
-                    className="form-input"
-                    style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
                   <label className="form-label">Primary Admin Email *</label>
                   <input
                     type="email"
@@ -676,6 +640,9 @@ export default function SuperAdminDashboard() {
                     required
                   />
                 </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
                   <label className="form-label">Contact Phone</label>
                   <input
@@ -687,18 +654,17 @@ export default function SuperAdminDashboard() {
                     className="form-input"
                   />
                 </div>
-              </div>
-
-              <div style={{ marginBottom: '1rem' }}>
-                <label className="form-label">GSTIN / Tax ID</label>
-                <input
-                  type="text"
-                  name="tax_number"
-                  value={formData.tax_number}
-                  onChange={handleInputChange}
-                  placeholder="e.g. 29ABCDE1234F1Z5"
-                  className="form-input"
-                />
+                <div>
+                  <label className="form-label">GSTIN / Tax ID</label>
+                  <input
+                    type="text"
+                    name="tax_number"
+                    value={formData.tax_number}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 29ABCDE1234F1Z5"
+                    className="form-input"
+                  />
+                </div>
               </div>
 
               <div style={{ marginBottom: '1.5rem' }}>

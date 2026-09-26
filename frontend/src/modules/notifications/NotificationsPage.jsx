@@ -902,7 +902,7 @@ export default function NotificationsPage() {
                       { value: '', label: 'Choose Tenant Organization' },
                       ...tenantsList.map((t) => ({
                         value: t.id,
-                        label: `${t.company_name} (${t.company_code})`
+                        label: t.company_name
                       }))
                     ]}
                   />

@@ -100,8 +100,8 @@ export default function Navbar({ onMenuToggle }) {
 
       {/* Right Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-        {/* Notifications Dropdown */}
-        <NotificationDropdown />
+        {/* Notifications Dropdown (Tenant Workspace Users Only) */}
+        {!user?.isSuperAdmin && <NotificationDropdown />}
 
         {/* User Identity Info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>

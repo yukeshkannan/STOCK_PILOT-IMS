@@ -39,7 +39,6 @@ export default function SuperAdminTenants() {
 
   const [formData, setFormData] = useState({
     company_name: '',
-    company_code: '',
     email: '',
     phone: '',
     address: '',
@@ -74,14 +73,14 @@ export default function SuperAdminTenants() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'company_code' ? value.toUpperCase() : value
+      [name]: value
     }));
   };
 
   const handleCreateTenant = async (e) => {
     e.preventDefault();
-    if (!formData.company_name || !formData.company_code || !formData.email) {
-      toast.warning('Please fill in Company Name, Code, and Primary Admin Email');
+    if (!formData.company_name || !formData.email) {
+      toast.warning('Please fill in Company Name and Primary Admin Email');
       return;
     }
 
@@ -92,7 +91,6 @@ export default function SuperAdminTenants() {
       setIsModalOpen(false);
       setFormData({
         company_name: '',
-        company_code: '',
         email: '',
         phone: '',
         address: '',
@@ -226,7 +224,7 @@ export default function SuperAdminTenants() {
             <Search size={15} color="#94a3b8" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
-              placeholder="Search by Company Code, Name, or Email..."
+              placeholder="Search by Tenant Name, Email, or GSTIN..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="form-input"
@@ -272,7 +270,6 @@ export default function SuperAdminTenants() {
             <thead>
               <tr>
                 <th>Organization & GSTIN</th>
-                <th>Company Code</th>
                 <th>Primary Email</th>
                 <th>Location & Phone</th>
                 <th>Active Users</th>
@@ -284,7 +281,7 @@ export default function SuperAdminTenants() {
             <tbody>
               {filteredTenants.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
                     No tenant businesses found matching search criteria.
                   </td>
                 </tr>
@@ -312,40 +309,6 @@ export default function SuperAdminTenants() {
                           {t.is_pending_setup ? 'Awaiting Workspace Setup' : `GSTIN: ${t.tax_number || 'Standard Registration'}`}
                         </div>
                       </div>
-                    </td>
-
-                    <td>
-                      {t.is_pending_setup ? (
-                        <span
-                          style={{
-                            fontFamily: 'monospace',
-                            fontWeight: 700,
-                            color: '#b45309',
-                            fontSize: '0.75rem',
-                            background: '#fef3c7',
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '4px',
-                            border: '1px solid #fde68a'
-                          }}
-                        >
-                          PENDING
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            fontFamily: 'monospace',
-                            fontWeight: 700,
-                            color: '#7c3aed',
-                            fontSize: '0.85rem',
-                            background: '#f5f3ff',
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '4px',
-                            border: '1px solid #ddd6fe'
-                          }}
-                        >
-                          {t.company_code}
-                        </span>
-                      )}
                     </td>
 
                     <td>
@@ -548,7 +511,7 @@ export default function SuperAdminTenants() {
         }
         itemName={
           deleteModal.tenant
-            ? `${deleteModal.tenant.company_name} (${deleteModal.tenant.company_code || deleteModal.tenant.email})`
+            ? `${deleteModal.tenant.company_name} (${deleteModal.tenant.email})`
             : ''
         }
         confirmText={deleteModal.tenant?.is_pending_setup ? 'Purge Account' : 'Delete Company'}
@@ -592,22 +555,6 @@ export default function SuperAdminTenants() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Unique Company Code (Code) *</label>
-                  <input
-                    type="text"
-                    name="company_code"
-                    required
-                    placeholder="e.g. APX004"
-                    value={formData.company_code}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    maxLength={10}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
                   <label className="form-label">Primary Admin Email *</label>
                   <input
                     type="email"
@@ -619,7 +566,9 @@ export default function SuperAdminTenants() {
                     className="form-input"
                   />
                 </div>
+              </div>
 
+              <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Contact Phone</label>
                   <input

@@ -177,7 +177,7 @@ export default function TenantDetailsPage() {
             }}
           >
             <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>
-              #{tenant.company_code}
+              Tenant #{tenant.id}
             </span>
 
             <span style={{ color: '#cbd5e1' }}>•</span>

@@ -495,7 +495,7 @@ export default function SuperAdminAuditLogs() {
             <option value="GLOBAL">Global Platform / System</option>
             {tenants.map((t) => (
               <option key={t.id} value={t.id}>
-                [{t.company_code || `ORG-${t.id}`}] {t.company_name}
+                {t.company_name}
               </option>
             ))}
           </select>

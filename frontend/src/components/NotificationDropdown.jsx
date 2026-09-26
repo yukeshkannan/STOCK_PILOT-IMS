@@ -207,27 +207,8 @@ export default function NotificationDropdown() {
       >
         <Bell size={18} />
         {unreadCount > 0 && (
-          <span
-            style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              background: '#ef4444',
-              color: '#ffffff',
-              fontSize: '0.65rem',
-              fontWeight: 800,
-              minWidth: '18px',
-              height: '18px',
-              borderRadius: '9999px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 4px',
-              boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
-              animation: 'pulse 2s infinite'
-            }}
-          >
-            {unreadCount > 9 ? '9+' : unreadCount}
+          <span className="whatsapp-badge">
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>

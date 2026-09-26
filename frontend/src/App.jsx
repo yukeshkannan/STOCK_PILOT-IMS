@@ -143,7 +143,7 @@ export default function App() {
           <Route path="/admin/tenants/:id" element={<TenantDetailsPage />} />
           <Route path="/admin/audit" element={<SuperAdminAuditLogs />} />
           <Route path="/admin/audit-logs" element={<SuperAdminAuditLogs />} />
-          <Route path="/admin/notifications" element={<NotificationsPage />} />
+          <Route path="/admin/notifications" element={<Navigate to="/admin" replace />} />
           <Route path="/admin/tickets" element={<SuperAdminTicketsPage />} />
           <Route path="/admin/team" element={<SuperAdminTeamPage />} />
         </Route>
