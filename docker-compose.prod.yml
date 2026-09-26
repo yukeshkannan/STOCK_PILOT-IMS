@@ -317,6 +317,20 @@ services:
     networks:
       - stockpilot-network
 
+  # Frontend SPA
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stockpilot-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    networks:
+      - stockpilot-network
+
 volumes:
   mysql_data:
 
