@@ -61,9 +61,11 @@ export default function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
 
+  const storeSlug = user?.companyCode || user?.company_code || (user?.companyName ? user.companyName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : 'STORE');
+
   const handleCopyStoreUrl = () => {
-    if (!user?.companyCode) return;
-    const storeUrl = `${window.location.origin}/store/${user.companyCode}`;
+    if (!storeSlug) return;
+    const storeUrl = `${window.location.origin}/store/${storeSlug}`;
     navigator.clipboard.writeText(storeUrl);
     setCopiedUrl(true);
     toast.success('Storefront URL copied to clipboard!');
@@ -469,7 +471,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Live Online Storefront Banner */}
-      {user?.companyCode && !isStaff && (
+      {(user?.companyCode || user?.companyName) && !isStaff && (
         <div
           style={{
             background: 'var(--bg-card, #ffffff)',
@@ -538,7 +540,7 @@ export default function DashboardPage() {
                     fontSize: '0.78rem'
                   }}
                 >
-                  {window.location.origin}/store/{user.companyCode}
+                  {window.location.origin}/store/{storeSlug}
                 </span>
               </div>
             </div>
@@ -614,7 +616,7 @@ export default function DashboardPage() {
             </Link>
 
             <a
-              href={`/store/${user.companyCode}`}
+              href={`/store/${storeSlug}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{

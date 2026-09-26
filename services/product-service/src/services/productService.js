@@ -412,7 +412,10 @@ class ProductService {
   }
 
   async getPublicStoreCatalog(companyCode) {
-    const cleanCode = (companyCode || '').trim().toUpperCase();
+    const rawInput = (companyCode || '').trim();
+    const cleanUpper = rawInput.toUpperCase();
+    const cleanLower = rawInput.toLowerCase();
+    const numericId = !isNaN(Number(rawInput)) ? Number(rawInput) : -1;
     let tenantInfo = null;
 
     // 1. Try tenant_db first for full store config and details
@@ -420,8 +423,14 @@ class ProductService {
       const { createDatabaseConnection } = require('@stockpilot/common');
       const tenantDb = createDatabaseConnection('tenant_db');
       const [tenants] = await tenantDb.query(
-        'SELECT * FROM tenants WHERE UPPER(company_code) = :code LIMIT 1;',
-        { replacements: { code: cleanCode } }
+        `SELECT * FROM tenants 
+         WHERE UPPER(company_code) = :upper 
+            OR UPPER(company_name) = :upper 
+            OR REPLACE(UPPER(company_name), ' ', '') = :upper
+            OR REPLACE(LOWER(company_name), ' ', '-') = :lower
+            OR id = :numericId
+         LIMIT 1;`,
+        { replacements: { upper: cleanUpper, lower: cleanLower, numericId } }
       );
       if (tenants && tenants.length > 0) {
         const t = tenants[0];
@@ -436,7 +445,7 @@ class ProductService {
 
         tenantInfo = {
           tenantId: Number(t.id),
-          companyCode: t.company_code,
+          companyCode: t.company_code || cleanUpper,
           companyName: t.company_name,
           email: t.email,
           phone: t.phone,
@@ -458,19 +467,52 @@ class ProductService {
         const { createDatabaseConnection } = require('@stockpilot/common');
         const authDb = createDatabaseConnection('auth_db');
         const [lookups] = await authDb.query(
-          'SELECT tenant_id, company_code, company_name FROM tenant_lookup WHERE UPPER(company_code) = :code LIMIT 1;',
-          { replacements: { code: cleanCode } }
+          `SELECT tenant_id, company_code, company_name FROM tenant_lookup 
+           WHERE UPPER(company_code) = :upper 
+              OR UPPER(company_name) = :upper 
+              OR REPLACE(UPPER(company_name), ' ', '') = :upper
+              OR REPLACE(LOWER(company_name), ' ', '-') = :lower
+              OR tenant_id = :numericId
+           LIMIT 1;`,
+          { replacements: { upper: cleanUpper, lower: cleanLower, numericId } }
         );
         if (lookups && lookups.length > 0) {
           tenantInfo = {
             tenantId: Number(lookups[0].tenant_id),
-            companyCode: lookups[0].company_code,
+            companyCode: lookups[0].company_code || cleanUpper,
             companyName: lookups[0].company_name
           };
         }
       } catch (e) {
         console.warn('Auth DB lookup notice:', e.message);
       }
+    }
+
+    // 3. Fallback: fuzzy search if exact match didn't find
+    if (!tenantInfo) {
+      try {
+        const { createDatabaseConnection } = require('@stockpilot/common');
+        const tenantDb = createDatabaseConnection('tenant_db');
+        const [fuzzy] = await tenantDb.query(
+          'SELECT * FROM tenants WHERE UPPER(company_name) LIKE :like OR UPPER(company_code) LIKE :like LIMIT 1;',
+          { replacements: { like: `%${cleanUpper}%` } }
+        );
+        if (fuzzy && fuzzy.length > 0) {
+          const t = fuzzy[0];
+          tenantInfo = {
+            tenantId: Number(t.id),
+            companyCode: t.company_code || cleanUpper,
+            companyName: t.company_name,
+            email: t.email,
+            phone: t.phone,
+            address: t.address,
+            city: t.city || '',
+            taxNumber: t.tax_number,
+            currency: t.currency || 'INR',
+            currencySymbol: t.currency_symbol || '₹'
+          };
+        }
+      } catch (e) {}
     }
 
     if (!tenantInfo) {
@@ -512,15 +554,58 @@ class ProductService {
       }
     } catch (e) {}
 
-    const catalog = products.map((p) => {
+    // Check which products have purchase records in purchase_db or purchase stock movements in inventory_db
+    let purchasedProductIds = new Set();
+    try {
+      const { createDatabaseConnection } = require('@stockpilot/common');
+      const purDb = createDatabaseConnection('purchase_db');
+      const [purItems] = await purDb.query(
+        `SELECT DISTINCT pi.product_id 
+         FROM purchase_items pi 
+         JOIN purchases p ON p.id = pi.purchase_id 
+         WHERE p.tenant_id = :tenantId AND p.status != 'CANCELLED';`,
+        { replacements: { tenantId } }
+      );
+      if (purItems) {
+        purItems.forEach((pi) => purchasedProductIds.add(Number(pi.product_id)));
+      }
+    } catch (e) {}
+
+    try {
+      const { createDatabaseConnection } = require('@stockpilot/common');
+      const invDb = createDatabaseConnection('inventory_db');
+      const [invItems] = await invDb.query(
+        `SELECT DISTINCT product_id FROM stock_movements 
+         WHERE tenant_id = :tenantId 
+           AND (movement_type = 'PURCHASE' OR reference_type = 'PURCHASE' OR reference_type = 'PO');`,
+        { replacements: { tenantId } }
+      );
+      if (invItems) {
+        invItems.forEach((im) => purchasedProductIds.add(Number(im.product_id)));
+      }
+    } catch (e) {}
+
+    let catalog = products.map((p) => {
       const pJson = p.toJSON();
-      const currentStock = stockMap[p.id] !== undefined ? stockMap[p.id] : 15;
+      const currentStock = stockMap[p.id] !== undefined ? stockMap[p.id] : 0;
+      const isPurchased = purchasedProductIds.has(Number(p.id)) || currentStock > 0;
       return {
         ...pJson,
         availableStock: currentStock,
-        inStock: currentStock > 0
+        inStock: currentStock > 0,
+        isPurchased
       };
     });
+
+    // Only include purchased products in the public store catalog as requested
+    catalog = catalog.filter((p) => p.isPurchased);
+
+    // Filter by selected products if configured by admin in storefront builder
+    const savedConfig = tenantInfo.storeConfig || {};
+    const selectedIds = savedConfig.productsSection?.selectedProductIds;
+    if (Array.isArray(selectedIds) && selectedIds.length > 0) {
+      catalog = catalog.filter((p) => selectedIds.includes(p.id));
+    }
 
     // Merge default store config
     const defaultConfig = {

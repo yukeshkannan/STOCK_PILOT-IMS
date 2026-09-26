@@ -25,9 +25,9 @@ function getProjectDataDir() {
 }
 
 function createDbConnection(dbName, options = {}) {
-  const dialect = process.env.DB_DIALECT || 'sqlite';
+  const isMysql = process.env.DB_DIALECT === 'mysql' || Boolean(process.env.DB_HOST);
 
-  if (dialect === 'mysql') {
+  if (isMysql) {
     return new Sequelize(
       dbName,
       process.env.DB_USER || 'root',

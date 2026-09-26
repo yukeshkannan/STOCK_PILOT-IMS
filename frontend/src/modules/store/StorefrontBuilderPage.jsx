@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
+import Modal from '../../components/Modal';
 import {
   Store,
   Palette,
@@ -38,7 +40,8 @@ import {
   Lock,
   Link as LinkIcon,
   Globe,
-  GripVertical
+  GripVertical,
+  Package
 } from 'lucide-react';
 import { WhatsAppBrandIcon } from './PublicStorePage';
 import './StorefrontBuilderPage.css';
@@ -150,12 +153,30 @@ export const DEFAULT_NAV_LINKS = [
 
 export default function StorefrontBuilderPage() {
   const { user } = useSelector((state) => state.auth);
-  const companyCode = user?.companyCode || 'STORE';
+  const companyCode = user?.companyCode || user?.company_code || (user?.companyName ? user.companyName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : 'STORE');
   const liveStoreUrl = `${window.location.origin}/store/${companyCode}`;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+
+  // Real Tenant Products & Stocks State
+  const [tenantProducts, setTenantProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [builderProductSearch, setBuilderProductSearch] = useState('');
+
+  // Add Product to Catalog Modal State
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [submittingProduct, setSubmittingProduct] = useState(false);
+  const [newProductForm, setNewProductForm] = useState({
+    name: '',
+    productCode: '',
+    description: '',
+    sellingPrice: '',
+    purchasePrice: '',
+    initialStock: '10',
+    unit: 'PCS'
+  });
 
   // Active Sidebar Mode: 'sections' | 'theme'
   const [activeTab, setActiveTab] = useState('sections');
@@ -221,7 +242,9 @@ export default function StorefrontBuilderPage() {
       subtitle: 'Browse all available products in real-time inventory',
       showSearch: true,
       showCategories: true,
-      showStockBadge: true
+      showStockBadge: true,
+      showOnlyInStock: true,
+      selectedProductIds: []
     },
     testimonials: {
       enabled: true,
@@ -326,8 +349,100 @@ export default function StorefrontBuilderPage() {
     }
   };
 
+  const fetchTenantProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const [prodRes, stockRes, purRes] = await Promise.allSettled([
+        api.get('/products?limit=150'),
+        api.get('/inventory/stocks'),
+        api.get('/purchases?limit=150')
+      ]);
+
+      const rawProds = prodRes.status === 'fulfilled' ? (prodRes.value?.data?.products || (Array.isArray(prodRes.value?.data) ? prodRes.value.data : [])) : [];
+      const rawStocks = stockRes.status === 'fulfilled' ? (stockRes.value?.data || []) : [];
+      const rawPurchases = purRes.status === 'fulfilled' ? (purRes.value?.data?.purchases || (Array.isArray(purRes.value?.data) ? purRes.value.data : [])) : [];
+
+      const stockMap = {};
+      rawStocks.forEach((s) => {
+        stockMap[s.product_id] = (stockMap[s.product_id] || 0) + (Number(s.current_stock) || 0);
+      });
+
+      const purchasedProductIds = new Set();
+      rawPurchases.forEach((po) => {
+        if (po.status !== 'CANCELLED' && Array.isArray(po.items)) {
+          po.items.forEach((item) => {
+            if (item.product_id) purchasedProductIds.add(Number(item.product_id));
+          });
+        }
+      });
+      rawStocks.forEach((s) => {
+        if (Number(s.current_stock) > 0) {
+          purchasedProductIds.add(Number(s.product_id));
+        }
+      });
+
+      const enriched = rawProds.map((p) => {
+        const stock = stockMap[p.id] !== undefined ? stockMap[p.id] : (p.initialStock || p.current_stock || 0);
+        const isPurchased = purchasedProductIds.has(Number(p.id)) || Number(stock) > 0;
+        return {
+          ...p,
+          currentStock: stock,
+          isPurchased
+        };
+      });
+
+      // Filter: only purchased inventory products
+      const purchasedOnly = enriched.filter((p) => p.isPurchased);
+      setTenantProducts(purchasedOnly);
+    } catch (err) {
+      console.warn('Failed to load products for storefront builder:', err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleCreateProduct = async (e) => {
+    e.preventDefault();
+    if (!newProductForm.name.trim()) {
+      toast.error('Product name is required');
+      return;
+    }
+    try {
+      setSubmittingProduct(true);
+      const code = newProductForm.productCode.trim() || `PRD-${Date.now().toString().slice(-6)}`;
+      const payload = {
+        name: newProductForm.name.trim(),
+        productCode: code,
+        description: newProductForm.description || '',
+        sellingPrice: parseFloat(newProductForm.sellingPrice) || 0,
+        purchasePrice: parseFloat(newProductForm.purchasePrice) || 0,
+        initialStock: parseInt(newProductForm.initialStock, 10) || 0,
+        unit: newProductForm.unit || 'PCS'
+      };
+
+      await api.post('/products', payload);
+      toast.success(`Product "${newProductForm.name}" created and added to inventory!`);
+      setIsAddProductModalOpen(false);
+      setNewProductForm({
+        name: '',
+        productCode: '',
+        description: '',
+        sellingPrice: '',
+        purchasePrice: '',
+        initialStock: '10',
+        unit: 'PCS'
+      });
+      await fetchTenantProducts();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to create product');
+    } finally {
+      setSubmittingProduct(false);
+    }
+  };
+
   useEffect(() => {
     fetchConfig();
+    fetchTenantProducts();
   }, []);
 
   const handleApplyPreset = (preset) => {
@@ -1151,6 +1266,167 @@ export default function StorefrontBuilderPage() {
                           <span className="switch-slider" />
                         </label>
                       </div>
+
+                      <div className="toggle-item">
+                        <span>Only Show In-Stock Items</span>
+                        <label className="shopify-switch">
+                          <input
+                            type="checkbox"
+                            checked={config.productsSection?.showOnlyInStock !== false}
+                            onChange={(e) =>
+                              setConfig({
+                                ...config,
+                                productsSection: {
+                                  ...config.productsSection,
+                                  showOnlyInStock: e.target.checked
+                                }
+                              })
+                            }
+                          />
+                          <span className="switch-slider" />
+                        </label>
+                      </div>
+
+                      {/* Real Tenant Products Selection & Management */}
+                      <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                          <div>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>
+                              Purchased Catalog ({tenantProducts.length} Items)
+                            </span>
+                            <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '1px' }}>
+                              Only items purchased into inventory are shown
+                            </p>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setIsAddProductModalOpen(true)}
+                              style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                color: '#ffffff',
+                                background: '#982A86',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '0.25rem 0.6rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px'
+                              }}
+                            >
+                              <Plus size={12} /> Add Product
+                            </button>
+                            <Link
+                              to="/purchases"
+                              target="_blank"
+                              style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 600,
+                                color: '#64748b',
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '2px'
+                              }}
+                              title="Go to Purchases"
+                            >
+                              PO <ExternalLink size={10} />
+                            </Link>
+                          </div>
+                        </div>
+
+                        {/* Search in builder */}
+                        <div style={{ marginBottom: '0.65rem' }}>
+                          <input
+                            type="text"
+                            placeholder="Search purchased items..."
+                            value={builderProductSearch}
+                            onChange={(e) => setBuilderProductSearch(e.target.value)}
+                            className="shopify-input"
+                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem' }}
+                          />
+                        </div>
+
+                        {/* Product Checkbox List */}
+                        <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.4rem' }}>
+                          {tenantProducts.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '1.25rem 0.5rem', color: '#64748b' }}>
+                              <ShoppingBag size={26} color="#94a3b8" style={{ marginBottom: '0.35rem' }} />
+                              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155' }}>
+                                No purchased products in inventory
+                              </div>
+                              <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: '0.25rem 0 0.65rem' }}>
+                                Only products with purchase orders or inventory stock appear online.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setIsAddProductModalOpen(true)}
+                                className="shopify-btn-primary"
+                                style={{ fontSize: '0.72rem', padding: '0.3rem 0.75rem' }}
+                              >
+                                <Plus size={12} /> Add Product Now
+                              </button>
+                            </div>
+                          ) : (
+                            tenantProducts
+                              .filter((p) => (p.name || '').toLowerCase().includes(builderProductSearch.toLowerCase()) || (p.product_code || '').toLowerCase().includes(builderProductSearch.toLowerCase()))
+                              .map((p) => {
+                                const isIncluded = !config.productsSection?.selectedProductIds || config.productsSection.selectedProductIds.length === 0 || config.productsSection.selectedProductIds.includes(p.id);
+                                return (
+                                  <label
+                                    key={p.id}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.55rem',
+                                      padding: '0.35rem 0.45rem',
+                                      borderRadius: '6px',
+                                      background: isIncluded ? '#fdf4fc' : '#ffffff',
+                                      cursor: 'pointer',
+                                      marginBottom: '2px',
+                                      fontSize: '0.78rem'
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isIncluded}
+                                      onChange={(e) => {
+                                        const currentIds = config.productsSection?.selectedProductIds?.length > 0
+                                          ? [...config.productsSection.selectedProductIds]
+                                          : tenantProducts.map((tp) => tp.id);
+
+                                        let newIds;
+                                        if (e.target.checked) {
+                                          newIds = [...new Set([...currentIds, p.id])];
+                                        } else {
+                                          newIds = currentIds.filter((id) => id !== p.id);
+                                        }
+
+                                        setConfig({
+                                          ...config,
+                                          productsSection: {
+                                            ...config.productsSection,
+                                            selectedProductIds: newIds
+                                          }
+                                        });
+                                      }}
+                                    />
+                                    <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <span style={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {p.name}
+                                      </span>
+                                      <span style={{ fontSize: '0.7rem', color: p.currentStock > 0 ? '#059669' : '#dc2626', fontWeight: 700, marginLeft: '6px' }}>
+                                        {p.currentStock > 0 ? `${p.currentStock} in stock` : 'Out of stock'}
+                                      </span>
+                                    </div>
+                                  </label>
+                                );
+                              })
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1714,65 +1990,80 @@ export default function StorefrontBuilderPage() {
                   )}
 
                   <div className="sim-product-cards-grid">
-                    {[
-                      {
-                        name: 'Handcrafted Suede Penny Loafers',
-                        price: '₹4,990',
-                        cat: 'Footwear',
-                        img: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?auto=format&fit=crop&w=400&q=80'
-                      },
-                      {
-                        name: 'Pleated Floral Midi Dress',
-                        price: '₹3,990',
-                        cat: 'Women Collection',
-                        img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=400&q=80'
-                      },
-                      {
-                        name: 'Premium Linen Button-Down Shirt',
-                        price: '₹2,490',
-                        cat: 'Men Apparel',
-                        img: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=400&q=80'
-                      },
-                      {
-                        name: 'Tailored Stretch Chino Trousers',
-                        price: '₹2,990',
-                        cat: 'Men Apparel',
-                        img: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=400&q=80'
-                      }
-                    ].map((p, i) => (
-                      <div
-                        key={i}
-                        className="sim-product-card"
-                        style={{
-                          background: config.branding.cardColor || selectedPreset.card,
-                          borderColor: selectedPreset.border || '#e2e8f0'
-                        }}
-                      >
-                        <div className="sim-card-img">
-                          <img src={p.img} alt={p.name} />
-                          <span className="sim-cat-pill">{p.cat}</span>
-                        </div>
-                        <div className="sim-card-body">
-                          <h4 style={{ color: config.branding.textColor || selectedPreset.text }}>
-                            {p.name}
-                          </h4>
-                          <div className="sim-card-price-row">
-                            <span
-                              className="sim-price"
-                              style={{ color: config.branding.textColor || selectedPreset.text }}
-                            >
-                              {p.price}
-                            </span>
-                            <button
-                              className="sim-btn-add"
-                              style={{ background: config.branding.primaryColor }}
-                            >
-                              + Add
-                            </button>
-                          </div>
-                        </div>
+                    {tenantProducts.length === 0 ? (
+                      <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2.5rem 1rem', color: '#64748b' }}>
+                        <ShoppingBag size={34} color="#94a3b8" style={{ marginBottom: '0.65rem' }} />
+                        <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: config.branding.textColor || selectedPreset.text }}>
+                          No Purchased Products in Inventory Yet
+                        </h4>
+                        <p style={{ fontSize: '0.78rem', marginTop: '0.25rem', color: '#94a3b8', maxWidth: '380px', margin: '0.25rem auto 1rem' }}>
+                          Only products purchased into inventory will be displayed on your live customer storefront.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddProductModalOpen(true)}
+                          className="shopify-btn-primary"
+                          style={{ fontSize: '0.78rem', padding: '0.4rem 1rem' }}
+                        >
+                          <Plus size={14} /> Add Product to Catalog
+                        </button>
                       </div>
-                    ))}
+                    ) : (
+                      tenantProducts
+                        .filter((p) => {
+                          const isSelected = !config.productsSection?.selectedProductIds || config.productsSection.selectedProductIds.length === 0 || config.productsSection.selectedProductIds.includes(p.id);
+                          const inStockCheck = config.productsSection?.showOnlyInStock !== false ? p.currentStock > 0 : true;
+                          return isSelected && inStockCheck;
+                        })
+                        .map((p, i) => (
+                          <div
+                            key={p.id || i}
+                            className="sim-product-card"
+                            style={{
+                              background: config.branding.cardColor || selectedPreset.card,
+                              borderColor: selectedPreset.border || '#e2e8f0'
+                            }}
+                          >
+                            <div className="sim-card-img" style={{ height: '140px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {p.image_url ? (
+                                <img src={p.image_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#94a3b8' }}>
+                                  <Package size={28} />
+                                  <span style={{ fontSize: '0.68rem', fontWeight: 600 }}>{p.category?.name || 'Item'}</span>
+                                </div>
+                              )}
+                              {p.category?.name && (
+                                <span className="sim-cat-pill">{p.category.name}</span>
+                              )}
+                            </div>
+                            <div className="sim-card-body">
+                              <h4 style={{ color: config.branding.textColor || selectedPreset.text }}>
+                                {p.name}
+                              </h4>
+                              <div className="sim-card-price-row">
+                                <span
+                                  className="sim-price"
+                                  style={{ color: config.branding.textColor || selectedPreset.text }}
+                                >
+                                  ₹{parseFloat(p.selling_price || p.purchase_price || 0).toLocaleString('en-IN')}
+                                </span>
+                                <button
+                                  className="sim-btn-add"
+                                  style={{ background: config.branding.primaryColor }}
+                                >
+                                  + Add
+                                </button>
+                              </div>
+                              {config.productsSection?.showStockBadge !== false && (
+                                <div style={{ fontSize: '0.68rem', marginTop: '4px', fontWeight: 600, color: p.currentStock > 0 ? '#059669' : '#dc2626' }}>
+                                  {p.currentStock > 0 ? `In Stock (${p.currentStock})` : 'Out of Stock'}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                    )}
                   </div>
                 </section>
               )}
@@ -1924,6 +2215,122 @@ export default function StorefrontBuilderPage() {
           </div>
         </main>
       </div>
+
+      {/* Add Product Modal for Admin / Staff */}
+      <Modal
+        isOpen={isAddProductModalOpen}
+        onClose={() => setIsAddProductModalOpen(false)}
+        title="Add Product to Store Catalog"
+        maxWidth="540px"
+      >
+        <form onSubmit={handleCreateProduct} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
+          <div className="form-group">
+            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+              Product Name *
+            </label>
+            <input
+              type="text"
+              required
+              className="shopify-input"
+              placeholder="e.g. Premium Cotton Casual Shirt"
+              value={newProductForm.name}
+              onChange={(e) => setNewProductForm({ ...newProductForm, name: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Selling Price (₹) *
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                required
+                className="shopify-input"
+                placeholder="e.g. 1299"
+                value={newProductForm.sellingPrice}
+                onChange={(e) => setNewProductForm({ ...newProductForm, sellingPrice: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Initial Purchased Stock
+              </label>
+              <input
+                type="number"
+                min="0"
+                className="shopify-input"
+                placeholder="e.g. 15"
+                value={newProductForm.initialStock}
+                onChange={(e) => setNewProductForm({ ...newProductForm, initialStock: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Product SKU / Code
+              </label>
+              <input
+                type="text"
+                className="shopify-input"
+                placeholder="Auto-generated if empty"
+                value={newProductForm.productCode}
+                onChange={(e) => setNewProductForm({ ...newProductForm, productCode: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Unit of Measurement
+              </label>
+              <select
+                className="shopify-input"
+                value={newProductForm.unit}
+                onChange={(e) => setNewProductForm({ ...newProductForm, unit: e.target.value })}
+              >
+                <option value="PCS">Pieces (PCS)</option>
+                <option value="BOX">Box</option>
+                <option value="KG">Kilogram (KG)</option>
+                <option value="LTR">Liter (LTR)</option>
+                <option value="PAIR">Pair</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+              Product Description
+            </label>
+            <textarea
+              rows={2}
+              className="shopify-input"
+              placeholder="Brief details about the product..."
+              value={newProductForm.description}
+              onChange={(e) => setNewProductForm({ ...newProductForm, description: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', marginTop: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => setIsAddProductModalOpen(false)}
+              className="shopify-btn-outline"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submittingProduct}
+              className="shopify-btn-primary"
+            >
+              {submittingProduct ? 'Adding Product...' : 'Add to Catalog'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

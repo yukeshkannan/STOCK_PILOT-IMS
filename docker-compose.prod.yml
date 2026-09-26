@@ -83,6 +83,7 @@ services:
     environment:
       - PORT=5001
       - DB_NAME=auth_db
+      - DB_DIALECT=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
@@ -114,6 +115,7 @@ services:
     environment:
       - PORT=5002
       - DB_NAME=tenant_db
+      - DB_DIALECT=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
@@ -141,6 +143,7 @@ services:
     environment:
       - PORT=5003
       - DB_NAME=product_db
+      - DB_DIALECT=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
@@ -166,6 +169,7 @@ services:
     environment:
       - PORT=5004
       - DB_NAME=inventory_db
+      - DB_DIALECT=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
@@ -191,6 +195,7 @@ services:
     environment:
       - PORT=5005
       - DB_NAME=warehouse_db
+      - DB_DIALECT=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
@@ -218,6 +223,7 @@ services:
     environment:
       - PORT=5006
       - DB_NAME=purchase_db
+      - DB_DIALECT=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
@@ -245,6 +251,7 @@ services:
     environment:
       - PORT=5007
       - DB_NAME=sales_db
+      - DB_DIALECT=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
@@ -272,6 +279,7 @@ services:
     environment:
       - PORT=5008
       - DB_NAME=finance_db
+      - DB_DIALECT=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
@@ -297,6 +305,7 @@ services:
     environment:
       - PORT=5009
       - DB_NAME=notification_db
+      - DB_DIALECT=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
