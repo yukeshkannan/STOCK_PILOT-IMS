@@ -585,20 +585,19 @@ class ProductService {
       }
     } catch (e) {}
 
-    let catalog = products.map((p) => {
-      const pJson = p.toJSON();
-      const currentStock = stockMap[p.id] !== undefined ? stockMap[p.id] : 0;
-      const isPurchased = purchasedProductIds.has(Number(p.id)) || currentStock > 0;
-      return {
-        ...pJson,
-        availableStock: currentStock,
-        inStock: currentStock > 0,
-        isPurchased
-      };
-    });
-
-    // Only include purchased products in the public store catalog as requested
-    catalog = catalog.filter((p) => p.isPurchased);
+    // Strictly include ONLY products that have been purchased via purchases
+    let catalog = products
+      .filter((p) => purchasedProductIds.has(Number(p.id)))
+      .map((p) => {
+        const pJson = p.toJSON();
+        const currentStock = stockMap[p.id] !== undefined ? stockMap[p.id] : 0;
+        return {
+          ...pJson,
+          availableStock: currentStock,
+          inStock: currentStock > 0,
+          isPurchased: true
+        };
+      });
 
     // Filter by selected products if configured by admin in storefront builder
     const savedConfig = tenantInfo.storeConfig || {};
@@ -606,6 +605,10 @@ class ProductService {
     if (Array.isArray(selectedIds) && selectedIds.length > 0) {
       catalog = catalog.filter((p) => selectedIds.includes(p.id));
     }
+
+    // Only return categories that belong to the purchased products
+    const purchasedCategoryIds = new Set(catalog.map((p) => p.category_id).filter(Boolean));
+    const activeCategories = categories.filter((c) => purchasedCategoryIds.has(c.id));
 
     // Merge default store config
     const defaultConfig = {
@@ -717,7 +720,7 @@ class ProductService {
         storeConfig: mergedConfig
       },
       storeConfig: mergedConfig,
-      categories,
+      categories: activeCategories,
       products: catalog
     };
   }

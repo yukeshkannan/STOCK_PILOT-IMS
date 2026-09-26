@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
-import Modal from '../../components/Modal';
 import {
   Store,
   Palette,
@@ -164,19 +163,17 @@ export default function StorefrontBuilderPage() {
   const [tenantProducts, setTenantProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [builderProductSearch, setBuilderProductSearch] = useState('');
+  const [selectedSimCategory, setSelectedSimCategory] = useState('ALL');
 
-  // Add Product to Catalog Modal State
-  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
-  const [submittingProduct, setSubmittingProduct] = useState(false);
-  const [newProductForm, setNewProductForm] = useState({
-    name: '',
-    productCode: '',
-    description: '',
-    sellingPrice: '',
-    purchasePrice: '',
-    initialStock: '10',
-    unit: 'PCS'
-  });
+  // Dynamic categories from purchased products
+  const purchasedCategories = useMemo(() => {
+    const cats = new Set();
+    tenantProducts.forEach((p) => {
+      const cat = p.category?.name || p.category_name || (typeof p.category === 'string' ? p.category : null);
+      if (cat && cat.trim()) cats.add(cat.trim());
+    });
+    return Array.from(cats);
+  }, [tenantProducts]);
 
   // Active Sidebar Mode: 'sections' | 'theme'
   const [activeTab, setActiveTab] = useState('sections');
@@ -353,9 +350,9 @@ export default function StorefrontBuilderPage() {
     try {
       setLoadingProducts(true);
       const [prodRes, stockRes, purRes] = await Promise.allSettled([
-        api.get('/products?limit=150'),
+        api.get('/products?limit=200'),
         api.get('/inventory/stocks'),
-        api.get('/purchases?limit=150')
+        api.get('/purchases?limit=200')
       ]);
 
       const rawProds = prodRes.status === 'fulfilled' ? (prodRes.value?.data?.products || (Array.isArray(prodRes.value?.data) ? prodRes.value.data : [])) : [];
@@ -367,6 +364,7 @@ export default function StorefrontBuilderPage() {
         stockMap[s.product_id] = (stockMap[s.product_id] || 0) + (Number(s.current_stock) || 0);
       });
 
+      // ONLY include products that have been purchased via a purchase order
       const purchasedProductIds = new Set();
       rawPurchases.forEach((po) => {
         if (po.status !== 'CANCELLED' && Array.isArray(po.items)) {
@@ -375,68 +373,23 @@ export default function StorefrontBuilderPage() {
           });
         }
       });
-      rawStocks.forEach((s) => {
-        if (Number(s.current_stock) > 0) {
-          purchasedProductIds.add(Number(s.product_id));
-        }
-      });
 
-      const enriched = rawProds.map((p) => {
-        const stock = stockMap[p.id] !== undefined ? stockMap[p.id] : (p.initialStock || p.current_stock || 0);
-        const isPurchased = purchasedProductIds.has(Number(p.id)) || Number(stock) > 0;
-        return {
-          ...p,
-          currentStock: stock,
-          isPurchased
-        };
-      });
+      const onlyPurchased = rawProds
+        .filter((p) => purchasedProductIds.has(Number(p.id)))
+        .map((p) => {
+          const stock = stockMap[p.id] !== undefined ? stockMap[p.id] : 0;
+          return {
+            ...p,
+            currentStock: stock,
+            isPurchased: true
+          };
+        });
 
-      // Filter: only purchased inventory products
-      const purchasedOnly = enriched.filter((p) => p.isPurchased);
-      setTenantProducts(purchasedOnly);
+      setTenantProducts(onlyPurchased);
     } catch (err) {
       console.warn('Failed to load products for storefront builder:', err);
     } finally {
       setLoadingProducts(false);
-    }
-  };
-
-  const handleCreateProduct = async (e) => {
-    e.preventDefault();
-    if (!newProductForm.name.trim()) {
-      toast.error('Product name is required');
-      return;
-    }
-    try {
-      setSubmittingProduct(true);
-      const code = newProductForm.productCode.trim() || `PRD-${Date.now().toString().slice(-6)}`;
-      const payload = {
-        name: newProductForm.name.trim(),
-        productCode: code,
-        description: newProductForm.description || '',
-        sellingPrice: parseFloat(newProductForm.sellingPrice) || 0,
-        purchasePrice: parseFloat(newProductForm.purchasePrice) || 0,
-        initialStock: parseInt(newProductForm.initialStock, 10) || 0,
-        unit: newProductForm.unit || 'PCS'
-      };
-
-      await api.post('/products', payload);
-      toast.success(`Product "${newProductForm.name}" created and added to inventory!`);
-      setIsAddProductModalOpen(false);
-      setNewProductForm({
-        name: '',
-        productCode: '',
-        description: '',
-        sellingPrice: '',
-        purchasePrice: '',
-        initialStock: '10',
-        unit: 'PCS'
-      });
-      await fetchTenantProducts();
-    } catch (err) {
-      toast.error(err?.message || 'Failed to create product');
-    } finally {
-      setSubmittingProduct(false);
     }
   };
 
@@ -1298,41 +1251,22 @@ export default function StorefrontBuilderPage() {
                               Only items purchased into inventory are shown
                             </p>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <button
-                              type="button"
-                              onClick={() => setIsAddProductModalOpen(true)}
-                              style={{
-                                fontSize: '0.72rem',
-                                fontWeight: 700,
-                                color: '#ffffff',
-                                background: '#982A86',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '0.25rem 0.6rem',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px'
-                              }}
-                            >
-                              <Plus size={12} /> Add Product
-                            </button>
+                          <div>
                             <Link
                               to="/purchases"
                               target="_blank"
                               style={{
                                 fontSize: '0.72rem',
                                 fontWeight: 600,
-                                color: '#64748b',
+                                color: '#982A86',
                                 textDecoration: 'none',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '2px'
+                                gap: '3px'
                               }}
                               title="Go to Purchases"
                             >
-                              PO <ExternalLink size={10} />
+                              + New PO <ExternalLink size={10} />
                             </Link>
                           </div>
                         </div>
@@ -1355,19 +1289,19 @@ export default function StorefrontBuilderPage() {
                             <div style={{ textAlign: 'center', padding: '1.25rem 0.5rem', color: '#64748b' }}>
                               <ShoppingBag size={26} color="#94a3b8" style={{ marginBottom: '0.35rem' }} />
                               <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155' }}>
-                                No purchased products in inventory
+                                No Purchased Products in Inventory
                               </div>
                               <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: '0.25rem 0 0.65rem' }}>
-                                Only products with purchase orders or inventory stock appear online.
+                                Products must be purchased via a Purchase Order before they can appear in your online store.
                               </p>
-                              <button
-                                type="button"
-                                onClick={() => setIsAddProductModalOpen(true)}
+                              <Link
+                                to="/purchases"
+                                target="_blank"
                                 className="shopify-btn-primary"
-                                style={{ fontSize: '0.72rem', padding: '0.3rem 0.75rem' }}
+                                style={{ fontSize: '0.72rem', padding: '0.35rem 0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                               >
-                                <Plus size={12} /> Add Product Now
-                              </button>
+                                Go to Purchases <ExternalLink size={11} />
+                              </Link>
                             </div>
                           ) : (
                             tenantProducts
@@ -1975,17 +1909,26 @@ export default function StorefrontBuilderPage() {
                     )}
                   </div>
 
-                  {config.sections.categoriesEnabled && (
+                  {/* Category Chips - Dynamic from Real Purchased Products */}
+                  {config.sections.categoriesEnabled && purchasedCategories.length > 0 && (
                     <div className="sim-category-chips">
                       <span
-                        className="sim-chip active"
-                        style={{ background: config.branding.primaryColor }}
+                        className={`sim-chip ${selectedSimCategory === 'ALL' ? 'active' : ''}`}
+                        style={selectedSimCategory === 'ALL' ? { background: config.branding.primaryColor } : {}}
+                        onClick={() => setSelectedSimCategory('ALL')}
                       >
-                        All Items (4)
+                        All Items ({tenantProducts.length})
                       </span>
-                      <span className="sim-chip">Apparel</span>
-                      <span className="sim-chip">Accessories</span>
-                      <span className="sim-chip">Footwear</span>
+                      {purchasedCategories.map((catName) => (
+                        <span
+                          key={catName}
+                          className={`sim-chip ${selectedSimCategory === catName ? 'active' : ''}`}
+                          style={selectedSimCategory === catName ? { background: config.branding.primaryColor } : {}}
+                          onClick={() => setSelectedSimCategory(catName)}
+                        >
+                          {catName}
+                        </span>
+                      ))}
                     </div>
                   )}
 
@@ -1999,21 +1942,23 @@ export default function StorefrontBuilderPage() {
                         <p style={{ fontSize: '0.78rem', marginTop: '0.25rem', color: '#94a3b8', maxWidth: '380px', margin: '0.25rem auto 1rem' }}>
                           Only products purchased into inventory will be displayed on your live customer storefront.
                         </p>
-                        <button
-                          type="button"
-                          onClick={() => setIsAddProductModalOpen(true)}
+                        <Link
+                          to="/purchases"
+                          target="_blank"
                           className="shopify-btn-primary"
-                          style={{ fontSize: '0.78rem', padding: '0.4rem 1rem' }}
+                          style={{ fontSize: '0.78rem', padding: '0.4rem 1rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         >
-                          <Plus size={14} /> Add Product to Catalog
-                        </button>
+                          Go to Purchases <ExternalLink size={12} />
+                        </Link>
                       </div>
                     ) : (
                       tenantProducts
                         .filter((p) => {
                           const isSelected = !config.productsSection?.selectedProductIds || config.productsSection.selectedProductIds.length === 0 || config.productsSection.selectedProductIds.includes(p.id);
                           const inStockCheck = config.productsSection?.showOnlyInStock !== false ? p.currentStock > 0 : true;
-                          return isSelected && inStockCheck;
+                          const catName = p.category?.name || p.category_name || (typeof p.category === 'string' ? p.category : null);
+                          const catCheck = selectedSimCategory === 'ALL' || catName === selectedSimCategory;
+                          return isSelected && inStockCheck && catCheck;
                         })
                         .map((p, i) => (
                           <div
@@ -2215,122 +2160,6 @@ export default function StorefrontBuilderPage() {
           </div>
         </main>
       </div>
-
-      {/* Add Product Modal for Admin / Staff */}
-      <Modal
-        isOpen={isAddProductModalOpen}
-        onClose={() => setIsAddProductModalOpen(false)}
-        title="Add Product to Store Catalog"
-        maxWidth="540px"
-      >
-        <form onSubmit={handleCreateProduct} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
-          <div className="form-group">
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-              Product Name *
-            </label>
-            <input
-              type="text"
-              required
-              className="shopify-input"
-              placeholder="e.g. Premium Cotton Casual Shirt"
-              value={newProductForm.name}
-              onChange={(e) => setNewProductForm({ ...newProductForm, name: e.target.value })}
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-                Selling Price (₹) *
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                required
-                className="shopify-input"
-                placeholder="e.g. 1299"
-                value={newProductForm.sellingPrice}
-                onChange={(e) => setNewProductForm({ ...newProductForm, sellingPrice: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-                Initial Purchased Stock
-              </label>
-              <input
-                type="number"
-                min="0"
-                className="shopify-input"
-                placeholder="e.g. 15"
-                value={newProductForm.initialStock}
-                onChange={(e) => setNewProductForm({ ...newProductForm, initialStock: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-                Product SKU / Code
-              </label>
-              <input
-                type="text"
-                className="shopify-input"
-                placeholder="Auto-generated if empty"
-                value={newProductForm.productCode}
-                onChange={(e) => setNewProductForm({ ...newProductForm, productCode: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-                Unit of Measurement
-              </label>
-              <select
-                className="shopify-input"
-                value={newProductForm.unit}
-                onChange={(e) => setNewProductForm({ ...newProductForm, unit: e.target.value })}
-              >
-                <option value="PCS">Pieces (PCS)</option>
-                <option value="BOX">Box</option>
-                <option value="KG">Kilogram (KG)</option>
-                <option value="LTR">Liter (LTR)</option>
-                <option value="PAIR">Pair</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-              Product Description
-            </label>
-            <textarea
-              rows={2}
-              className="shopify-input"
-              placeholder="Brief details about the product..."
-              value={newProductForm.description}
-              onChange={(e) => setNewProductForm({ ...newProductForm, description: e.target.value })}
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', marginTop: '0.5rem' }}>
-            <button
-              type="button"
-              onClick={() => setIsAddProductModalOpen(false)}
-              className="shopify-btn-outline"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submittingProduct}
-              className="shopify-btn-primary"
-            >
-              {submittingProduct ? 'Adding Product...' : 'Add to Catalog'}
-            </button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }
