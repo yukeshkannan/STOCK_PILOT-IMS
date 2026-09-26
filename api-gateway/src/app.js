@@ -47,6 +47,18 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Instant AI Copilot Suggested Prompts Fallback (prevents 504 timeout when AI service is idle)
+app.get('/api/v1/ai/suggested-prompts', (req, res) => {
+  res.json({
+    success: true,
+    data: [
+      { id: '1', label: "Today's Sales", prompt: "Show me today's sales summary and total revenue.", icon: 'TrendingUp' },
+      { id: '2', label: 'Low Stock Alert', prompt: 'Which products are low on stock right now?', icon: 'AlertTriangle' },
+      { id: '3', label: 'Store Health Check', prompt: 'Give me a quick financial health check for this month.', icon: 'DollarSign' }
+    ]
+  });
+});
+
 // Configure Proxies for each microservice route
 Object.entries(SERVICES).forEach(([name, config]) => {
   app.use(

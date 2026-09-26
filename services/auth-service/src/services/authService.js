@@ -517,18 +517,17 @@ class AuthService {
           status: 'ACTIVE'
         });
 
-        const warehouseModels = require('../../../warehouse-service/src/models');
-        if (warehouseModels?.Warehouse) {
-          await warehouseModels.Warehouse.create({
-            tenant_id: newTenantId,
-            name: `${companyName} Main Warehouse`,
-            code: 'MWH-01',
-            address: 'Central Storage Yard',
-            is_default: true,
-            capacity: 10000,
-            capacity_unit: 'Pieces (Pcs)',
-            status: 'ACTIVE'
-          });
+        try {
+          const { createDatabaseConnection } = require('@stockpilot/common');
+          const whDb = createDatabaseConnection('warehouse_db');
+          await whDb.query(
+            `INSERT INTO warehouses (tenant_id, name, code, address, is_default, capacity, capacity_unit, status, created_at, updated_at)
+             VALUES (:tenantId, :name, 'MWH-01', 'Central Storage Yard', 1, 10000, 'Pieces (Pcs)', 'ACTIVE', NOW(), NOW())
+             ON DUPLICATE KEY UPDATE name = VALUES(name);`,
+            { replacements: { tenantId: newTenantId, name: `${companyName} Main Warehouse` } }
+          );
+        } catch (whErr) {
+          // Non-fatal if warehouse auto-provisions on first fetch
         }
 
         if (tenantModels?.AuditLog) {

@@ -25,10 +25,34 @@ async function dispatchNotification(tenantId, { title, message, type = 'PURCHASE
 class PurchaseService {
   // Suppliers
   async getSuppliers(tenantId) {
-    return Supplier.findAll({
+    let suppliers = await Supplier.findAll({
       where: { tenant_id: tenantId },
       order: [['name', 'ASC']]
     });
+
+    if (suppliers.length === 0 && tenantId) {
+      try {
+        await Supplier.create({
+          tenant_id: tenantId,
+          name: 'Primary Wholesale Supplier',
+          contact_person: 'Procurement Desk',
+          phone: '+91 98765 43210',
+          email: 'procurement@vendor-direct.in',
+          address: 'Central Wholesale Market, Unit #4',
+          gstin: '33AABCS1429B1Z',
+          status: 'ACTIVE'
+        });
+
+        suppliers = await Supplier.findAll({
+          where: { tenant_id: tenantId },
+          order: [['name', 'ASC']]
+        });
+      } catch (e) {
+        // Non-fatal if concurrent create
+      }
+    }
+
+    return suppliers;
   }
 
   async getSupplierById(tenantId, id) {

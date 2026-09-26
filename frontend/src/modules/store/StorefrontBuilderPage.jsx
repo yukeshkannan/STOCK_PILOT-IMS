@@ -351,7 +351,7 @@ export default function StorefrontBuilderPage() {
       setLoadingProducts(true);
       const [prodRes, stockRes, purRes] = await Promise.allSettled([
         api.get('/products?limit=200'),
-        api.get('/inventory/stocks'),
+        api.get('/inventory'),
         api.get('/purchases?limit=200')
       ]);
 

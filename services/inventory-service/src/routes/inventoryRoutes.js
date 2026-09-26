@@ -11,6 +11,7 @@ const {
 
 // Public/Tenant APIs
 router.get('/', authenticateToken, requireTenant, requirePermission(PERMISSIONS.STOCK_VIEW), (req, res, next) => inventoryController.getStocks(req, res, next));
+router.get('/stocks', authenticateToken, requireTenant, requirePermission(PERMISSIONS.STOCK_VIEW), (req, res, next) => inventoryController.getStocks(req, res, next));
 router.get('/forecast', authenticateToken, requireTenant, requirePermission(PERMISSIONS.STOCK_VIEW), (req, res, next) => inventoryController.getForecast(req, res, next));
 router.get('/audit-logs', authenticateToken, requireTenant, (req, res, next) => inventoryController.getAuditLogs(req, res, next));
 router.post('/audit-logs', authenticateToken, requireTenant, (req, res, next) => inventoryController.createAuditLog(req, res, next));

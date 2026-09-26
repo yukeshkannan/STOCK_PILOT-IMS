@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
 import Modal from '../../components/Modal';
@@ -31,7 +31,9 @@ import {
   Eye,
   CheckCheck,
   ShieldCheck,
-  Building
+  Building,
+  AlertTriangle,
+  Package
 } from 'lucide-react';
 
 export default function PurchasesPage() {
@@ -679,8 +681,8 @@ export default function PurchasesPage() {
           <button
             onClick={() => {
               setPoForm({
-                supplierId: '',
-                warehouseId: '',
+                supplierId: suppliers[0]?.id ? String(suppliers[0].id) : '',
+                warehouseId: warehouses[0]?.id ? String(warehouses[0].id) : '',
                 notes: '',
                 discountAmount: 0,
                 items: [{ productId: '', quantity: 1, unitPrice: '', taxRate: 0 }]
@@ -695,7 +697,40 @@ export default function PurchasesPage() {
       </div>
 
       {activeTab === 'purchases' && (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <>
+          {products.length === 0 && (
+            <div
+              style={{
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: '10px',
+                padding: '0.85rem 1.25rem',
+                marginBottom: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Package size={22} color="#3b82f6" style={{ flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e40af' }}>
+                    Your Product Catalog is Empty
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#3b82f6' }}>
+                    To create purchase orders and procure inventory, define your products in the Products page first.
+                  </div>
+                </div>
+              </div>
+              <Link to="/products" className="btn btn-primary btn-sm" style={{ whiteSpace: 'nowrap', textDecoration: 'none' }}>
+                <Plus size={13} /> Go to Products Catalog
+              </Link>
+            </div>
+          )}
+
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div className="table-container" style={{ border: 'none' }}>
             <table className="data-table">
               <thead>
@@ -863,6 +898,7 @@ export default function PurchasesPage() {
             </table>
           </div>
         </div>
+        </>
       )}
 
       {activeTab === 'suppliers' && (
@@ -1103,7 +1139,21 @@ export default function PurchasesPage() {
         <form onSubmit={handleCreatePO}>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Select Supplier *</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label className="form-label" style={{ margin: 0 }}>Select Supplier *</label>
+                {suppliers.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPOModalOpen(false);
+                      setIsSupplierModalOpen(true);
+                    }}
+                    style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                  >
+                    + Add Supplier
+                  </button>
+                )}
+              </div>
               <CustomSelect
                 value={poForm.supplierId}
                 onChange={(e) => setPoForm({ ...poForm, supplierId: e.target.value })}
@@ -1129,6 +1179,34 @@ export default function PurchasesPage() {
             </div>
           </div>
 
+          {products.length === 0 && (
+            <div
+              style={{
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '8px',
+                padding: '0.75rem 1rem',
+                marginTop: '0.75rem',
+                marginBottom: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertTriangle size={18} color="#2563eb" style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: '0.8rem', color: '#1e40af' }}>
+                  <strong>Product Catalog is empty:</strong> Add products to your catalog first before procuring them.
+                </span>
+              </div>
+              <Link to="/products" className="btn btn-primary btn-sm" style={{ whiteSpace: 'nowrap', textDecoration: 'none' }}>
+                + Add Products to Catalog
+              </Link>
+            </div>
+          )}
+
           <div style={{ marginTop: '1.25rem', marginBottom: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>Order Line Items</span>
@@ -1137,7 +1215,7 @@ export default function PurchasesPage() {
               </span>
             </div>
             <button type="button" onClick={handleAddItemRow} className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <Plus size={13} /> Add Product
+              <Plus size={13} /> Add Row
             </button>
           </div>
 

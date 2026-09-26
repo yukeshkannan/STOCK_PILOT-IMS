@@ -6,10 +6,49 @@ const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://local
 
 class WarehouseService {
   async getWarehouses(tenantId) {
-    return Warehouse.findAll({
+    let warehouses = await Warehouse.findAll({
       where: { tenant_id: tenantId },
       order: [['is_default', 'DESC'], ['name', 'ASC']]
     });
+
+    if (warehouses.length === 0 && tenantId) {
+      let companyName = 'Main';
+      let companyAddress = 'Central Storage Facility';
+      try {
+        const { createDatabaseConnection } = require('@stockpilot/common');
+        const tenantDb = createDatabaseConnection('tenant_db');
+        const [tenants] = await tenantDb.query(
+          'SELECT company_name, address, city FROM tenants WHERE id = :tenantId LIMIT 1;',
+          { replacements: { tenantId } }
+        );
+        if (tenants && tenants.length > 0) {
+          companyName = tenants[0].company_name || 'Main';
+          companyAddress = tenants[0].address || tenants[0].city || companyAddress;
+        }
+      } catch (e) {}
+
+      await Warehouse.findOrCreate({
+        where: { tenant_id: tenantId, is_default: true },
+        defaults: {
+          tenant_id: tenantId,
+          name: `${companyName} Main Warehouse`,
+          code: 'MWH-01',
+          address: companyAddress,
+          city: 'Main Hub',
+          is_default: true,
+          capacity: 10000,
+          capacity_unit: 'Pieces (Pcs)',
+          status: 'ACTIVE'
+        }
+      });
+
+      warehouses = await Warehouse.findAll({
+        where: { tenant_id: tenantId },
+        order: [['is_default', 'DESC'], ['name', 'ASC']]
+      });
+    }
+
+    return warehouses;
   }
 
   async getWarehouseById(tenantId, id) {
