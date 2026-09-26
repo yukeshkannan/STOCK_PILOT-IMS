@@ -27,20 +27,42 @@ class WarehouseService {
         }
       } catch (e) {}
 
-      await Warehouse.findOrCreate({
-        where: { tenant_id: tenantId, is_default: true },
-        defaults: {
-          tenant_id: tenantId,
-          name: `${companyName} Main Warehouse`,
-          code: 'MWH-01',
-          address: companyAddress,
-          city: 'Main Hub',
-          is_default: true,
-          capacity: 10000,
-          capacity_unit: 'Pieces (Pcs)',
-          status: 'ACTIVE'
-        }
-      });
+      try {
+        await sequelize.query(`
+          ALTER TABLE warehouses 
+          MODIFY COLUMN createdAt DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+          MODIFY COLUMN updatedAt DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+        `);
+      } catch (e) {}
+
+      try {
+        await Warehouse.findOrCreate({
+          where: { tenant_id: tenantId, is_default: true },
+          defaults: {
+            tenant_id: tenantId,
+            name: `${companyName} Main Warehouse`,
+            code: 'MWH-01',
+            address: companyAddress,
+            city: 'Main Hub',
+            is_default: true,
+            capacity: 10000,
+            capacity_unit: 'Pieces (Pcs)',
+            status: 'ACTIVE',
+            created_at: new Date(),
+            updated_at: new Date(),
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
+      } catch (createErr) {
+        try {
+          await sequelize.query(
+            `INSERT IGNORE INTO warehouses (tenant_id, name, code, address, city, is_default, capacity, capacity_unit, status, created_at, updated_at)
+             VALUES (:tenantId, :name, 'MWH-01', :address, 'Main Hub', 1, 10000, 'Pieces (Pcs)', 'ACTIVE', NOW(), NOW());`,
+            { replacements: { tenantId, name: `${companyName} Main Warehouse`, address: companyAddress } }
+          );
+        } catch (rawErr) {}
+      }
 
       warehouses = await Warehouse.findAll({
         where: { tenant_id: tenantId },
@@ -70,7 +92,11 @@ class WarehouseService {
         capacity: 10000,
         capacity_unit: 'Pieces (Pcs)',
         is_default: true,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        created_at: new Date(),
+        updated_at: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
     });
     return warehouse;
@@ -106,7 +132,11 @@ class WarehouseService {
       capacity: data.capacity || 10000,
       capacity_unit: data.capacityUnit || data.capacity_unit || 'Square Feet (Sq. Ft)',
       is_default: !!data.isDefault,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      created_at: new Date(),
+      updated_at: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
   }
 

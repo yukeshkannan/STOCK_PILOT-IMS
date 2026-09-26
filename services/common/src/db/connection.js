@@ -68,10 +68,28 @@ async function syncTableColumns(sequelize) {
       const tableName = model.getTableName();
       try {
         const tableDescription = await queryInterface.describeTable(tableName);
-        for (const [colName, attr] of Object.entries(model.rawAttributes)) {
-          if (!tableDescription[colName]) {
-            logger.info(`[Auto-Migration] Adding missing column "${colName}" to table "${tableName}"...`);
-            await queryInterface.addColumn(tableName, colName, attr);
+
+        // Auto-repair orphaned camelCase timestamp columns in MySQL if underscored table
+        if (tableDescription['createdAt'] && tableDescription['created_at']) {
+          try {
+            await sequelize.query(`ALTER TABLE \`${tableName}\` MODIFY COLUMN \`createdAt\` DATETIME NULL DEFAULT CURRENT_TIMESTAMP;`);
+          } catch (e) {}
+        }
+        if (tableDescription['updatedAt'] && tableDescription['updated_at']) {
+          try {
+            await sequelize.query(`ALTER TABLE \`${tableName}\` MODIFY COLUMN \`updatedAt\` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;`);
+          } catch (e) {}
+        }
+
+        for (const [attrName, attr] of Object.entries(model.rawAttributes)) {
+          const dbCol = attr.field || attrName;
+          if (!tableDescription[dbCol]) {
+            // Do not accidentally add camelCase createdAt/updatedAt if created_at/updated_at exists
+            if ((attrName === 'createdAt' || attrName === 'updatedAt') && (tableDescription['created_at'] || tableDescription['updated_at'])) {
+              continue;
+            }
+            logger.info(`[Auto-Migration] Adding missing column "${dbCol}" to table "${tableName}"...`);
+            await queryInterface.addColumn(tableName, dbCol, attr);
           }
         }
       } catch (tableErr) {
