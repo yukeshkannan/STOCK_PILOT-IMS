@@ -255,8 +255,8 @@ class AuthService {
             code: 'WH-MAIN',
             address: address || city || 'Primary Logistics Facility',
             city: city || '',
-            capacity: 10000,
-            capacity_unit: 'Pieces (Pcs)',
+            capacity: null,
+            capacity_unit: null,
             is_default: true,
             status: 'ACTIVE'
           }

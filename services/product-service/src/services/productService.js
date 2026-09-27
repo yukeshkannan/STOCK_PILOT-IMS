@@ -322,12 +322,14 @@ class ProductService {
 
   // Categories
   async getCategories(tenantId) {
-    const cacheKey = `stockpilot:categories:tenant:${tenantId}`;
+    const tid = tenantId ? parseInt(tenantId, 10) : null;
+    const cacheKey = `stockpilot:categories:tenant:${tid || 'all'}`;
     const cached = await cache.get(cacheKey);
     if (cached) return cached;
 
+    const where = tid ? { tenant_id: tid } : {};
     const categories = await Category.findAll({
-      where: { tenant_id: tenantId },
+      where,
       order: [['name', 'ASC']]
     });
 
@@ -336,44 +338,51 @@ class ProductService {
   }
 
   async createCategory(tenantId, categoryData) {
+    const tid = parseInt(tenantId, 10);
+    if (!tid) throw { statusCode: 400, message: 'Valid tenantId is required to create a category' };
+
     const cat = await Category.create({
-      tenant_id: tenantId,
+      tenant_id: tid,
       name: categoryData.name,
       code: categoryData.code || categoryData.name.substring(0, 4).toUpperCase(),
       description: categoryData.description || ''
     });
-    await cache.del(`stockpilot:categories:tenant:${tenantId}`);
-    await cache.delByPattern(`stockpilot:products:tenant:${tenantId}:*`);
+    await cache.del(`stockpilot:categories:tenant:${tid}`);
+    await cache.delByPattern(`stockpilot:products:tenant:${tid}:*`);
     return cat;
   }
 
   async updateCategory(tenantId, categoryId, data) {
-    const cat = await Category.findOne({ where: { id: categoryId, tenant_id: tenantId } });
+    const tid = parseInt(tenantId, 10);
+    const cat = await Category.findOne({ where: { id: categoryId, tenant_id: tid } });
     if (!cat) throw { statusCode: 404, message: 'Category not found' };
     await cat.update(data);
-    await cache.del(`stockpilot:categories:tenant:${tenantId}`);
-    await cache.delByPattern(`stockpilot:products:tenant:${tenantId}:*`);
+    await cache.del(`stockpilot:categories:tenant:${tid}`);
+    await cache.delByPattern(`stockpilot:products:tenant:${tid}:*`);
     return cat;
   }
 
   async deleteCategory(tenantId, categoryId) {
-    const cat = await Category.findOne({ where: { id: categoryId, tenant_id: tenantId } });
+    const tid = parseInt(tenantId, 10);
+    const cat = await Category.findOne({ where: { id: categoryId, tenant_id: tid } });
     if (!cat) throw { statusCode: 404, message: 'Category not found' };
-    await Product.update({ category_id: null }, { where: { category_id: categoryId, tenant_id: tenantId } });
+    await Product.update({ category_id: null }, { where: { category_id: categoryId, tenant_id: tid } });
     await cat.destroy();
-    await cache.del(`stockpilot:categories:tenant:${tenantId}`);
-    await cache.delByPattern(`stockpilot:products:tenant:${tenantId}:*`);
+    await cache.del(`stockpilot:categories:tenant:${tid}`);
+    await cache.delByPattern(`stockpilot:products:tenant:${tid}:*`);
     return true;
   }
 
   // Brands
   async getBrands(tenantId) {
-    const cacheKey = `stockpilot:brands:tenant:${tenantId}`;
+    const tid = tenantId ? parseInt(tenantId, 10) : null;
+    const cacheKey = `stockpilot:brands:tenant:${tid || 'all'}`;
     const cached = await cache.get(cacheKey);
     if (cached) return cached;
 
+    const where = tid ? { tenant_id: tid } : {};
     const brands = await Brand.findAll({
-      where: { tenant_id: tenantId },
+      where,
       order: [['name', 'ASC']]
     });
 
@@ -382,32 +391,37 @@ class ProductService {
   }
 
   async createBrand(tenantId, brandData) {
+    const tid = parseInt(tenantId, 10);
+    if (!tid) throw { statusCode: 400, message: 'Valid tenantId is required to create a brand' };
+
     const brand = await Brand.create({
-      tenant_id: tenantId,
+      tenant_id: tid,
       name: brandData.name,
       description: brandData.description || ''
     });
-    await cache.del(`stockpilot:brands:tenant:${tenantId}`);
-    await cache.delByPattern(`stockpilot:products:tenant:${tenantId}:*`);
+    await cache.del(`stockpilot:brands:tenant:${tid}`);
+    await cache.delByPattern(`stockpilot:products:tenant:${tid}:*`);
     return brand;
   }
 
   async updateBrand(tenantId, brandId, data) {
-    const brand = await Brand.findOne({ where: { id: brandId, tenant_id: tenantId } });
+    const tid = parseInt(tenantId, 10);
+    const brand = await Brand.findOne({ where: { id: brandId, tenant_id: tid } });
     if (!brand) throw { statusCode: 404, message: 'Brand not found' };
     await brand.update(data);
-    await cache.del(`stockpilot:brands:tenant:${tenantId}`);
-    await cache.delByPattern(`stockpilot:products:tenant:${tenantId}:*`);
+    await cache.del(`stockpilot:brands:tenant:${tid}`);
+    await cache.delByPattern(`stockpilot:products:tenant:${tid}:*`);
     return brand;
   }
 
   async deleteBrand(tenantId, brandId) {
-    const brand = await Brand.findOne({ where: { id: brandId, tenant_id: tenantId } });
+    const tid = parseInt(tenantId, 10);
+    const brand = await Brand.findOne({ where: { id: brandId, tenant_id: tid } });
     if (!brand) throw { statusCode: 404, message: 'Brand not found' };
-    await Product.update({ brand_id: null }, { where: { brand_id: brandId, tenant_id: tenantId } });
+    await Product.update({ brand_id: null }, { where: { brand_id: brandId, tenant_id: tid } });
     await brand.destroy();
-    await cache.del(`stockpilot:brands:tenant:${tenantId}`);
-    await cache.delByPattern(`stockpilot:products:tenant:${tenantId}:*`);
+    await cache.del(`stockpilot:brands:tenant:${tid}`);
+    await cache.delByPattern(`stockpilot:products:tenant:${tid}:*`);
     return true;
   }
 

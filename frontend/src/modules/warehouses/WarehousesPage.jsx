@@ -141,8 +141,8 @@ export default function WarehousesPage() {
     city: '',
     managerName: '',
     phone: '',
-    capacity: 25000,
-    capacityUnit: 'Square Feet (Sq. Ft)',
+    capacity: '',
+    capacityUnit: '',
     isDefault: false,
     status: 'ACTIVE'
   });
@@ -155,8 +155,8 @@ export default function WarehousesPage() {
     city: '',
     managerName: '',
     phone: '',
-    capacity: 25000,
-    capacityUnit: 'Square Feet (Sq. Ft)',
+    capacity: '',
+    capacityUnit: '',
     isDefault: false,
     status: 'ACTIVE'
   });
@@ -227,8 +227,8 @@ export default function WarehousesPage() {
         city: configuringWarehouse.city || '',
         managerName: configuringWarehouse.manager_name || '',
         phone: configuringWarehouse.phone || '',
-        capacity: configuringWarehouse.capacity || 25000,
-        capacityUnit: configuringWarehouse.capacity_unit || 'Square Feet (Sq. Ft)',
+        capacity: (configuringWarehouse.capacity !== null && configuringWarehouse.capacity !== undefined && configuringWarehouse.capacity !== '') ? configuringWarehouse.capacity : '',
+        capacityUnit: configuringWarehouse.capacity_unit || '',
         isDefault: Boolean(configuringWarehouse.is_default),
         status: configuringWarehouse.status || 'ACTIVE'
       });
@@ -314,7 +314,7 @@ export default function WarehousesPage() {
   // Aggregate metrics across visible fulfillment facilities
   const networkMetrics = useMemo(() => {
     const totalWarehouses = visibleWarehouses.length;
-    const totalCapacity = visibleWarehouses.reduce((sum, w) => sum + parseInt(w.capacity || 25000, 10), 0);
+    const totalCapacity = visibleWarehouses.reduce((sum, w) => sum + (w.capacity ? parseInt(w.capacity, 10) : 0), 0);
     let totalUnits = 0;
     let totalValuation = 0;
     let lowStockCount = 0;
@@ -440,8 +440,8 @@ export default function WarehousesPage() {
       (editForm.city || '').trim() !== (configuringWarehouse.city || '').trim() ||
       (editForm.managerName || '').trim() !== (configuringWarehouse.manager_name || '').trim() ||
       (editForm.phone || '').trim() !== (configuringWarehouse.phone || '').trim() ||
-      parseInt(editForm.capacity, 10) !== parseInt(configuringWarehouse.capacity, 10) ||
-      (editForm.capacityUnit || 'Square Feet (Sq. Ft)') !== (configuringWarehouse.capacity_unit || 'Square Feet (Sq. Ft)') ||
+      String(editForm.capacity ?? '') !== String(configuringWarehouse.capacity ?? '') ||
+      String(editForm.capacityUnit ?? '') !== String(configuringWarehouse.capacity_unit ?? '') ||
       Boolean(editForm.isDefault) !== Boolean(configuringWarehouse.is_default) ||
       (editForm.status || 'ACTIVE') !== (configuringWarehouse.status || 'ACTIVE')
     );
@@ -463,10 +463,13 @@ export default function WarehousesPage() {
   const handleCreateWarehouse = async (e) => {
     e.preventDefault();
     try {
+      const capVal = whForm.capacity !== '' && whForm.capacity !== null && !isNaN(parseInt(whForm.capacity, 10))
+        ? parseInt(whForm.capacity, 10)
+        : null;
       await api.post('/warehouses', {
         ...whForm,
-        capacity: parseInt(whForm.capacity, 10) || 25000,
-        capacityUnit: whForm.capacityUnit || 'Square Feet (Sq. Ft)'
+        capacity: capVal,
+        capacityUnit: whForm.capacityUnit || null
       });
       toast.success('Warehouse facility created successfully');
       setIsCreateModalOpen(false);
@@ -477,8 +480,8 @@ export default function WarehousesPage() {
         city: '',
         managerName: '',
         phone: '',
-        capacity: 25000,
-        capacityUnit: 'Square Feet (Sq. Ft)',
+        capacity: '',
+        capacityUnit: '',
         isDefault: false,
         status: 'ACTIVE'
       });
@@ -493,10 +496,13 @@ export default function WarehousesPage() {
     if (!configuringWarehouse) return;
     try {
       setIsUpdating(true);
+      const capVal = editForm.capacity !== '' && editForm.capacity !== null && !isNaN(parseInt(editForm.capacity, 10))
+        ? parseInt(editForm.capacity, 10)
+        : null;
       await api.put(`/warehouses/${configuringWarehouse.id}`, {
         ...editForm,
-        capacity: parseInt(editForm.capacity, 10) || 25000,
-        capacityUnit: editForm.capacityUnit || 'Square Feet (Sq. Ft)'
+        capacity: capVal,
+        capacityUnit: editForm.capacityUnit || null
       });
       toast.success('Warehouse configuration updated successfully');
       setIsEditModalOpen(false);
@@ -518,8 +524,8 @@ export default function WarehousesPage() {
       city: configuringWarehouse.city || '',
       managerName: configuringWarehouse.manager_name || '',
       phone: configuringWarehouse.phone || '',
-      capacity: configuringWarehouse.capacity || 25000,
-      capacityUnit: configuringWarehouse.capacity_unit || 'Square Feet (Sq. Ft)',
+      capacity: (configuringWarehouse.capacity !== null && configuringWarehouse.capacity !== undefined && configuringWarehouse.capacity !== '') ? configuringWarehouse.capacity : '',
+      capacityUnit: configuringWarehouse.capacity_unit || '',
       isDefault: Boolean(configuringWarehouse.is_default),
       status: configuringWarehouse.status || 'ACTIVE'
     });
@@ -1394,7 +1400,36 @@ export default function WarehousesPage() {
                       >
                         <div style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Floor / Storage Capacity</div>
                         <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
-                          {parseInt(w.capacity || 25000, 10).toLocaleString()} <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>{capacityUnit}</span>
+                          {w.capacity ? (
+                            <>
+                              {parseInt(w.capacity, 10).toLocaleString()} <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>{w.capacity_unit || ''}</span>
+                            </>
+                          ) : (
+                            <span
+                              onClick={() => {
+                                if (canEditWarehouse) {
+                                  setConfiguringWarehouse(w);
+                                  setIsEditModalOpen(true);
+                                }
+                              }}
+                              style={{
+                                fontSize: '0.725rem',
+                                fontWeight: 600,
+                                color: '#d97706',
+                                background: '#fef3c7',
+                                border: '1px solid #fde68a',
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                cursor: canEditWarehouse ? 'pointer' : 'default',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                              title={canEditWarehouse ? 'Click to configure physical storage footprint' : 'Storage footprint not configured'}
+                            >
+                              <Maximize2 size={11} /> Setup Storage Area
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -2196,23 +2231,23 @@ export default function WarehousesPage() {
               </div>
               <div className="form-row">
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Usable Storage Area *</label>
+                  <label className="form-label">Usable Storage Area</label>
                   <input
                     type="number"
                     min="1"
                     className="form-input"
-                    placeholder="e.g. 25000"
+                    placeholder="e.g. 10000"
                     value={whForm.capacity}
                     onChange={(e) => setWhForm({ ...whForm, capacity: e.target.value })}
-                    required
                   />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Measurement Unit *</label>
+                  <label className="form-label">Measurement Unit</label>
                   <CustomSelect
                     value={whForm.capacityUnit}
                     onChange={(e) => setWhForm({ ...whForm, capacityUnit: e.target.value })}
                     options={CAPACITY_UNIT_OPTIONS}
+                    placeholder="Select Measurement Unit..."
                   />
                 </div>
               </div>
@@ -2335,27 +2370,28 @@ export default function WarehousesPage() {
               </div>
               <div className="form-row">
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Usable Storage Area *</label>
+                  <label className="form-label">Usable Storage Area</label>
                   <input
                     type="number"
                     min="1"
                     disabled={!canEditWarehouse}
                     className="form-input"
+                    placeholder="e.g. 10000"
                     value={editForm.capacity}
                     onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })}
-                    required
                   />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Measurement Unit *</label>
+                  <label className="form-label">Measurement Unit</label>
                   {canEditWarehouse ? (
                     <CustomSelect
                       value={editForm.capacityUnit}
                       onChange={(e) => setEditForm({ ...editForm, capacityUnit: e.target.value })}
                       options={CAPACITY_UNIT_OPTIONS}
+                      placeholder="Select Measurement Unit..."
                     />
                   ) : (
-                    <input type="text" disabled className="form-input" value={editForm.capacityUnit} />
+                    <input type="text" disabled className="form-input" value={editForm.capacityUnit || 'Not configured'} />
                   )}
                 </div>
               </div>

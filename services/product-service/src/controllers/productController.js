@@ -22,12 +22,18 @@ const productSchema = z.object({
 });
 
 class ProductController {
+  _getTenantId(req) {
+    const tid = req.tenantId || req.user?.tenantId || req.user?.tenant_id || req.headers['x-tenant-id'] || req.query?.tenantId;
+    return (tid !== undefined && tid !== null && tid !== '') ? parseInt(tid, 10) : null;
+  }
+
   async getNextProductCode(req, res, next) {
     try {
       const companyCode = req.user?.companyCode || req.query?.companyCode;
       const companyName = req.user?.companyName || req.query?.companyName;
+      const tenantId = this._getTenantId(req);
       const nextCode = await productService.getNextProductCode(
-        req.user.tenantId,
+        tenantId,
         companyCode,
         companyName
       );
@@ -39,8 +45,9 @@ class ProductController {
 
   async getProducts(req, res, next) {
     try {
+      const tenantId = this._getTenantId(req);
       const { search, categoryId, brandId, status, page = 1, limit = 50 } = req.query;
-      const result = await productService.getProducts(req.user.tenantId, {
+      const result = await productService.getProducts(tenantId, {
         search,
         categoryId: categoryId ? parseInt(categoryId, 10) : undefined,
         brandId: brandId ? parseInt(brandId, 10) : undefined,
@@ -56,7 +63,8 @@ class ProductController {
 
   async getProduct(req, res, next) {
     try {
-      const product = await productService.getProductById(req.user.tenantId, req.params.id);
+      const tenantId = this._getTenantId(req);
+      const product = await productService.getProductById(tenantId, req.params.id);
       return ApiResponse.success(res, product, 'Product details');
     } catch (err) {
       next(err);
@@ -65,11 +73,12 @@ class ProductController {
 
   async createProduct(req, res, next) {
     try {
+      const tenantId = this._getTenantId(req);
       const validated = productSchema.parse(req.body);
-      const product = await productService.createProduct(req.user.tenantId, {
+      const product = await productService.createProduct(tenantId, {
         ...validated,
-        companyCode: req.user.companyCode,
-        companyName: req.user.companyName
+        companyCode: req.user?.companyCode,
+        companyName: req.user?.companyName
       });
       return ApiResponse.created(res, product, 'Product created successfully');
     } catch (err) {
@@ -79,7 +88,8 @@ class ProductController {
 
   async updateProduct(req, res, next) {
     try {
-      const product = await productService.updateProduct(req.user.tenantId, req.params.id, req.body);
+      const tenantId = this._getTenantId(req);
+      const product = await productService.updateProduct(tenantId, req.params.id, req.body);
       return ApiResponse.success(res, product, 'Product updated successfully');
     } catch (err) {
       next(err);
@@ -88,7 +98,8 @@ class ProductController {
 
   async deleteProduct(req, res, next) {
     try {
-      await productService.deleteProduct(req.user.tenantId, req.params.id);
+      const tenantId = this._getTenantId(req);
+      await productService.deleteProduct(tenantId, req.params.id);
       return ApiResponse.success(res, null, 'Product deleted successfully');
     } catch (err) {
       next(err);
@@ -98,7 +109,8 @@ class ProductController {
   // Categories
   async getCategories(req, res, next) {
     try {
-      const categories = await productService.getCategories(req.user.tenantId);
+      const tenantId = this._getTenantId(req);
+      const categories = await productService.getCategories(tenantId);
       return ApiResponse.success(res, categories, 'Categories retrieved');
     } catch (err) {
       next(err);
@@ -107,7 +119,8 @@ class ProductController {
 
   async createCategory(req, res, next) {
     try {
-      const category = await productService.createCategory(req.user.tenantId, req.body);
+      const tenantId = this._getTenantId(req);
+      const category = await productService.createCategory(tenantId, req.body);
       return ApiResponse.created(res, category, 'Category created');
     } catch (err) {
       next(err);
@@ -116,7 +129,8 @@ class ProductController {
 
   async updateCategory(req, res, next) {
     try {
-      const category = await productService.updateCategory(req.user.tenantId, req.params.id, req.body);
+      const tenantId = this._getTenantId(req);
+      const category = await productService.updateCategory(tenantId, req.params.id, req.body);
       return ApiResponse.success(res, category, 'Category updated');
     } catch (err) {
       next(err);
@@ -125,7 +139,8 @@ class ProductController {
 
   async deleteCategory(req, res, next) {
     try {
-      await productService.deleteCategory(req.user.tenantId, req.params.id);
+      const tenantId = this._getTenantId(req);
+      await productService.deleteCategory(tenantId, req.params.id);
       return ApiResponse.success(res, null, 'Category deleted');
     } catch (err) {
       next(err);
@@ -135,7 +150,8 @@ class ProductController {
   // Brands
   async getBrands(req, res, next) {
     try {
-      const brands = await productService.getBrands(req.user.tenantId);
+      const tenantId = this._getTenantId(req);
+      const brands = await productService.getBrands(tenantId);
       return ApiResponse.success(res, brands, 'Brands retrieved');
     } catch (err) {
       next(err);
@@ -144,7 +160,8 @@ class ProductController {
 
   async createBrand(req, res, next) {
     try {
-      const brand = await productService.createBrand(req.user.tenantId, req.body);
+      const tenantId = this._getTenantId(req);
+      const brand = await productService.createBrand(tenantId, req.body);
       return ApiResponse.created(res, brand, 'Brand created');
     } catch (err) {
       next(err);
@@ -153,7 +170,8 @@ class ProductController {
 
   async updateBrand(req, res, next) {
     try {
-      const brand = await productService.updateBrand(req.user.tenantId, req.params.id, req.body);
+      const tenantId = this._getTenantId(req);
+      const brand = await productService.updateBrand(tenantId, req.params.id, req.body);
       return ApiResponse.success(res, brand, 'Brand updated');
     } catch (err) {
       next(err);
@@ -162,7 +180,8 @@ class ProductController {
 
   async deleteBrand(req, res, next) {
     try {
-      await productService.deleteBrand(req.user.tenantId, req.params.id);
+      const tenantId = this._getTenantId(req);
+      await productService.deleteBrand(tenantId, req.params.id);
       return ApiResponse.success(res, null, 'Brand deleted');
     } catch (err) {
       next(err);

@@ -27,7 +27,9 @@ const PERMISSIONS = {
   PRODUCT_UPDATE: 'products:update',
   PRODUCT_DELETE: 'products:delete',
   MANAGE_CATEGORIES: 'categories:manage',
+  CATEGORY_MANAGE: 'categories:manage',
   MANAGE_BRANDS: 'brands:manage',
+  BRAND_MANAGE: 'brands:manage',
 
   // Inventory & Stock
   MANAGE_INVENTORY: 'inventory:manage',

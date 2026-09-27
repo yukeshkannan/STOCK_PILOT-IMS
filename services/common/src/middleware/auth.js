@@ -31,9 +31,12 @@ function verifyRefreshToken(token) {
 function authenticateToken(req, res, next) {
   // If API gateway has already authenticated and passed context headers
   if (req.headers['x-user-id']) {
+    const rawTid = req.headers['x-tenant-id'];
+    const parsedTid = (rawTid && rawTid !== 'null' && rawTid !== 'undefined') ? parseInt(rawTid, 10) : null;
     req.user = {
       userId: req.headers['x-user-id'],
-      tenantId: req.headers['x-tenant-id'] || null,
+      tenantId: parsedTid,
+      tenant_id: parsedTid,
       companyCode: req.headers['x-company-code'] || null,
       companyName: req.headers['x-company-name'] || null,
       name: req.headers['x-user-name'] || null,
@@ -60,6 +63,12 @@ function authenticateToken(req, res, next) {
   }
 
   req.user = decoded;
+  if (req.user) {
+    const tid = req.user.tenantId !== undefined ? req.user.tenantId : req.user.tenant_id;
+    const parsedTid = (tid !== undefined && tid !== null && tid !== '') ? parseInt(tid, 10) : null;
+    req.user.tenantId = parsedTid;
+    req.user.tenant_id = parsedTid;
+  }
   next();
 }
 

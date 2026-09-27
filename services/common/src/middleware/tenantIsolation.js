@@ -3,16 +3,25 @@ const { sendError } = require('../utils/response');
 function enforceTenantIsolation(req, res, next) {
   // Super Admin can access across tenants if explicit, or operate on global scope
   if (req.user && req.user.isSuperAdmin) {
-    req.tenantId = req.query.tenantId || req.headers['x-tenant-id'] || null;
+    const rawTid = req.query.tenantId || req.headers['x-tenant-id'] || null;
+    req.tenantId = rawTid ? parseInt(rawTid, 10) : null;
+    if (req.user) {
+      req.user.tenantId = req.tenantId;
+      req.user.tenant_id = req.tenantId;
+    }
     return next();
   }
 
-  const tenantId = req.user?.tenantId || req.headers['x-tenant-id'];
+  const tenantId = req.user?.tenantId || req.user?.tenant_id || req.headers['x-tenant-id'];
   if (!tenantId) {
     return sendError(res, 'Tenant context missing from verified token', 403);
   }
 
   req.tenantId = parseInt(tenantId, 10);
+  if (req.user) {
+    req.user.tenantId = req.tenantId;
+    req.user.tenant_id = req.tenantId;
+  }
   next();
 }
 

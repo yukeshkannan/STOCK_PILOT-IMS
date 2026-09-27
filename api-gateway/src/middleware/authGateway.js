@@ -10,7 +10,8 @@ function authGatewayMiddleware(req, res, next) {
       const decoded = jwt.verify(token, JWT_SECRET);
       // Inject context headers to downstream microservices
       req.headers['x-user-id'] = String(decoded.userId || decoded.id || '');
-      req.headers['x-tenant-id'] = decoded.tenantId ? String(decoded.tenantId) : '';
+      const tid = decoded.tenantId !== undefined ? decoded.tenantId : decoded.tenant_id;
+      req.headers['x-tenant-id'] = (tid !== null && tid !== undefined && tid !== '') ? String(tid) : '';
       req.headers['x-company-code'] = decoded.companyCode || '';
       req.headers['x-company-name'] = decoded.companyName || '';
       req.headers['x-user-role'] = decoded.roleName || decoded.role || '';

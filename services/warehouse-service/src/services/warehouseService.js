@@ -45,8 +45,8 @@ class WarehouseService {
             address: companyAddress,
             city: 'Main Hub',
             is_default: true,
-            capacity: 10000,
-            capacity_unit: 'Pieces (Pcs)',
+            capacity: null,
+            capacity_unit: null,
             status: 'ACTIVE',
             created_at: new Date(),
             updated_at: new Date(),
@@ -58,7 +58,7 @@ class WarehouseService {
         try {
           await sequelize.query(
             `INSERT IGNORE INTO warehouses (tenant_id, name, code, address, city, is_default, capacity, capacity_unit, status, created_at, updated_at)
-             VALUES (:tenantId, :name, 'MWH-01', :address, 'Main Hub', 1, 10000, 'Pieces (Pcs)', 'ACTIVE', NOW(), NOW());`,
+             VALUES (:tenantId, :name, 'MWH-01', :address, 'Main Hub', 1, NULL, NULL, 'ACTIVE', NOW(), NOW());`,
             { replacements: { tenantId, name: `${companyName} Main Warehouse`, address: companyAddress } }
           );
         } catch (rawErr) {}
@@ -89,8 +89,8 @@ class WarehouseService {
         code: 'WH-MAIN',
         address: address || city || 'Central Logistics Facility',
         city: city || '',
-        capacity: 10000,
-        capacity_unit: 'Pieces (Pcs)',
+        capacity: null,
+        capacity_unit: null,
         is_default: true,
         status: 'ACTIVE',
         created_at: new Date(),
@@ -129,8 +129,8 @@ class WarehouseService {
       city: data.city || '',
       manager_name: data.managerName || '',
       phone: data.phone || '',
-      capacity: data.capacity || 10000,
-      capacity_unit: data.capacityUnit || data.capacity_unit || 'Square Feet (Sq. Ft)',
+      capacity: (data.capacity !== null && data.capacity !== '' && data.capacity !== undefined) ? parseInt(data.capacity, 10) : null,
+      capacity_unit: data.capacityUnit || data.capacity_unit || null,
       is_default: !!data.isDefault,
       status: 'ACTIVE',
       created_at: new Date(),
@@ -164,9 +164,16 @@ class WarehouseService {
     if (data.managerName !== undefined) updatePayload.manager_name = data.managerName;
     else if (data.manager_name !== undefined) updatePayload.manager_name = data.manager_name;
     if (data.phone !== undefined) updatePayload.phone = data.phone;
-    if (data.capacity !== undefined) updatePayload.capacity = parseInt(data.capacity, 10) || 10000;
-    if (data.capacityUnit !== undefined) updatePayload.capacity_unit = data.capacityUnit;
-    else if (data.capacity_unit !== undefined) updatePayload.capacity_unit = data.capacity_unit;
+    if (data.capacity !== undefined) {
+      updatePayload.capacity = (data.capacity !== null && data.capacity !== '' && !isNaN(parseInt(data.capacity, 10)))
+        ? parseInt(data.capacity, 10)
+        : null;
+    }
+    if (data.capacityUnit !== undefined) {
+      updatePayload.capacity_unit = data.capacityUnit || null;
+    } else if (data.capacity_unit !== undefined) {
+      updatePayload.capacity_unit = data.capacity_unit || null;
+    }
     if (isDefaultVal !== undefined) updatePayload.is_default = isDefaultVal;
     if (data.status !== undefined) updatePayload.status = data.status;
 

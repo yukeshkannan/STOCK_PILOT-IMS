@@ -39,12 +39,13 @@ const Warehouse = sequelize.define('Warehouse', {
   },
   capacity: {
     type: DataTypes.INTEGER,
-    defaultValue: 10000
+    allowNull: true,
+    defaultValue: null
   },
   capacity_unit: {
     type: DataTypes.STRING(50),
-    defaultValue: 'Square Feet (Sq. Ft)',
-    allowNull: true
+    allowNull: true,
+    defaultValue: null
   },
   is_default: {
     type: DataTypes.BOOLEAN,
