@@ -313,9 +313,16 @@ services:
       - JWT_SECRET=${JWT_SECRET:-stockpilot_jwt_prod_secret_key_2026}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_jwt_refresh_prod_secret_key_2026}
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - PURCHASE_SERVICE_URL=http://purchase-service:5006
+      - SALES_SERVICE_URL=http://sales-service:5007
+      - WAREHOUSE_SERVICE_URL=http://warehouse-service:5005
     depends_on:
       - mysql
       - rabbitmq
+    networks:
+      - stockpilot-network
+
   # Microservice 10: AI Service
   ai-service:
     build:
