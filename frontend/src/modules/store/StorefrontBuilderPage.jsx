@@ -2331,36 +2331,9 @@ export default function StorefrontBuilderPage() {
                   className="shopify-input"
                   style={{ width: '100%', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}
                 />
-                <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', marginBottom: '6px' }}>
+                <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', marginBottom: '0' }}>
                   Paste direct image link (PNG, JPG, WebP). It will display on your online storefront and inventory catalog.
                 </p>
-
-                {/* Fast Sample Presets for Testing */}
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', alignSelf: 'center' }}>Presets:</span>
-                  {[
-                    { label: '💻 MacBook', url: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80' },
-                    { label: '📱 iPhone', url: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=600&q=80' },
-                    { label: '🎧 Audio', url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80' },
-                    { label: '⌚ Smartwatch', url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80' }
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => setProductEditForm({ ...productEditForm, imageUrl: preset.url })}
-                      style={{
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        fontSize: '0.68rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
 
