@@ -278,6 +278,73 @@ class NotificationService {
         } catch (e) {
           // silent fallback
         }
+
+        // E. Dynamic Live Pending Purchase Returns Sync
+        try {
+          const retRes = await fetch(`${PURCHASE_SERVICE_URL}/api/v1/purchase-returns`, { headers });
+          const retData = await retRes.json();
+          const retList = retData?.data?.returns || retData?.data?.items || retData?.data || [];
+          if (Array.isArray(retList)) {
+            for (const ret of retList) {
+              if (ret.status === 'PENDING_APPROVAL') {
+                const existing = await Notification.findOne({
+                  where: {
+                    tenant_id: tId,
+                    action_type: 'RETURN_APPROVE',
+                    action_id: String(ret.id)
+                  }
+                });
+                if (!existing) {
+                  await this.createNotification({
+                    tenantId: tId,
+                    title: `Purchase Return Request #${ret.return_number}`,
+                    message: `RMA Return request of ₹${Number(ret.total_refund || 0).toLocaleString('en-IN')} submitted for ${ret.supplier_name || 'Supplier'} (${ret.reason || 'Defective'}). Awaiting manager review.`,
+                    type: 'RETURN_APPROVAL',
+                    category: 'REQUESTS',
+                    actionType: 'RETURN_APPROVE',
+                    actionId: ret.id,
+                    metadata: { returnId: ret.id, returnNumber: ret.return_number },
+                    link: `/purchases?tab=returns&returnId=${ret.id}`
+                  });
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // silent fallback
+        }
+
+        // F. Dynamic Live Customer Sales Returns Sync
+        try {
+          const sRetRes = await fetch(`${SALES_SERVICE_URL}/api/v1/sales-returns`, { headers });
+          const sRetData = await sRetRes.json();
+          const sRetList = sRetData?.data?.returns || sRetData?.data?.items || sRetData?.data || [];
+          if (Array.isArray(sRetList)) {
+            for (const sRet of sRetList) {
+              const existing = await Notification.findOne({
+                where: {
+                  tenant_id: tId,
+                  type: 'RETURN',
+                  action_id: String(sRet.id)
+                }
+              });
+              if (!existing) {
+                await this.createNotification({
+                  tenantId: tId,
+                  title: `Customer Return #${sRet.return_number}`,
+                  message: `Sales return #${sRet.return_number} recorded for ${sRet.customer_name || 'Customer'} (Refund Amount: ₹${Number(sRet.total_refund || 0).toLocaleString('en-IN')}). Items restored to warehouse stock.`,
+                  type: 'RETURN',
+                  category: 'TRANSACTIONS',
+                  actionId: sRet.id,
+                  metadata: { returnId: sRet.id, returnNumber: sRet.return_number },
+                  link: '/sales'
+                });
+              }
+            }
+          }
+        } catch (e) {
+          // silent fallback
+        }
       }
     } catch (err) {
       console.warn('Dynamic live sync note:', err.message);
@@ -547,10 +614,10 @@ class NotificationService {
     // 3. Purchase Return Approval Actions
     else if (notif.action_type === 'RETURN_APPROVE') {
       if (actionUpper === 'APPROVE') {
-        await httpPatch(`${PURCHASE_SERVICE_URL}/api/v1/purchases/returns/${notif.action_id}/approve`, {}, headers);
+        await httpPatch(`${PURCHASE_SERVICE_URL}/api/v1/purchase-returns/${notif.action_id}/approve`, {}, headers);
         await notif.update({ action_status: 'APPROVED', is_read: true });
       } else if (actionUpper === 'REJECT') {
-        await httpPatch(`${PURCHASE_SERVICE_URL}/api/v1/purchases/returns/${notif.action_id}/reject`, {}, headers);
+        await httpPatch(`${PURCHASE_SERVICE_URL}/api/v1/purchase-returns/${notif.action_id}/reject`, {}, headers);
         await notif.update({ action_status: 'REJECTED', is_read: true });
       }
     }

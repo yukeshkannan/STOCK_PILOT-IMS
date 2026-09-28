@@ -5,20 +5,23 @@ const { PURCHASE_STATUS, PAYMENT_STATUS, STOCK_MOVEMENT_TYPES, eventBus, EVENTS,
 const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
 const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5009';
 
-async function dispatchNotification(tenantId, { title, message, type = 'PURCHASE', link = null }) {
+async function dispatchNotification(tenantId, { title, message, type = 'PURCHASE', category = 'REQUESTS', link = null, actionType = null, actionId = null }) {
   try {
-    await axios.post(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications`, {
+    await axios.post(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/internal`, {
       title,
       message,
       type,
+      category,
       link,
+      actionType,
+      actionId: actionId ? String(actionId) : null,
       tenantId: tenantId ? Number(tenantId) : 0
     }, {
       headers: { 'x-tenant-id': String(tenantId || 0) },
-      timeout: 3000
+      timeout: 4000
     });
   } catch (e) {
-    // Non-fatal notification failure
+    console.warn('[NotificationDispatch] Note:', e.message);
   }
 }
 
@@ -475,7 +478,10 @@ class PurchaseService {
       dispatchNotification(tenantId, {
         title: `Purchase Return Request #${returnNumber}`,
         message: `RMA Return request of ₹${totalRefund.toLocaleString('en-IN')} submitted for ${supplier.name} (${reason || 'Defective items'}). Awaiting review.`,
-        type: 'PURCHASE',
+        type: 'RETURN_APPROVAL',
+        category: 'REQUESTS',
+        actionType: 'RETURN_APPROVE',
+        actionId: pReturn.id,
         link: `/purchases?tab=returns&returnId=${pReturn.id}`
       });
 

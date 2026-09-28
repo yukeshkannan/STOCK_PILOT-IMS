@@ -3,6 +3,27 @@ const { Customer, Sale, SaleItem, SaleReturn, SaleReturnItem, sequelize } = requ
 const { SALE_STATUS, PAYMENT_STATUS, PAYMENT_METHODS, STOCK_MOVEMENT_TYPES, eventBus, EVENTS, getNextSequenceNumber } = require('@stockpilot/common');
 
 const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5009';
+
+async function dispatchNotification(tenantId, { title, message, type = 'RETURN', category = 'TRANSACTIONS', link = null, actionType = null, actionId = null }) {
+  try {
+    await axios.post(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/internal`, {
+      title,
+      message,
+      type,
+      category,
+      link,
+      actionType,
+      actionId: actionId ? String(actionId) : null,
+      tenantId: tenantId ? Number(tenantId) : 0
+    }, {
+      headers: { 'x-tenant-id': String(tenantId || 0) },
+      timeout: 4000
+    });
+  } catch (e) {
+    console.warn('[SalesNotificationDispatch] Note:', e.message);
+  }
+}
 
 class SalesService {
   // Customers
@@ -649,6 +670,16 @@ class SalesService {
         customerName: customerName || 'Customer',
         refundAmount: totalRefund,
         itemsCount: returnItems.length
+      });
+
+      // Direct in-app notification dispatch for instant UI update
+      dispatchNotification(tenantId, {
+        title: `Customer Return #${returnNumber}`,
+        message: `Sales return #${returnNumber} recorded for ${customerName || 'Customer'} (Refund Amount: ₹${Number(totalRefund || 0).toLocaleString('en-IN')}). Items restored to warehouse stock.`,
+        type: 'RETURN',
+        category: 'TRANSACTIONS',
+        actionId: sReturn.id,
+        link: '/sales'
       });
 
       return sReturn;
