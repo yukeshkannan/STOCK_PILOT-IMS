@@ -1,5 +1,4 @@
 const { Op } = require('sequelize');
-const axios = require('axios');
 const { Stock, StockMovement, StockAdjustment, AuditLog, sequelize } = require('../models');
 const { STOCK_MOVEMENT_TYPES, eventBus, EVENTS } = require('@stockpilot/common');
 
@@ -12,21 +11,26 @@ async function dispatchNotification(tenantId, { title, message, type = 'LOW_STOC
 
   for (const url of [...new Set(urls)]) {
     try {
-      await axios.post(`${url}/api/v1/notifications/internal`, {
-        title,
-        message,
-        type,
-        category,
-        link,
-        actionType,
-        actionId: actionId ? String(actionId) : null,
-        metadata,
-        tenantId: tenantId ? Number(tenantId) : 0
-      }, {
-        headers: { 'x-tenant-id': String(tenantId || 0), 'x-user-id': 'system' },
-        timeout: 3000
+      const res = await fetch(`${url}/api/v1/notifications/internal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': String(tenantId || 0),
+          'x-user-id': 'system'
+        },
+        body: JSON.stringify({
+          title,
+          message,
+          type,
+          category,
+          link,
+          actionType,
+          actionId: actionId ? String(actionId) : null,
+          metadata,
+          tenantId: tenantId ? Number(tenantId) : 0
+        })
       });
-      return;
+      if (res.ok) return;
     } catch {
       // try next candidate URL
     }

@@ -72,14 +72,29 @@ Object.entries(SERVICES).forEach(([name, config]) => {
         const normalized = path.startsWith('/') ? path : `/${path}`;
         return `${config.prefix}${normalized === '/' ? '' : normalized}`;
       },
+      on: {
+        error: (err, req, res) => {
+          console.error(`[Gateway Proxy Error] ${name} (${config.url}):`, err.message);
+          if (res && !res.headersSent) {
+            res.status(503).json({
+              success: false,
+              message: `Service [${name}] is currently unavailable. Please ensure the service is running.`,
+              errorCode: 'SERVICE_UNAVAILABLE',
+              service: name
+            });
+          }
+        }
+      },
       onError: (err, req, res) => {
         console.error(`[Gateway Proxy Error] ${name} (${config.url}):`, err.message);
-        res.status(503).json({
-          success: false,
-          message: `Service [${name}] is currently unavailable. Please ensure the service is running.`,
-          errorCode: 'SERVICE_UNAVAILABLE',
-          service: name
-        });
+        if (res && !res.headersSent) {
+          res.status(503).json({
+            success: false,
+            message: `Service [${name}] is currently unavailable. Please ensure the service is running.`,
+            errorCode: 'SERVICE_UNAVAILABLE',
+            service: name
+          });
+        }
       }
     })
   );
