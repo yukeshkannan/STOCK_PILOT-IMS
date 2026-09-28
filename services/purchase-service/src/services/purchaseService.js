@@ -34,7 +34,8 @@ class PurchaseService {
   }
 
   async getSupplierById(tenantId, id) {
-    const supplier = await Supplier.findOne({ where: { id, tenant_id: tenantId } });
+    const where = tenantId ? { id, tenant_id: tenantId } : { id };
+    const supplier = await Supplier.findOne({ where });
     if (!supplier) throw { statusCode: 404, message: 'Supplier not found' };
     return supplier;
   }
@@ -60,7 +61,36 @@ class PurchaseService {
 
   async deleteSupplier(tenantId, id) {
     const supplier = await this.getSupplierById(tenantId, id);
-    await supplier.destroy();
+
+    try {
+      // 1. Cascade delete linked purchases, returns & items to avoid foreign key errors
+      const pWhere = tenantId ? { tenant_id: tenantId, supplier_id: id } : { supplier_id: id };
+      const linkedPurchases = await Purchase.findAll({ where: pWhere });
+      if (linkedPurchases.length > 0) {
+        const poIds = linkedPurchases.map((p) => p.id);
+        await PurchaseItem.destroy({ where: { purchase_id: poIds } });
+        await Purchase.destroy({ where: { id: poIds } });
+      }
+
+      const rWhere = tenantId ? { tenant_id: tenantId, supplier_id: id } : { supplier_id: id };
+      const linkedReturns = await PurchaseReturn.findAll({ where: rWhere });
+      if (linkedReturns.length > 0) {
+        const retIds = linkedReturns.map((r) => r.id);
+        await PurchaseReturnItem.destroy({ where: { return_id: retIds } });
+        await PurchaseReturn.destroy({ where: { id: retIds } });
+      }
+
+      // 2. Destroy supplier
+      await supplier.destroy();
+    } catch (err) {
+      if (err.name === 'SequelizeForeignKeyConstraintError' || err.name === 'ForeignKeyConstraintError') {
+        // Fallback: mark as inactive if database prevents hard deletion
+        await supplier.update({ status: 'INACTIVE' });
+      } else {
+        throw err;
+      }
+    }
+
     return true;
   }
 

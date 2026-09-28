@@ -20,6 +20,10 @@ function errorHandler(err, req, res, next) {
     return sendError(res, 'Database Validation Error', 400, errorDetails);
   }
 
+  if (err.name === 'SequelizeForeignKeyConstraintError' || err.name === 'ForeignKeyConstraintError') {
+    return sendError(res, 'Cannot delete or modify this item because other records are linked to it.', 400);
+  }
+
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
 
