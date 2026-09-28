@@ -72,17 +72,10 @@ class NotificationService {
           activeTenantIds = tenants.map((t) => Number(t.id));
         }
       } catch (e) {
-        console.warn('Tenant model query note:', e.message);
+        // Inter-container model require fallback - silent
       }
 
-      if (activeTenantIds.length === 0) {
-        // If all tenant companies are deleted, delete ALL tenant notifications!
-        await Notification.destroy({
-          where: {
-            tenant_id: { [Op.gt]: 0 }
-          }
-        });
-      } else {
+      if (activeTenantIds.length > 0) {
         // Delete notifications belonging to non-existent / deleted tenants
         await Notification.destroy({
           where: {
@@ -292,8 +285,12 @@ class NotificationService {
   }
 
   async getNotifications(tenantId, userId, isSuperAdmin = false, options = {}) {
-    // Run live dynamic synchronization first
-    await this.syncLiveDynamicAlerts(tenantId, isSuperAdmin);
+    // Run live dynamic synchronization first (safe fallback on error)
+    try {
+      await this.syncLiveDynamicAlerts(tenantId, isSuperAdmin);
+    } catch (syncErr) {
+      console.warn('[NotificationSync] Warning during syncLiveDynamicAlerts:', syncErr.message);
+    }
 
     const { category, unreadOnly, search, limit = 50, page = 1, user } = options;
     const baseWhere = (!tenantId && isSuperAdmin) ? {} : { tenant_id: tenantId || null };

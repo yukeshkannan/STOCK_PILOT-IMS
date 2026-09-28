@@ -28,6 +28,7 @@ import {
   MapPin,
   Calendar,
   ExternalLink,
+  CheckCircle,
   CheckCircle2,
   Package,
   RotateCcw,
