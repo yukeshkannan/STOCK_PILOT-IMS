@@ -216,6 +216,9 @@ const EVENTS = {
   TRANSFER_REJECTED: 'transfer.rejected',
   TRANSFER_DISPATCHED: 'transfer.dispatched',
   TRANSFER_COMPLETED: 'transfer.completed',
+  PURCHASE_RETURN_CREATED: 'purchase_return.created',
+  PURCHASE_RETURN_APPROVED: 'purchase_return.approved',
+  PURCHASE_RETURN_REJECTED: 'purchase_return.rejected',
   SYSTEM_BROADCAST: 'system.broadcast',
   NOTIFICATION_SEND: 'notification.send'
 };

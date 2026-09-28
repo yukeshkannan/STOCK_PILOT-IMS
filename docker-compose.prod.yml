@@ -203,6 +203,7 @@ services:
       - JWT_SECRET=${JWT_SECRET:-stockpilot_jwt_prod_secret_key_2026}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_jwt_refresh_prod_secret_key_2026}
       - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5009
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql
@@ -231,6 +232,7 @@ services:
       - JWT_SECRET=${JWT_SECRET:-stockpilot_jwt_prod_secret_key_2026}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_jwt_refresh_prod_secret_key_2026}
       - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5009
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql
@@ -259,6 +261,7 @@ services:
       - JWT_SECRET=${JWT_SECRET:-stockpilot_jwt_prod_secret_key_2026}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_jwt_refresh_prod_secret_key_2026}
       - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5009
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql
@@ -286,6 +289,7 @@ services:
       - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
       - JWT_SECRET=${JWT_SECRET:-stockpilot_jwt_prod_secret_key_2026}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_jwt_refresh_prod_secret_key_2026}
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5009
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql
@@ -317,9 +321,14 @@ services:
       - PURCHASE_SERVICE_URL=http://purchase-service:5006
       - SALES_SERVICE_URL=http://sales-service:5007
       - WAREHOUSE_SERVICE_URL=http://warehouse-service:5005
+      - TENANT_SERVICE_URL=http://tenant-service:5002
     depends_on:
       - mysql
       - rabbitmq
+      - inventory-service
+      - purchase-service
+      - sales-service
+      - warehouse-service
     networks:
       - stockpilot-network
 

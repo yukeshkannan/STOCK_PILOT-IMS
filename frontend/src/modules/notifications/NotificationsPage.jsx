@@ -225,10 +225,13 @@ export default function NotificationsPage() {
       case 'SALE':
         return <ShoppingBag size={20} color="#10b981" />;
       case 'PURCHASE':
+      case 'PURCHASE_APPROVAL':
         return <ShoppingCart size={20} color="#3b82f6" />;
       case 'TRANSFER':
+      case 'TRANSFER_REQUEST':
         return <ArrowRightLeft size={20} color="#8b5cf6" />;
       case 'RETURN':
+      case 'RETURN_APPROVAL':
         return <RefreshCw size={20} color="#06b6d4" />;
       case 'SECURITY':
         return <ShieldAlert size={20} color="#ef4444" />;

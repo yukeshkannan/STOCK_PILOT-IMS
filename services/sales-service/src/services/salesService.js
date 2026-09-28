@@ -5,23 +5,33 @@ const { SALE_STATUS, PAYMENT_STATUS, PAYMENT_METHODS, STOCK_MOVEMENT_TYPES, even
 const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
 const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5009';
 
-async function dispatchNotification(tenantId, { title, message, type = 'RETURN', category = 'TRANSACTIONS', link = null, actionType = null, actionId = null }) {
-  try {
-    await axios.post(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/internal`, {
-      title,
-      message,
-      type,
-      category,
-      link,
-      actionType,
-      actionId: actionId ? String(actionId) : null,
-      tenantId: tenantId ? Number(tenantId) : 0
-    }, {
-      headers: { 'x-tenant-id': String(tenantId || 0) },
-      timeout: 4000
-    });
-  } catch (e) {
-    console.warn('[SalesNotificationDispatch] Note:', e.message);
+async function dispatchNotification(tenantId, { title, message, type = 'RETURN', category = 'TRANSACTIONS', link = null, actionType = null, actionId = null, metadata = null }) {
+  const urls = [
+    process.env.NOTIFICATION_SERVICE_URL,
+    'http://notification-service:5009',
+    'http://localhost:5009'
+  ].filter(Boolean);
+
+  for (const url of [...new Set(urls)]) {
+    try {
+      await axios.post(`${url}/api/v1/notifications/internal`, {
+        title,
+        message,
+        type,
+        category,
+        link,
+        actionType,
+        actionId: actionId ? String(actionId) : null,
+        metadata,
+        tenantId: tenantId ? Number(tenantId) : 0
+      }, {
+        headers: { 'x-tenant-id': String(tenantId || 0), 'x-user-id': 'system' },
+        timeout: 3000
+      });
+      return;
+    } catch {
+      // try next URL
+    }
   }
 }
 

@@ -162,6 +162,55 @@ async function startServer() {
       }
     });
 
+    // Purchase Returns Events
+    await eventBus.subscribe('notification-purchase-return-created', EVENTS.PURCHASE_RETURN_CREATED, async (data) => {
+      try {
+        await notificationService.createNotification({
+          tenantId: data.tenantId,
+          title: `Purchase Return Request #${data.returnNumber}`,
+          message: `RMA Return request #${data.returnNumber} of ₹${Number(data.totalRefund || 0).toLocaleString('en-IN')} submitted for ${data.supplierName || 'Supplier'} (${data.reason || 'Defective items'}). Awaiting review.`,
+          type: 'RETURN_APPROVAL',
+          category: 'REQUESTS',
+          actionType: 'RETURN_APPROVE',
+          actionId: data.returnId,
+          metadata: { returnId: data.returnId, returnNumber: data.returnNumber },
+          link: `/purchases?tab=returns&returnId=${data.returnId}`
+        });
+      } catch (err) {
+        console.error('Error handling PURCHASE_RETURN_CREATED notification:', err.message);
+      }
+    });
+
+    await eventBus.subscribe('notification-purchase-return-approved', EVENTS.PURCHASE_RETURN_APPROVED, async (data) => {
+      try {
+        const { Notification } = require('./src/models');
+        await Notification.update({ action_status: 'APPROVED', is_read: true }, {
+          where: { tenant_id: data.tenantId, action_type: 'RETURN_APPROVE', action_id: String(data.returnId) }
+        });
+        await notificationService.createNotification({
+          tenantId: data.tenantId,
+          title: `Purchase Return Approved: #${data.returnNumber}`,
+          message: `RMA Return #${data.returnNumber} was approved. Stock deducted from warehouse.`,
+          type: 'RETURN',
+          category: 'TRANSACTIONS',
+          link: '/purchases?tab=returns'
+        });
+      } catch (err) {
+        console.error('Error handling PURCHASE_RETURN_APPROVED notification:', err.message);
+      }
+    });
+
+    await eventBus.subscribe('notification-purchase-return-rejected', EVENTS.PURCHASE_RETURN_REJECTED, async (data) => {
+      try {
+        const { Notification } = require('./src/models');
+        await Notification.update({ action_status: 'REJECTED', is_read: true }, {
+          where: { tenant_id: data.tenantId, action_type: 'RETURN_APPROVE', action_id: String(data.returnId) }
+        });
+      } catch (err) {
+        console.error('Error handling PURCHASE_RETURN_REJECTED notification:', err.message);
+      }
+    });
+
     // 4. Sales & Finance Events
     await eventBus.subscribe('notification-sale', EVENTS.SALE_CREATED, async (data) => {
       try {

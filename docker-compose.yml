@@ -164,6 +164,7 @@ services:
       - DB_PORT=3306
       - DB_USER=root
       - DB_PASSWORD=rootpassword
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5009
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql
@@ -188,6 +189,7 @@ services:
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5009
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql
@@ -213,6 +215,7 @@ services:
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5009
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql
@@ -238,6 +241,7 @@ services:
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5009
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql
@@ -262,6 +266,7 @@ services:
       - DB_PORT=3306
       - DB_USER=root
       - DB_PASSWORD=rootpassword
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5009
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql
@@ -285,10 +290,19 @@ services:
       - DB_PORT=3306
       - DB_USER=root
       - DB_PASSWORD=rootpassword
+      - INVENTORY_SERVICE_URL=http://inventory-service:5004
+      - PURCHASE_SERVICE_URL=http://purchase-service:5006
+      - SALES_SERVICE_URL=http://sales-service:5007
+      - WAREHOUSE_SERVICE_URL=http://warehouse-service:5005
+      - TENANT_SERVICE_URL=http://tenant-service:5002
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql
       - rabbitmq
+      - inventory-service
+      - purchase-service
+      - sales-service
+      - warehouse-service
     networks:
       - stockpilot-network
 

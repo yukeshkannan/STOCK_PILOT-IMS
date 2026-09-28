@@ -1,6 +1,37 @@
 const { Op } = require('sequelize');
+const axios = require('axios');
 const { Stock, StockMovement, StockAdjustment, AuditLog, sequelize } = require('../models');
 const { STOCK_MOVEMENT_TYPES, eventBus, EVENTS } = require('@stockpilot/common');
+
+async function dispatchNotification(tenantId, { title, message, type = 'LOW_STOCK', category = 'STOCK', link = '/inventory', actionType = 'REORDER', actionId = null, metadata = null }) {
+  const urls = [
+    process.env.NOTIFICATION_SERVICE_URL,
+    'http://notification-service:5009',
+    'http://localhost:5009'
+  ].filter(Boolean);
+
+  for (const url of [...new Set(urls)]) {
+    try {
+      await axios.post(`${url}/api/v1/notifications/internal`, {
+        title,
+        message,
+        type,
+        category,
+        link,
+        actionType,
+        actionId: actionId ? String(actionId) : null,
+        metadata,
+        tenantId: tenantId ? Number(tenantId) : 0
+      }, {
+        headers: { 'x-tenant-id': String(tenantId || 0), 'x-user-id': 'system' },
+        timeout: 3000
+      });
+      return;
+    } catch {
+      // try next candidate URL
+    }
+  }
+}
 
 class InventoryService {
   async getStocks(tenantId, { warehouseId, productId, lowStockOnly, outOfStockOnly, search, page = 1, limit = 50 }) {
@@ -91,6 +122,17 @@ class InventoryService {
           currentStock: item.current_stock,
           minimumStock: item.minimum_stock
         }).catch(() => {});
+
+        dispatchNotification(tenantId, {
+          title: `Low Stock Alert: ${item.product_name}`,
+          message: `Product [${item.product_name} (${item.product_code})] has only ${item.current_stock} units remaining in ${item.warehouse_name} (Minimum threshold: ${item.minimum_stock} units).`,
+          type: 'LOW_STOCK',
+          category: 'STOCK',
+          actionType: 'REORDER',
+          actionId: item.product_id,
+          metadata: { productId: item.product_id, warehouseId: item.warehouse_id },
+          link: '/inventory'
+        }).catch(() => {});
       } else if (item.current_stock <= 0) {
         eventBus.publish(EVENTS.STOCK_OUT, {
           tenantId,
@@ -99,6 +141,17 @@ class InventoryService {
           productName: item.product_name,
           warehouseId: item.warehouse_id,
           warehouseName: item.warehouse_name
+        }).catch(() => {});
+
+        dispatchNotification(tenantId, {
+          title: `Out of Stock Alert: ${item.product_name}`,
+          message: `Product [${item.product_name} (${item.product_code})] is completely OUT OF STOCK in ${item.warehouse_name}. Sales paused for this item.`,
+          type: 'OUT_OF_STOCK',
+          category: 'STOCK',
+          actionType: 'REORDER',
+          actionId: item.product_id,
+          metadata: { productId: item.product_id, warehouseId: item.warehouse_id },
+          link: '/inventory'
         }).catch(() => {});
       }
     }
@@ -411,6 +464,16 @@ class InventoryService {
           warehouseId: stock.warehouse_id,
           warehouseName: stock.warehouse_name
         });
+        dispatchNotification(tenantId, {
+          title: `Out of Stock Alert: ${stock.product_name}`,
+          message: `Product [${stock.product_name} (${stock.product_code})] is completely OUT OF STOCK in ${stock.warehouse_name}. Sales paused for this item.`,
+          type: 'OUT_OF_STOCK',
+          category: 'STOCK',
+          actionType: 'REORDER',
+          actionId: productId,
+          metadata: { productId, warehouseId: stock.warehouse_id },
+          link: '/inventory'
+        }).catch(() => {});
       } else if (newCurrent <= stock.minimum_stock) {
         await eventBus.publish(EVENTS.STOCK_LOW, {
           tenantId,
@@ -422,6 +485,16 @@ class InventoryService {
           currentStock: newCurrent,
           minimumStock: stock.minimum_stock
         });
+        dispatchNotification(tenantId, {
+          title: `Low Stock Alert: ${stock.product_name}`,
+          message: `Product [${stock.product_name} (${stock.product_code})] has only ${newCurrent} units remaining in ${stock.warehouse_name} (Minimum threshold: ${stock.minimum_stock} units).`,
+          type: 'LOW_STOCK',
+          category: 'STOCK',
+          actionType: 'REORDER',
+          actionId: productId,
+          metadata: { productId, warehouseId: stock.warehouse_id },
+          link: '/inventory'
+        }).catch(() => {});
       }
 
       await eventBus.publish(EVENTS.STOCK_UPDATED, {
@@ -543,6 +616,30 @@ class InventoryService {
         newQuantity: newQty,
         reason: reason || 'Audit adjustment'
       });
+
+      if (newQty <= 0) {
+        dispatchNotification(tenantId, {
+          title: `Out of Stock Alert: ${stock.product_name}`,
+          message: `Product [${stock.product_name} (${stock.product_code})] is completely OUT OF STOCK in ${stock.warehouse_name}.`,
+          type: 'OUT_OF_STOCK',
+          category: 'STOCK',
+          actionType: 'REORDER',
+          actionId: productId,
+          metadata: { productId, warehouseId },
+          link: '/inventory'
+        }).catch(() => {});
+      } else if (newQty <= stock.minimum_stock) {
+        dispatchNotification(tenantId, {
+          title: `Low Stock Alert: ${stock.product_name}`,
+          message: `Product [${stock.product_name} (${stock.product_code})] has only ${newQty} units remaining in ${stock.warehouse_name} (Minimum threshold: ${stock.minimum_stock} units).`,
+          type: 'LOW_STOCK',
+          category: 'STOCK',
+          actionType: 'REORDER',
+          actionId: productId,
+          metadata: { productId, warehouseId },
+          link: '/inventory'
+        }).catch(() => {});
+      }
 
       return { stock, adjustment: adj };
     } catch (err) {

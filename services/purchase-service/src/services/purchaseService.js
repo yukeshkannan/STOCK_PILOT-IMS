@@ -5,23 +5,33 @@ const { PURCHASE_STATUS, PAYMENT_STATUS, STOCK_MOVEMENT_TYPES, eventBus, EVENTS,
 const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
 const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5009';
 
-async function dispatchNotification(tenantId, { title, message, type = 'PURCHASE', category = 'REQUESTS', link = null, actionType = null, actionId = null }) {
-  try {
-    await axios.post(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/internal`, {
-      title,
-      message,
-      type,
-      category,
-      link,
-      actionType,
-      actionId: actionId ? String(actionId) : null,
-      tenantId: tenantId ? Number(tenantId) : 0
-    }, {
-      headers: { 'x-tenant-id': String(tenantId || 0) },
-      timeout: 4000
-    });
-  } catch (e) {
-    console.warn('[NotificationDispatch] Note:', e.message);
+async function dispatchNotification(tenantId, { title, message, type = 'PURCHASE', category = 'REQUESTS', link = null, actionType = null, actionId = null, metadata = null }) {
+  const urls = [
+    process.env.NOTIFICATION_SERVICE_URL,
+    'http://notification-service:5009',
+    'http://localhost:5009'
+  ].filter(Boolean);
+
+  for (const url of [...new Set(urls)]) {
+    try {
+      await axios.post(`${url}/api/v1/notifications/internal`, {
+        title,
+        message,
+        type,
+        category,
+        link,
+        actionType,
+        actionId: actionId ? String(actionId) : null,
+        metadata,
+        tenantId: tenantId ? Number(tenantId) : 0
+      }, {
+        headers: { 'x-tenant-id': String(tenantId || 0), 'x-user-id': 'system' },
+        timeout: 3000
+      });
+      return;
+    } catch {
+      // try next URL
+    }
   }
 }
 
@@ -482,8 +492,23 @@ class PurchaseService {
         category: 'REQUESTS',
         actionType: 'RETURN_APPROVE',
         actionId: pReturn.id,
+        metadata: { returnId: pReturn.id, returnNumber: pReturn.return_number, poNumber: linkedPurchase?.po_number, purchaseId: linkedPurchase?.id },
         link: `/purchases?tab=returns&returnId=${pReturn.id}`
       });
+
+      try {
+        await eventBus.publish(EVENTS.PURCHASE_RETURN_CREATED, {
+          tenantId,
+          returnId: pReturn.id,
+          returnNumber,
+          supplierName: supplier.name,
+          warehouseId: targetWhId,
+          totalRefund,
+          reason: reason || 'Defective items'
+        });
+      } catch (e) {
+        // Event bus non-fatal
+      }
 
       return this.getPurchaseReturnById(tenantId, pReturn.id);
     } catch (err) {
@@ -534,6 +559,14 @@ class PurchaseService {
     });
 
     try {
+      await eventBus.publish(EVENTS.PURCHASE_RETURN_APPROVED, {
+        tenantId,
+        returnId: pReturn.id,
+        returnNumber: pReturn.return_number,
+        supplierName: pReturn.supplier_name,
+        warehouseId: pReturn.warehouse_id,
+        totalRefund: pReturn.total_refund
+      });
       await eventBus.publish(EVENTS.STOCK_UPDATED, {
         tenantId,
         type: 'PURCHASE_RETURN_APPROVED',
@@ -549,7 +582,10 @@ class PurchaseService {
     dispatchNotification(tenantId, {
       title: `Return Approved: #${pReturn.return_number}`,
       message: `Return request of ₹${parseFloat(pReturn.total_refund).toLocaleString('en-IN')} for ${pReturn.supplier_name} accepted. Stock deducted from ${pReturn.warehouse_name}.`,
-      type: 'PURCHASE',
+      type: 'RETURN',
+      category: 'TRANSACTIONS',
+      actionId: pReturn.id,
+      metadata: { returnId: pReturn.id, returnNumber: pReturn.return_number },
       link: `/purchases?tab=returns&returnId=${pReturn.id}`
     });
 
@@ -573,10 +609,24 @@ class PurchaseService {
       rejection_reason: rejectionReason || 'Declined by supplier / quality check'
     });
 
+    try {
+      await eventBus.publish(EVENTS.PURCHASE_RETURN_REJECTED, {
+        tenantId,
+        returnId: pReturn.id,
+        returnNumber: pReturn.return_number,
+        supplierName: pReturn.supplier_name
+      });
+    } catch (e) {
+      // Event bus non-fatal
+    }
+
     dispatchNotification(tenantId, {
       title: `Return Declined: #${pReturn.return_number}`,
       message: `Return request for ${pReturn.supplier_name} was declined: ${rejectionReason || 'No reason provided'}. Stock remains unaffected.`,
-      type: 'PURCHASE',
+      type: 'RETURN',
+      category: 'TRANSACTIONS',
+      actionId: pReturn.id,
+      metadata: { returnId: pReturn.id, returnNumber: pReturn.return_number },
       link: `/purchases?tab=returns&returnId=${pReturn.id}`
     });
 

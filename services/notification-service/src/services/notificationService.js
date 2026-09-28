@@ -5,27 +5,65 @@ const WAREHOUSE_SERVICE_URL = process.env.WAREHOUSE_SERVICE_URL || 'http://local
 const PURCHASE_SERVICE_URL = process.env.PURCHASE_SERVICE_URL || 'http://localhost:5006';
 const SALES_SERVICE_URL = process.env.SALES_SERVICE_URL || 'http://localhost:5007';
 const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
+const TENANT_SERVICE_URL = process.env.TENANT_SERVICE_URL || 'http://localhost:5002';
 
-async function httpPatch(url, body = {}, headers = {}) {
-  const res = await fetch(url, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers
-    },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) {
-    let errMessage = `HTTP request failed (${res.status})`;
+async function fetchService(servicePath, defaultEnvUrl, dockerUrl, headers = {}) {
+  const candidateUrls = [
+    defaultEnvUrl,
+    dockerUrl,
+    `http://localhost:${dockerUrl.split(':').pop()}`
+  ].filter(Boolean);
+
+  for (const baseUrl of [...new Set(candidateUrls)]) {
     try {
-      const errJson = await res.json();
-      if (errJson?.message) errMessage = errJson.message;
+      const url = `${baseUrl.replace(/\/$/, '')}${servicePath}`;
+      const res = await fetch(url, { headers });
+      if (res.ok) {
+        return await res.json();
+      }
     } catch {
-      // ignore
+      // try next candidate URL
     }
-    throw { statusCode: res.status, message: errMessage };
   }
-  return res.json();
+  return null;
+}
+
+async function httpPatch(serviceEnvUrl, dockerUrl, path, body = {}, headers = {}) {
+  const candidateUrls = [
+    serviceEnvUrl,
+    dockerUrl,
+    `http://localhost:${dockerUrl.split(':').pop()}`
+  ].filter(Boolean);
+
+  let lastError = null;
+  for (const baseUrl of [...new Set(candidateUrls)]) {
+    try {
+      const url = `${baseUrl.replace(/\/$/, '')}${path}`;
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        let errMessage = `HTTP request failed (${res.status})`;
+        try {
+          const errJson = await res.json();
+          if (errJson?.message) errMessage = errJson.message;
+        } catch {
+          // ignore
+        }
+        throw { statusCode: res.status, message: errMessage };
+      }
+      return await res.json();
+    } catch (e) {
+      lastError = e;
+      if (e.statusCode) throw e;
+    }
+  }
+  throw lastError || new Error(`Failed to reach service for PATCH ${path}`);
 }
 
 function inferCategory(type, actionType) {
@@ -38,6 +76,21 @@ function inferCategory(type, actionType) {
   if (['LOW_STOCK', 'OUT_OF_STOCK', 'STOCK_ADJUSTMENT', 'STOCK'].includes(type)) return 'STOCK';
   if (['SALE', 'PURCHASE', 'PAYMENT', 'RETURN', 'TRANSACTIONS'].includes(type)) return 'TRANSACTIONS';
   return 'SYSTEM';
+}
+
+function extractList(json, defaultProp) {
+  if (!json) return [];
+  if (Array.isArray(json)) return json;
+  if (Array.isArray(json.data)) return json.data;
+  if (defaultProp && Array.isArray(json.data?.[defaultProp])) return json.data[defaultProp];
+  if (Array.isArray(json.data?.items)) return json.data.items;
+  if (Array.isArray(json.data?.stocks)) return json.data.stocks;
+  if (Array.isArray(json.data?.purchases)) return json.data.purchases;
+  if (Array.isArray(json.data?.returns)) return json.data.returns;
+  if (Array.isArray(json.data?.transfers)) return json.data.transfers;
+  if (Array.isArray(json.data?.sales)) return json.data.sales;
+  if (Array.isArray(json.items)) return json.items;
+  return [];
 }
 
 class NotificationService {
@@ -63,85 +116,69 @@ class NotificationService {
         }
       });
 
-      // 2. Clean up orphan notifications whose tenant no longer exists in tenant_db
-      let activeTenantIds = [];
-      try {
-        const tenantModels = require('../../../tenant-service/src/models');
-        if (tenantModels?.Tenant) {
-          const tenants = await tenantModels.Tenant.findAll({ where: { status: 'ACTIVE' }, attributes: ['id'] });
-          activeTenantIds = tenants.map((t) => Number(t.id));
-        }
-      } catch (e) {
-        // Inter-container model require fallback - silent
-      }
-
-      if (activeTenantIds.length > 0) {
-        // Delete notifications belonging to non-existent / deleted tenants
-        await Notification.destroy({
-          where: {
-            tenant_id: {
-              [Op.and]: [
-                { [Op.gt]: 0 },
-                { [Op.notIn]: activeTenantIds }
-              ]
-            }
+      // 2. Identify tenants to synchronize
+      let tenantIdsToSync = [];
+      if (tenantId) {
+        tenantIdsToSync = [Number(tenantId)];
+      } else {
+        // Fallback for SuperAdmin / background sweeps: discover active tenants
+        try {
+          const tenantModels = require('../../../tenant-service/src/models');
+          if (tenantModels?.Tenant) {
+            const tenants = await tenantModels.Tenant.findAll({ where: { status: 'ACTIVE' }, attributes: ['id'] });
+            tenantIdsToSync = tenants.map((t) => Number(t.id));
           }
-        });
-      }
+        } catch {
+          // ignore
+        }
 
-      // 3. Purge stock notifications whose product or stock no longer exists in inventory_db
-      try {
-        const inventoryModels = require('../../../inventory-service/src/models');
-        if (inventoryModels?.Stock) {
-          const allStocks = await inventoryModels.Stock.findAll({ attributes: ['tenant_id', 'product_id'] });
-          const stockSet = new Set(allStocks.map((s) => `${s.tenant_id}-${s.product_id}`));
-
-          const existingStockNotifs = await Notification.findAll({
-            where: {
-              type: { [Op.in]: ['LOW_STOCK', 'OUT_OF_STOCK', 'STOCK'] }
-            }
-          });
-
-          for (const sn of existingStockNotifs) {
-            if (sn.action_id && sn.tenant_id > 0) {
-              const key = `${sn.tenant_id}-${sn.action_id}`;
-              if (!stockSet.has(key)) {
-                await sn.destroy();
-              }
-            }
+        if (tenantIdsToSync.length === 0) {
+          try {
+            const notifTenants = await Notification.findAll({
+              attributes: [[sequelize.fn('DISTINCT', sequelize.col('tenant_id')), 'tenant_id']],
+              where: { tenant_id: { [Op.gt]: 0 } },
+              raw: true
+            });
+            tenantIdsToSync = notifTenants.map((n) => Number(n.tenant_id)).filter(Boolean);
+          } catch {
+            // ignore
           }
         }
-      } catch (e) {
-        // ignore
-      }
 
-      const tenantIdsToSync = [];
-      if (!tenantId || isSuperAdmin) {
-        tenantIdsToSync.push(...activeTenantIds);
-      } else if (activeTenantIds.includes(Number(tenantId))) {
-        tenantIdsToSync.push(Number(tenantId));
+        if (tenantIdsToSync.length === 0) {
+          tenantIdsToSync = [1];
+        }
       }
 
       for (const tId of tenantIdsToSync) {
         const headers = {
           'x-tenant-id': String(tId),
+          'x-user-id': 'system',
           'x-user-role': 'ADMIN',
-          'x-user-permissions': '["*"]'
+          'x-user-permissions': JSON.stringify(['*']),
+          'x-is-super-admin': 'true',
+          'Content-Type': 'application/json'
         };
 
         // A. Dynamic Live Stock Alerts Sync (Real inventory levels)
         try {
-          const stockRes = await fetch(`${INVENTORY_SERVICE_URL}/api/v1/inventory?limit=200`, { headers });
-          const stockData = await stockRes.json();
-          const itemsList = stockData?.data?.items || stockData?.data?.stocks || [];
+          const stockJson = await fetchService(
+            '/api/v1/inventory?limit=500',
+            INVENTORY_SERVICE_URL,
+            'http://inventory-service:5004',
+            headers
+          );
+          const itemsList = extractList(stockJson, 'stocks');
           if (Array.isArray(itemsList) && itemsList.length > 0) {
             for (const item of itemsList) {
-              const curr = parseInt(item.current_stock ?? item.currentStock, 10) || 0;
+              const curr = parseInt(item.current_stock ?? item.currentStock, 10);
               const min = parseInt(item.minimum_stock ?? item.minimumStock, 10) || 5;
-              const pId = item.product_id ?? item.productId;
-              const pName = item.product_name ?? item.productName;
-              const pCode = item.product_code ?? item.productCode;
+              const pId = item.product_id ?? item.productId ?? item.id;
+              const pName = item.product_name ?? item.productName ?? 'Product';
+              const pCode = item.product_code ?? item.productCode ?? 'SKU';
               const whName = item.warehouse_name ?? item.warehouseName ?? 'Main Warehouse';
+
+              if (isNaN(curr)) continue;
 
               if (curr <= 0) {
                 await this.createNotification({
@@ -155,6 +192,13 @@ class NotificationService {
                   metadata: { productId: pId, warehouseId: item.warehouse_id || item.warehouseId },
                   link: '/inventory'
                 });
+                await Notification.destroy({
+                  where: {
+                    tenant_id: tId,
+                    type: 'LOW_STOCK',
+                    action_id: String(pId)
+                  }
+                });
               } else if (curr <= min) {
                 await this.createNotification({
                   tenantId: tId,
@@ -167,21 +211,45 @@ class NotificationService {
                   metadata: { productId: pId, warehouseId: item.warehouse_id || item.warehouseId },
                   link: '/inventory'
                 });
+                await Notification.destroy({
+                  where: {
+                    tenant_id: tId,
+                    type: 'OUT_OF_STOCK',
+                    action_id: String(pId)
+                  }
+                });
+              } else {
+                // Stock is healthy! Automatically remove previous low / out of stock warnings
+                await Notification.destroy({
+                  where: {
+                    tenant_id: tId,
+                    type: { [Op.in]: ['LOW_STOCK', 'OUT_OF_STOCK'] },
+                    action_id: String(pId)
+                  }
+                });
               }
             }
           }
         } catch (e) {
-          // silent fallback
+          console.warn('[NotificationLiveSync] Stock alerts sync note:', e.message);
         }
 
         // B. Dynamic Live Pending Purchase Orders Sync
         try {
-          const poRes = await fetch(`${PURCHASE_SERVICE_URL}/api/v1/purchases?status=PENDING&limit=50`, { headers });
-          const poData = await poRes.json();
-          const poList = poData?.data?.purchases || poData?.data?.items || [];
-          if (Array.isArray(poList)) {
+          const poJson = await fetchService(
+            '/api/v1/purchases?limit=100',
+            PURCHASE_SERVICE_URL,
+            'http://purchase-service:5006',
+            headers
+          );
+          const poList = extractList(poJson, 'purchases');
+          if (Array.isArray(poList) && poList.length > 0) {
             for (const po of poList) {
-              if (po.status === 'PENDING') {
+              const isPending = po.status === 'PENDING' || po.status === 'PENDING_APPROVAL' || po.status === 'DRAFT';
+              const isApproved = po.status === 'APPROVED';
+              const isCancelled = po.status === 'CANCELLED';
+
+              if (isPending) {
                 const existing = await Notification.findOne({
                   where: {
                     tenant_id: tId,
@@ -193,7 +261,7 @@ class NotificationService {
                   await this.createNotification({
                     tenantId: tId,
                     title: `PO Approval Needed: #${po.po_number}`,
-                    message: `Purchase Order #${po.po_number} created for supplier '${po.supplier_name || 'Vendor'}' (Total: ₹${Number(po.grand_total || 0).toLocaleString()}). Awaiting admin approval.`,
+                    message: `Purchase Order #${po.po_number} created for supplier '${po.supplier_name || 'Vendor'}' (Total: ₹${Number(po.grand_total || 0).toLocaleString('en-IN')}). Awaiting admin approval.`,
                     type: 'PURCHASE',
                     category: 'REQUESTS',
                     actionType: 'PURCHASE_APPROVE',
@@ -202,19 +270,90 @@ class NotificationService {
                     link: '/purchases'
                   });
                 }
+              } else if (isApproved || isCancelled) {
+                await Notification.update({
+                  action_status: isApproved ? 'APPROVED' : 'CANCELLED',
+                  is_read: true
+                }, {
+                  where: {
+                    tenant_id: tId,
+                    action_type: 'PURCHASE_APPROVE',
+                    action_id: String(po.id),
+                    action_status: 'PENDING'
+                  }
+                });
               }
             }
           }
         } catch (e) {
-          // silent fallback
+          console.warn('[NotificationLiveSync] PO sync note:', e.message);
         }
 
-        // C. Dynamic Live Pending Transfers Sync
+        // C. Dynamic Live Pending Purchase Returns Sync (RMA Returns)
         try {
-          const trfRes = await fetch(`${WAREHOUSE_SERVICE_URL}/api/v1/warehouses/transfers?status=PENDING&limit=50`, { headers });
-          const trfData = await trfRes.json();
-          const trfList = trfData?.data?.transfers || trfData?.data?.items || [];
-          if (Array.isArray(trfList)) {
+          const retJson = await fetchService(
+            '/api/v1/purchase-returns',
+            PURCHASE_SERVICE_URL,
+            'http://purchase-service:5006',
+            headers
+          );
+          const retList = extractList(retJson, 'returns');
+          if (Array.isArray(retList) && retList.length > 0) {
+            for (const ret of retList) {
+              const isPending = !ret.status || ret.status === 'PENDING_APPROVAL' || ret.status === 'PENDING';
+              const isApproved = ret.status === 'APPROVED';
+              const isRejected = ret.status === 'REJECTED';
+
+              if (isPending) {
+                const existing = await Notification.findOne({
+                  where: {
+                    tenant_id: tId,
+                    action_type: 'RETURN_APPROVE',
+                    action_id: String(ret.id)
+                  }
+                });
+                if (!existing) {
+                  await this.createNotification({
+                    tenantId: tId,
+                    title: `Purchase Return Request #${ret.return_number}`,
+                    message: `RMA Return request #${ret.return_number} of ₹${Number(ret.total_refund || 0).toLocaleString('en-IN')} submitted for ${ret.supplier_name || 'Supplier'} (${ret.reason || 'Defective / Damaged items'}). Awaiting manager review.`,
+                    type: 'RETURN_APPROVAL',
+                    category: 'REQUESTS',
+                    actionType: 'RETURN_APPROVE',
+                    actionId: ret.id,
+                    metadata: { returnId: ret.id, returnNumber: ret.return_number, poNumber: ret.po_number, purchaseId: ret.purchase_id },
+                    link: `/purchases?tab=returns&returnId=${ret.id}`
+                  });
+                }
+              } else if (isApproved || isRejected) {
+                await Notification.update({
+                  action_status: isApproved ? 'APPROVED' : 'REJECTED',
+                  is_read: true
+                }, {
+                  where: {
+                    tenant_id: tId,
+                    action_type: 'RETURN_APPROVE',
+                    action_id: String(ret.id),
+                    action_status: 'PENDING'
+                  }
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[NotificationLiveSync] Purchase returns sync note:', e.message);
+        }
+
+        // D. Dynamic Live Pending Transfers Sync
+        try {
+          const trfJson = await fetchService(
+            '/api/v1/warehouses/transfers?status=PENDING&limit=50',
+            WAREHOUSE_SERVICE_URL,
+            'http://warehouse-service:5005',
+            headers
+          );
+          const trfList = extractList(trfJson, 'transfers');
+          if (Array.isArray(trfList) && trfList.length > 0) {
             for (const trf of trfList) {
               if (trf.status === 'PENDING') {
                 const existing = await Notification.findOne({
@@ -242,15 +381,19 @@ class NotificationService {
             }
           }
         } catch (e) {
-          // silent fallback
+          console.warn('[NotificationLiveSync] Transfers sync note:', e.message);
         }
 
-        // D. Dynamic Live Outstanding Invoices Sync
+        // E. Dynamic Live Outstanding Invoices Sync
         try {
-          const salesRes = await fetch(`${SALES_SERVICE_URL}/api/v1/sales?status=PARTIAL&limit=20`, { headers });
-          const salesData = await salesRes.json();
-          const salesList = salesData?.data?.sales || salesData?.data?.items || [];
-          if (Array.isArray(salesList)) {
+          const salesJson = await fetchService(
+            '/api/v1/sales?limit=50',
+            SALES_SERVICE_URL,
+            'http://sales-service:5007',
+            headers
+          );
+          const salesList = extractList(salesJson, 'sales');
+          if (Array.isArray(salesList) && salesList.length > 0) {
             for (const s of salesList) {
               if (Number(s.due_amount) > 0) {
                 const existing = await Notification.findOne({
@@ -264,7 +407,7 @@ class NotificationService {
                   await this.createNotification({
                     tenantId: tId,
                     title: `Payment Pending: ${s.customer_name || 'Customer'}`,
-                    message: `Invoice #${s.invoice_number} (Due: ₹${Number(s.due_amount || 0).toLocaleString()}) has an outstanding balance for customer ${s.customer_name}.`,
+                    message: `Invoice #${s.invoice_number} (Due: ₹${Number(s.due_amount || 0).toLocaleString('en-IN')}) has an outstanding balance for customer ${s.customer_name || 'Customer'}.`,
                     type: 'PAYMENT',
                     category: 'TRANSACTIONS',
                     actionId: s.id,
@@ -276,50 +419,19 @@ class NotificationService {
             }
           }
         } catch (e) {
-          // silent fallback
-        }
-
-        // E. Dynamic Live Pending Purchase Returns Sync
-        try {
-          const retRes = await fetch(`${PURCHASE_SERVICE_URL}/api/v1/purchase-returns`, { headers });
-          const retData = await retRes.json();
-          const retList = retData?.data?.returns || retData?.data?.items || retData?.data || [];
-          if (Array.isArray(retList)) {
-            for (const ret of retList) {
-              if (ret.status === 'PENDING_APPROVAL') {
-                const existing = await Notification.findOne({
-                  where: {
-                    tenant_id: tId,
-                    action_type: 'RETURN_APPROVE',
-                    action_id: String(ret.id)
-                  }
-                });
-                if (!existing) {
-                  await this.createNotification({
-                    tenantId: tId,
-                    title: `Purchase Return Request #${ret.return_number}`,
-                    message: `RMA Return request of ₹${Number(ret.total_refund || 0).toLocaleString('en-IN')} submitted for ${ret.supplier_name || 'Supplier'} (${ret.reason || 'Defective'}). Awaiting manager review.`,
-                    type: 'RETURN_APPROVAL',
-                    category: 'REQUESTS',
-                    actionType: 'RETURN_APPROVE',
-                    actionId: ret.id,
-                    metadata: { returnId: ret.id, returnNumber: ret.return_number },
-                    link: `/purchases?tab=returns&returnId=${ret.id}`
-                  });
-                }
-              }
-            }
-          }
-        } catch (e) {
-          // silent fallback
+          console.warn('[NotificationLiveSync] Sales invoices sync note:', e.message);
         }
 
         // F. Dynamic Live Customer Sales Returns Sync
         try {
-          const sRetRes = await fetch(`${SALES_SERVICE_URL}/api/v1/sales-returns`, { headers });
-          const sRetData = await sRetRes.json();
-          const sRetList = sRetData?.data?.returns || sRetData?.data?.items || sRetData?.data || [];
-          if (Array.isArray(sRetList)) {
+          const sRetJson = await fetchService(
+            '/api/v1/sales-returns',
+            SALES_SERVICE_URL,
+            'http://sales-service:5007',
+            headers
+          );
+          const sRetList = extractList(sRetJson, 'returns');
+          if (Array.isArray(sRetList) && sRetList.length > 0) {
             for (const sRet of sRetList) {
               const existing = await Notification.findOne({
                 where: {
@@ -343,7 +455,7 @@ class NotificationService {
             }
           }
         } catch (e) {
-          // silent fallback
+          console.warn('[NotificationLiveSync] Sales returns sync note:', e.message);
         }
       }
     } catch (err) {
@@ -360,7 +472,7 @@ class NotificationService {
     }
 
     const { category, unreadOnly, search, limit = 50, page = 1, user } = options;
-    const baseWhere = (!tenantId && isSuperAdmin) ? {} : { tenant_id: tenantId || null };
+    const baseWhere = (!tenantId && isSuperAdmin) ? {} : { tenant_id: tenantId ? Number(tenantId) : null };
 
     // Staff/Branch-scoped filtering: non-admins only see their assigned or broadcast alerts
     const userRole = (user?.roleName || user?.role || '').toUpperCase();
@@ -444,7 +556,7 @@ class NotificationService {
   }
 
   async markAsRead(tenantId, notificationId, isSuperAdmin = false) {
-    const where = (!tenantId && isSuperAdmin) ? { id: notificationId } : { id: notificationId, tenant_id: tenantId };
+    const where = (!tenantId && isSuperAdmin) ? { id: notificationId } : { id: notificationId, tenant_id: tenantId ? Number(tenantId) : null };
     const notif = await Notification.findOne({ where });
     if (!notif) throw { statusCode: 404, message: 'Notification not found' };
     await notif.update({ is_read: true });
@@ -452,13 +564,13 @@ class NotificationService {
   }
 
   async markAllAsRead(tenantId, isSuperAdmin = false) {
-    const where = (!tenantId && isSuperAdmin) ? { is_read: false } : { tenant_id: tenantId, is_read: false };
+    const where = (!tenantId && isSuperAdmin) ? { is_read: false } : { tenant_id: tenantId ? Number(tenantId) : null, is_read: false };
     await Notification.update({ is_read: true }, { where });
     return true;
   }
 
   async deleteNotification(tenantId, notificationId, isSuperAdmin = false) {
-    const where = (!tenantId && isSuperAdmin) ? { id: notificationId } : { id: notificationId, tenant_id: tenantId };
+    const where = (!tenantId && isSuperAdmin) ? { id: notificationId } : { id: notificationId, tenant_id: tenantId ? Number(tenantId) : null };
     const notif = await Notification.findOne({ where });
     if (!notif) throw { statusCode: 404, message: 'Notification not found' };
     await notif.destroy();
@@ -466,7 +578,7 @@ class NotificationService {
   }
 
   async clearReadNotifications(tenantId, isSuperAdmin = false) {
-    const where = (!tenantId && isSuperAdmin) ? { is_read: true } : { tenant_id: tenantId, is_read: true };
+    const where = (!tenantId && isSuperAdmin) ? { is_read: true } : { tenant_id: tenantId ? Number(tenantId) : null, is_read: true };
     await Notification.destroy({ where });
     return true;
   }
@@ -486,22 +598,26 @@ class NotificationService {
   }) {
     const finalCategory = category || inferCategory(type, actionType);
 
-    // Prevent duplicate unread stock alerts for the same item
-    if (['LOW_STOCK', 'OUT_OF_STOCK'].includes(type) && actionId) {
+    // Prevent duplicate unread notifications for stock or approval items
+    if (['LOW_STOCK', 'OUT_OF_STOCK', 'RETURN_APPROVAL', 'PURCHASE'].includes(type) && actionId) {
       try {
         const existing = await Notification.findOne({
           where: {
             tenant_id: tenantId ? Number(tenantId) : 0,
             type,
-            action_id: String(actionId),
-            is_read: false
+            action_id: String(actionId)
           }
         });
         if (existing) {
           await existing.update({
             title,
             message,
-            metadata: typeof metadata === 'object' ? JSON.stringify(metadata) : (metadata || null)
+            category: finalCategory,
+            action_type: actionType || existing.action_type,
+            action_status: actionType ? (actionStatus || existing.action_status) : null,
+            metadata: typeof metadata === 'object' ? JSON.stringify(metadata) : (metadata || null),
+            link: link || existing.link,
+            is_read: false
           });
           return existing;
         }
@@ -531,7 +647,7 @@ class NotificationService {
    */
   async executeAction({ tenantId, notificationId, action, user, authHeader }) {
     const notif = await Notification.findOne({
-      where: { id: notificationId, tenant_id: tenantId }
+      where: { id: notificationId, tenant_id: tenantId ? Number(tenantId) : null }
     });
 
     if (!notif) {
@@ -548,7 +664,7 @@ class NotificationService {
 
     const headers = {
       'x-tenant-id': String(tenantId),
-      'x-user-id': String(user?.userId || ''),
+      'x-user-id': String(user?.userId || '1'),
       'x-user-role': String(user?.role || 'ADMIN'),
       'x-user-permissions': JSON.stringify(user?.permissions || ['*']),
       ...(authHeader ? { Authorization: authHeader } : {})
@@ -559,10 +675,9 @@ class NotificationService {
     // 1. Warehouse Transfer Actions
     if (notif.action_type === 'TRANSFER_APPROVE') {
       if (actionUpper === 'APPROVE') {
-        await httpPatch(`${WAREHOUSE_SERVICE_URL}/api/v1/warehouses/transfers/${notif.action_id}/approve`, {}, headers);
+        await httpPatch(WAREHOUSE_SERVICE_URL, 'http://warehouse-service:5005', `/api/v1/warehouses/transfers/${notif.action_id}/approve`, {}, headers);
         await notif.update({ action_status: 'APPROVED', is_read: true });
         
-        // Dispatch response notification
         await this.createNotification({
           tenantId,
           title: `Transfer Approved: #${notif.action_id}`,
@@ -572,10 +687,9 @@ class NotificationService {
           link: '/warehouses?tab=transfers'
         });
       } else if (actionUpper === 'REJECT') {
-        await httpPatch(`${WAREHOUSE_SERVICE_URL}/api/v1/warehouses/transfers/${notif.action_id}/reject`, { reason: 'Rejected from Notification Center' }, headers);
+        await httpPatch(WAREHOUSE_SERVICE_URL, 'http://warehouse-service:5005', `/api/v1/warehouses/transfers/${notif.action_id}/reject`, { reason: 'Rejected from Notification Center' }, headers);
         await notif.update({ action_status: 'REJECTED', is_read: true });
         
-        // Dispatch response notification
         await this.createNotification({
           tenantId,
           title: `Transfer Rejected: #${notif.action_id}`,
@@ -592,7 +706,7 @@ class NotificationService {
     // 2. Purchase Order Approval Actions
     else if (notif.action_type === 'PURCHASE_APPROVE') {
       if (actionUpper === 'APPROVE') {
-        await httpPatch(`${PURCHASE_SERVICE_URL}/api/v1/purchases/${notif.action_id}/approve`, {}, headers);
+        await httpPatch(PURCHASE_SERVICE_URL, 'http://purchase-service:5006', `/api/v1/purchases/${notif.action_id}/approve`, {}, headers);
         await notif.update({ action_status: 'APPROVED', is_read: true });
 
         await this.createNotification({
@@ -604,7 +718,7 @@ class NotificationService {
           link: '/purchases'
         });
       } else if (actionUpper === 'REJECT' || actionUpper === 'CANCEL') {
-        await httpPatch(`${PURCHASE_SERVICE_URL}/api/v1/purchases/${notif.action_id}/cancel`, {}, headers);
+        await httpPatch(PURCHASE_SERVICE_URL, 'http://purchase-service:5006', `/api/v1/purchases/${notif.action_id}/cancel`, {}, headers);
         await notif.update({ action_status: 'REJECTED', is_read: true });
       } else {
         throw { statusCode: 400, message: `Invalid action '${action}' for purchase order` };
@@ -614,11 +728,33 @@ class NotificationService {
     // 3. Purchase Return Approval Actions
     else if (notif.action_type === 'RETURN_APPROVE') {
       if (actionUpper === 'APPROVE') {
-        await httpPatch(`${PURCHASE_SERVICE_URL}/api/v1/purchase-returns/${notif.action_id}/approve`, {}, headers);
+        await httpPatch(PURCHASE_SERVICE_URL, 'http://purchase-service:5006', `/api/v1/purchase-returns/${notif.action_id}/approve`, {}, headers);
         await notif.update({ action_status: 'APPROVED', is_read: true });
+
+        const meta = notif.metadata ? (typeof notif.metadata === 'string' ? JSON.parse(notif.metadata) : notif.metadata) : {};
+        await this.createNotification({
+          tenantId,
+          title: `Purchase Return Approved: #${meta.returnNumber || notif.action_id}`,
+          message: `RMA Return #${meta.returnNumber || notif.action_id} was approved by ${user?.name || 'Admin'} and inventory stock was deducted.`,
+          type: 'RETURN',
+          category: 'TRANSACTIONS',
+          link: '/purchases?tab=returns'
+        });
       } else if (actionUpper === 'REJECT') {
-        await httpPatch(`${PURCHASE_SERVICE_URL}/api/v1/purchase-returns/${notif.action_id}/reject`, {}, headers);
+        await httpPatch(PURCHASE_SERVICE_URL, 'http://purchase-service:5006', `/api/v1/purchase-returns/${notif.action_id}/reject`, { reason: 'Rejected from Notification Center' }, headers);
         await notif.update({ action_status: 'REJECTED', is_read: true });
+
+        const meta = notif.metadata ? (typeof notif.metadata === 'string' ? JSON.parse(notif.metadata) : notif.metadata) : {};
+        await this.createNotification({
+          tenantId,
+          title: `Purchase Return Declined: #${meta.returnNumber || notif.action_id}`,
+          message: `RMA Return #${meta.returnNumber || notif.action_id} was declined by ${user?.name || 'Admin'}.`,
+          type: 'RETURN',
+          category: 'TRANSACTIONS',
+          link: '/purchases?tab=returns'
+        });
+      } else {
+        throw { statusCode: 400, message: `Invalid action '${action}' for purchase return` };
       }
     }
 
@@ -686,7 +822,7 @@ class NotificationService {
         is_read: false
       });
       createdList.push(adminNotif);
-    } catch (e) {
+    } catch {
       // ignore
     }
 
@@ -699,4 +835,3 @@ class NotificationService {
 }
 
 module.exports = new NotificationService();
-
