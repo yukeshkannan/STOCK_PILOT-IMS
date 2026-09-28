@@ -66,6 +66,8 @@ Object.entries(SERVICES).forEach(([name, config]) => {
     createProxyMiddleware({
       target: config.url,
       changeOrigin: true,
+      proxyTimeout: 30000,
+      timeout: 30000,
       pathRewrite: (path) => {
         const normalized = path.startsWith('/') ? path : `/${path}`;
         return `${config.prefix}${normalized === '/' ? '' : normalized}`;

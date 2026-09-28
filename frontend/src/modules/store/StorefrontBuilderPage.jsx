@@ -40,8 +40,10 @@ import {
   Link as LinkIcon,
   Globe,
   GripVertical,
-  Package
+  Package,
+  Settings
 } from 'lucide-react';
+import Modal from '../../components/Modal';
 import { WhatsAppBrandIcon } from './PublicStorePage';
 import './StorefrontBuilderPage.css';
 
@@ -164,6 +166,63 @@ export default function StorefrontBuilderPage() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [builderProductSearch, setBuilderProductSearch] = useState('');
   const [selectedSimCategory, setSelectedSimCategory] = useState('ALL');
+
+  // Product Settings & Image Configuration Modal State
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
+  const [productEditForm, setProductEditForm] = useState({
+    name: '',
+    productCode: '',
+    sellingPrice: '',
+    purchasePrice: '',
+    taxRate: '',
+    imageUrl: '',
+    description: ''
+  });
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+
+  const handleOpenEditProduct = (p) => {
+    setEditingProduct(p);
+    setProductEditForm({
+      name: p.name || '',
+      productCode: p.product_code || p.productCode || '',
+      sellingPrice: String(p.selling_price || p.sellingPrice || ''),
+      purchasePrice: String(p.purchase_price || p.purchasePrice || ''),
+      taxRate: String(p.tax_rate !== undefined && p.tax_rate !== null ? p.tax_rate : (p.taxRate || 0)),
+      imageUrl: p.image_url || p.imageUrl || '',
+      description: p.description || ''
+    });
+    setIsEditProductModalOpen(true);
+  };
+
+  const handleSaveProductEdit = async (e) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    try {
+      setIsSavingProduct(true);
+      const updatePayload = {
+        name: productEditForm.name.trim(),
+        productCode: productEditForm.productCode.trim(),
+        sellingPrice: parseFloat(productEditForm.sellingPrice) || 0,
+        purchasePrice: parseFloat(productEditForm.purchasePrice) || 0,
+        taxRate: parseFloat(productEditForm.taxRate) || 0,
+        imageUrl: productEditForm.imageUrl ? productEditForm.imageUrl.trim() : null,
+        description: productEditForm.description ? productEditForm.description.trim() : ''
+      };
+
+      await api.put(`/products/${editingProduct.id}`, updatePayload);
+      toast.success(`Updated ${productEditForm.name} & image URL successfully!`);
+      setIsEditProductModalOpen(false);
+      setEditingProduct(null);
+
+      // Re-fetch products so builder and preview immediately reflect new image & details
+      await fetchTenantProducts();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to update product');
+    } finally {
+      setIsSavingProduct(false);
+    }
+  };
 
   // Dynamic categories from purchased products
   const purchasedCategories = useMemo(() => {
@@ -1351,9 +1410,36 @@ export default function StorefrontBuilderPage() {
                                       <span style={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {p.name}
                                       </span>
-                                      <span style={{ fontSize: '0.7rem', color: p.currentStock > 0 ? '#059669' : '#dc2626', fontWeight: 700, marginLeft: '6px' }}>
-                                        {p.currentStock > 0 ? `${p.currentStock} in stock` : 'Out of stock'}
-                                      </span>
+                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ fontSize: '0.7rem', color: p.currentStock > 0 ? '#059669' : '#dc2626', fontWeight: 700 }}>
+                                          {p.currentStock > 0 ? `${p.currentStock} in stock` : 'Out of stock'}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleOpenEditProduct(p);
+                                          }}
+                                          style={{
+                                            padding: '2px 6px',
+                                            borderRadius: '4px',
+                                            border: '1px solid #e2e8f0',
+                                            background: '#ffffff',
+                                            color: '#982A86',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '3px',
+                                            fontSize: '0.68rem',
+                                            fontWeight: 600,
+                                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                                          }}
+                                          title="Configure Product Details & Image URL"
+                                        >
+                                          <Settings size={12} />
+                                        </button>
+                                      </div>
                                     </div>
                                   </label>
                                 );
@@ -2160,6 +2246,264 @@ export default function StorefrontBuilderPage() {
           </div>
         </main>
       </div>
+
+      {/* PRODUCT SETTINGS & IMAGE URL CONFIGURATION MODAL */}
+      {isEditProductModalOpen && editingProduct && (
+        <Modal
+          isOpen={isEditProductModalOpen}
+          onClose={() => {
+            if (!isSavingProduct) {
+              setIsEditProductModalOpen(false);
+              setEditingProduct(null);
+            }
+          }}
+          title={`Product Settings — ${editingProduct.name}`}
+          maxWidth="680px"
+        >
+          <form onSubmit={handleSaveProductEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+            {/* Live Image Preview & URL Section */}
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              padding: '1rem',
+              display: 'flex',
+              gap: '1.2rem',
+              alignItems: 'center'
+            }}>
+              <div style={{
+                width: '110px',
+                height: '110px',
+                borderRadius: '8px',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                position: 'relative'
+              }}>
+                {productEditForm.imageUrl ? (
+                  <img
+                    src={productEditForm.imageUrl}
+                    alt={productEditForm.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div style={{ textAlign: 'center', color: '#94a3b8', padding: '0.5rem' }}>
+                    <Package size={30} />
+                    <span style={{ fontSize: '0.65rem', display: 'block', marginTop: '4px' }}>No Image</span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>
+                    Product Image URL
+                  </label>
+                  {productEditForm.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setProductEditForm({ ...productEditForm, imageUrl: '' })}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#dc2626',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Clear Image
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  placeholder="https://example.com/images/macbook-pro.jpg"
+                  value={productEditForm.imageUrl}
+                  onChange={(e) => setProductEditForm({ ...productEditForm, imageUrl: e.target.value })}
+                  className="shopify-input"
+                  style={{ width: '100%', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}
+                />
+                <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', marginBottom: '6px' }}>
+                  Paste direct image link (PNG, JPG, WebP). It will display on your online storefront and inventory catalog.
+                </p>
+
+                {/* Fast Sample Presets for Testing */}
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', alignSelf: 'center' }}>Presets:</span>
+                  {[
+                    { label: '💻 MacBook', url: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80' },
+                    { label: '📱 iPhone', url: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=600&q=80' },
+                    { label: '🎧 Audio', url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80' },
+                    { label: '⌚ Smartwatch', url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80' }
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setProductEditForm({ ...productEditForm, imageUrl: preset.url })}
+                      style={{
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        fontSize: '0.68rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Product Details Form */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.85rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={productEditForm.name}
+                  onChange={(e) => setProductEditForm({ ...productEditForm, name: e.target.value })}
+                  className="shopify-input"
+                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
+                  Product Code / SKU
+                </label>
+                <input
+                  type="text"
+                  value={productEditForm.productCode}
+                  onChange={(e) => setProductEditForm({ ...productEditForm, productCode: e.target.value })}
+                  className="shopify-input"
+                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
+                  Selling Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  min="0"
+                  value={productEditForm.sellingPrice}
+                  onChange={(e) => setProductEditForm({ ...productEditForm, sellingPrice: e.target.value })}
+                  className="shopify-input"
+                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
+                  Cost / Purchase Price (₹)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={productEditForm.purchasePrice}
+                  onChange={(e) => setProductEditForm({ ...productEditForm, purchasePrice: e.target.value })}
+                  className="shopify-input"
+                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
+                  Tax Rate / GST (%)
+                </label>
+                <select
+                  value={productEditForm.taxRate}
+                  onChange={(e) => setProductEditForm({ ...productEditForm, taxRate: e.target.value })}
+                  className="shopify-input"
+                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                >
+                  <option value="0">0% (Exempt)</option>
+                  <option value="5">5% (Essential Goods / Hardware)</option>
+                  <option value="12">12% (Standard Concessional)</option>
+                  <option value="18">18% (Standard GST)</option>
+                  <option value="28">28% (Luxury / High Slab)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
+                  Current Inventory Stock
+                </label>
+                <div style={{
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: '6px',
+                  background: '#f1f5f9',
+                  color: editingProduct.currentStock > 0 ? '#059669' : '#dc2626',
+                  fontWeight: 700,
+                  fontSize: '0.85rem'
+                }}>
+                  {editingProduct.currentStock > 0 ? `${editingProduct.currentStock} Units in stock` : 'Out of stock'}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
+                Online Description / Highlights
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Product highlights, specifications, key features..."
+                value={productEditForm.description}
+                onChange={(e) => setProductEditForm({ ...productEditForm, description: e.target.value })}
+                className="shopify-input"
+                style={{ width: '100%', padding: '0.5rem 0.65rem', fontSize: '0.82rem', resize: 'vertical' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '0.85rem', borderTop: '1px solid #f1f5f9' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditProductModalOpen(false);
+                  setEditingProduct(null);
+                }}
+                disabled={isSavingProduct}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingProduct}
+                className="shopify-btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.5rem 1.25rem',
+                  fontWeight: 700,
+                  fontSize: '0.85rem'
+                }}
+              >
+                {isSavingProduct ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

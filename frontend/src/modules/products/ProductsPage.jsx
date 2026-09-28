@@ -100,7 +100,8 @@ export default function ProductsPage() {
       minimumStock: 5,
       maximumStock: 500,
       initialStock: 0,
-      warehouseId: warehouses[0]?.id || ''
+      warehouseId: warehouses[0]?.id || '',
+      imageUrl: ''
     });
     setIsProductModalOpen(true);
 
@@ -144,7 +145,8 @@ export default function ProductsPage() {
       minimumStock: p.minimum_stock || 5,
       maximumStock: p.maximum_stock || 500,
       initialStock: 0,
-      warehouseId: ''
+      warehouseId: '',
+      imageUrl: p.image_url || ''
     });
     setIsProductModalOpen(true);
   };
@@ -556,6 +558,49 @@ export default function ProductsPage() {
                 placeholder="Alert threshold (e.g. 5)"
               />
             </div>
+          </div>
+
+          <div className="form-group" style={{ marginTop: '0.5rem' }}>
+            <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Product Image URL (Optional)</span>
+              {productForm.imageUrl && (
+                <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>Image Linked</span>
+              )}
+            </label>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <input
+                type="url"
+                className="form-input"
+                placeholder="https://images.unsplash.com/... or direct image link"
+                value={productForm.imageUrl || ''}
+                onChange={(e) => setProductForm({ ...productForm, imageUrl: e.target.value })}
+                style={{ flex: 1 }}
+              />
+              {productForm.imageUrl && (
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  overflow: 'hidden',
+                  background: '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <img
+                    src={productForm.imageUrl}
+                    alt="Preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                </div>
+              )}
+            </div>
+            <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '4px 0 0' }}>
+              Used in the Online Storefront and customer catalog.
+            </p>
           </div>
 
           <div className="modal-footer">

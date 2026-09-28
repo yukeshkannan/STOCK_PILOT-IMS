@@ -69,6 +69,53 @@ export default function SalesPage() {
   const [selectedReturnDetail, setSelectedReturnDetail] = useState(null);
   const [isReturnDetailModalOpen, setIsReturnDetailModalOpen] = useState(false);
 
+  // Collect Payment Modal State
+  const [payTargetSale, setPayTargetSale] = useState(null);
+  const [isCollectPayModalOpen, setIsCollectPayModalOpen] = useState(false);
+  const [collectPayForm, setCollectPayForm] = useState({
+    amount: '',
+    paymentMethod: 'CASH',
+    transactionId: '',
+    notes: 'Full payment received'
+  });
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+
+  const handleOpenCollectPayment = (sale) => {
+    const due = parseFloat(sale.due_amount || 0);
+    const grand = parseFloat(sale.grand_total || 0);
+    const amountToSet = due > 0 ? due : grand;
+    setPayTargetSale(sale);
+    setCollectPayForm({
+      amount: String(amountToSet),
+      paymentMethod: sale.payment_method || 'CASH',
+      transactionId: '',
+      notes: 'Payment collected & verified'
+    });
+    setIsCollectPayModalOpen(true);
+  };
+
+  const handleRecordPaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!payTargetSale) return;
+    try {
+      setIsRecordingPayment(true);
+      await api.post(`/sales/${payTargetSale.id}/pay`, {
+        amount: parseFloat(collectPayForm.amount) || 0,
+        paymentMethod: collectPayForm.paymentMethod,
+        transactionId: collectPayForm.transactionId,
+        notes: collectPayForm.notes
+      });
+      toast.success(`Payment recorded for Invoice #${payTargetSale.invoice_number}!`);
+      setIsCollectPayModalOpen(false);
+      setPayTargetSale(null);
+      await fetchData();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to record payment');
+    } finally {
+      setIsRecordingPayment(false);
+    }
+  };
+
   // Customer Form State
   const [customerForm, setCustomerForm] = useState({
     name: '',
@@ -560,6 +607,28 @@ export default function SalesPage() {
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}>
+                            {s.payment_status !== 'PAID' && (
+                              <button
+                                onClick={() => handleOpenCollectPayment(s)}
+                                className="btn btn-sm"
+                                style={{
+                                  padding: '0.3rem 0.55rem',
+                                  fontSize: '0.75rem',
+                                  color: '#059669',
+                                  background: '#ecfdf5',
+                                  border: '1px solid #a7f3d0',
+                                  borderRadius: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer'
+                                }}
+                                title="Collect Payment & Mark as Paid"
+                              >
+                                <CheckCircle size={13} /> Collect Pay
+                              </button>
+                            )}
                             <button
                               onClick={() => setSelectedInvoice(s)}
                               className="btn btn-secondary btn-sm"
@@ -2248,6 +2317,143 @@ export default function SalesPage() {
               </button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* COLLECT PAYMENT MODAL */}
+      {isCollectPayModalOpen && payTargetSale && (
+        <Modal
+          isOpen={isCollectPayModalOpen}
+          onClose={() => {
+            if (!isRecordingPayment) {
+              setIsCollectPayModalOpen(false);
+              setPayTargetSale(null);
+            }
+          }}
+          title={`Collect Payment — Invoice #${payTargetSale.invoice_number}`}
+        >
+          <form onSubmit={handleRecordPaymentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              padding: '0.85rem 1rem',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '0.75rem',
+              textAlign: 'center'
+            }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Invoice Total</span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>
+                  ₹{parseFloat(payTargetSale.grand_total || 0).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Already Paid</span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#059669' }}>
+                  ₹{parseFloat(payTargetSale.paid_amount || 0).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Balance Due</span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#dc2626' }}>
+                  ₹{(parseFloat(payTargetSale.due_amount || 0) || parseFloat(payTargetSale.grand_total || 0)).toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Amount to Collect (₹) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                min="0.01"
+                max={parseFloat(payTargetSale.due_amount || payTargetSale.grand_total || 0)}
+                value={collectPayForm.amount}
+                onChange={(e) => setCollectPayForm({ ...collectPayForm, amount: e.target.value })}
+                className="form-control"
+                style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Payment Method *
+              </label>
+              <select
+                value={collectPayForm.paymentMethod}
+                onChange={(e) => setCollectPayForm({ ...collectPayForm, paymentMethod: e.target.value })}
+                className="form-control"
+                style={{ fontSize: '0.9rem', fontWeight: 600 }}
+              >
+                <option value="CASH">Cash (Counter / Physical Currency)</option>
+                <option value="UPI">UPI (GPay, PhonePe, Paytm, QR)</option>
+                <option value="CARD">Credit / Debit Card</option>
+                <option value="BANK_TRANSFER">Direct Bank Transfer / NEFT / IMPS</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Reference / Transaction ID (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. UPI Ref # or Receipt No."
+                value={collectPayForm.transactionId}
+                onChange={(e) => setCollectPayForm({ ...collectPayForm, transactionId: e.target.value })}
+                className="form-control"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Payment Notes
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Paid in full at storefront counter"
+                value={collectPayForm.notes}
+                onChange={(e) => setCollectPayForm({ ...collectPayForm, notes: e.target.value })}
+                className="form-control"
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '0.85rem', borderTop: '1px solid #f1f5f9' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCollectPayModalOpen(false);
+                  setPayTargetSale(null);
+                }}
+                disabled={isRecordingPayment}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isRecordingPayment}
+                className="btn btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontWeight: 700
+                }}
+              >
+                <CheckCircle size={15} />
+                {isRecordingPayment ? 'Recording...' : 'Confirm & Mark as Paid'}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

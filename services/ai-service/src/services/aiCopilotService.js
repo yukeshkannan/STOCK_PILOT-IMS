@@ -225,7 +225,7 @@ class AiCopilotService {
   constructor() {
     this.groqApiKey = process.env.GROQ_API_KEY;
     this.geminiApiKey = process.env.GEMINI_API_KEY;
-    this.groqModel = 'openai/gpt-oss-120b';
+    this.groqModel = 'openai/gpt-oss-20b';
     this.geminiModel = 'gemini-1.5-flash';
   }
 
@@ -332,7 +332,8 @@ KEY PERSONALITY & RULES:
           tools: groqTools,
           tool_choice: 'auto',
           temperature: 0.2
-        })
+        }),
+        signal: AbortSignal.timeout(12000)
       });
 
       const data = await res.json();
@@ -426,7 +427,8 @@ KEY PERSONALITY & RULES:
     let res = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal: AbortSignal.timeout(12000)
     });
 
     let data = await res.json();
@@ -478,7 +480,8 @@ KEY PERSONALITY & RULES:
             parts: [{ text: this.getSystemInstruction(companyName, userName) }]
           },
           tools: geminiToolDeclarations
-        })
+        }),
+        signal: AbortSignal.timeout(12000)
       });
 
       data = await res.json();

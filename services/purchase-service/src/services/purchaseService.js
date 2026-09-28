@@ -25,32 +25,10 @@ async function dispatchNotification(tenantId, { title, message, type = 'PURCHASE
 class PurchaseService {
   // Suppliers
   async getSuppliers(tenantId) {
-    let suppliers = await Supplier.findAll({
+    const suppliers = await Supplier.findAll({
       where: { tenant_id: tenantId },
       order: [['name', 'ASC']]
     });
-
-    if (suppliers.length === 0 && tenantId) {
-      try {
-        await Supplier.create({
-          tenant_id: tenantId,
-          name: 'Primary Wholesale Supplier',
-          contact_person: 'Procurement Desk',
-          phone: '+91 98765 43210',
-          email: 'procurement@vendor-direct.in',
-          address: 'Central Wholesale Market, Unit #4',
-          gstin: '33AABCS1429B1Z',
-          status: 'ACTIVE'
-        });
-
-        suppliers = await Supplier.findAll({
-          where: { tenant_id: tenantId },
-          order: [['name', 'ASC']]
-        });
-      } catch (e) {
-        // Non-fatal if concurrent create
-      }
-    }
 
     return suppliers;
   }
@@ -133,16 +111,9 @@ class PurchaseService {
 
     let supplier = await Supplier.findOne({ where: { id: parsedSupplierId, tenant_id: tenantId } });
     if (!supplier) {
-      const anySup = await Supplier.findOne({ where: { tenant_id: tenantId } });
-      if (anySup) {
-        supplier = anySup;
-      } else {
-        supplier = await Supplier.create({
-          tenant_id: tenantId,
-          name: 'Primary Wholesale Supplier',
-          phone: '9876543210',
-          status: 'ACTIVE'
-        });
+      supplier = await Supplier.findOne({ where: { tenant_id: tenantId } });
+      if (!supplier) {
+        throw { statusCode: 400, message: 'No registered supplier found. Please add a supplier first before creating a purchase order.' };
       }
     }
 

@@ -213,6 +213,13 @@ class SalesService {
       }
     }
 
+    const isPaid = Boolean(orderData.isPaid || (parseFloat(orderData.paidAmount) > 0));
+    const paidAmount = isPaid ? (parseFloat(orderData.paidAmount) || 'FULL') : 0;
+    const paymentRef = orderData.paymentReference ? ` | Ref: ${orderData.paymentReference}` : '';
+    const cashNote = (orderData.cashTendered && parseFloat(orderData.cashTendered) > 0)
+      ? ` | Cash Tendered: ₹${parseFloat(orderData.cashTendered).toLocaleString('en-IN')}, Change: ₹${(parseFloat(orderData.changeReturned) || 0).toLocaleString('en-IN')}`
+      : '';
+
     // Prepare sale
     const sale = await this.createSale(tenantId, {
       customerId: customer?.id,
@@ -222,9 +229,10 @@ class SalesService {
       warehouseName,
       items,
       paymentMethod: paymentMethod === 'UPI' ? 'UPI' : 'CASH',
-      paidAmount: paymentMethod === 'UPI' ? 0 : 0, // Mark paid or COD
+      paidAmount,
+      isPaid,
       discountAmount: 0,
-      notes: `[Online Storefront Order] ${notes || ''} | Delivery Addr: ${customerAddress || 'Direct Store Pickup'}`,
+      notes: `[Online Storefront Order] ${notes || ''} | Delivery Addr: ${customerAddress || 'Direct Store Pickup'}${paymentRef}${cashNote}`,
       createdBy: 'Online Customer'
     });
 
@@ -326,7 +334,8 @@ class SalesService {
     const discount = parseFloat(discountAmount) || 0;
     const grandTotal = Math.max(0, subtotal + totalTax - discount);
 
-    const paid = Math.min(grandTotal, Math.max(0, parseFloat(paidAmount) || 0));
+    const isPaidFull = Boolean(saleData.isPaid || paidAmount === 'FULL' || (parseFloat(paidAmount) >= grandTotal && grandTotal > 0));
+    const paid = isPaidFull ? grandTotal : Math.min(grandTotal, Math.max(0, parseFloat(paidAmount) || 0));
     const due = Math.max(0, grandTotal - paid);
 
     let paymentStatus = PAYMENT_STATUS.PAID;
@@ -455,6 +464,54 @@ class SalesService {
       await transaction.rollback();
       throw err;
     }
+  }
+
+  async recordPayment(tenantId, saleId, paymentData = {}) {
+    const sale = await Sale.findOne({
+      where: { id: saleId, tenant_id: tenantId }
+    });
+    if (!sale) {
+      throw { statusCode: 404, message: 'Sale invoice not found' };
+    }
+
+    const { amount, paymentMethod = 'CASH', notes = '', transactionId = '' } = paymentData;
+    const currentDue = parseFloat(sale.due_amount || 0);
+    const parsedAmount = amount !== undefined && !isNaN(parseFloat(amount))
+      ? Math.max(0, parseFloat(amount))
+      : currentDue;
+
+    const currentPaid = parseFloat(sale.paid_amount || 0);
+    const grandTotal = parseFloat(sale.grand_total || 0);
+
+    const newPaid = Math.min(grandTotal, currentPaid + parsedAmount);
+    const newDue = Math.max(0, grandTotal - newPaid);
+    const newStatus = newDue <= 0 ? PAYMENT_STATUS.PAID : (newPaid > 0 ? PAYMENT_STATUS.PARTIAL : PAYMENT_STATUS.UNPAID);
+
+    const currentNotes = sale.notes || '';
+    const paymentLog = `[Payment Received: ₹${parsedAmount.toLocaleString('en-IN')} via ${paymentMethod}${transactionId ? ` Ref: ${transactionId}` : ''}]`;
+    const updatedNotes = currentNotes ? `${currentNotes} | ${paymentLog}` : paymentLog;
+
+    await sale.update({
+      paid_amount: newPaid,
+      due_amount: newDue,
+      payment_status: newStatus,
+      payment_method: paymentMethod || sale.payment_method,
+      notes: updatedNotes
+    });
+
+    if (sale.customer_id && parsedAmount > 0) {
+      try {
+        const customer = await Customer.findOne({ where: { id: sale.customer_id, tenant_id: tenantId } });
+        if (customer) {
+          const newBal = Math.max(0, parseFloat(customer.current_balance || 0) - parsedAmount);
+          await customer.update({ current_balance: newBal });
+        }
+      } catch (e) {
+        console.warn('Customer balance update warning:', e.message);
+      }
+    }
+
+    return this.getSaleById(tenantId, sale.id);
   }
 
   async deleteSale(tenantId, id) {

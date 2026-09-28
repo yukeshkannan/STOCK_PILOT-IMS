@@ -22,7 +22,7 @@ salesRouter.get('/', requirePermission(PERMISSIONS.SALE_VIEW), (req, res, next) 
 salesRouter.post('/', requirePermission(PERMISSIONS.SALE_CREATE), idempotency(), (req, res, next) => salesController.createSale(req, res, next));
 salesRouter.get('/:id', requirePermission(PERMISSIONS.SALE_VIEW), (req, res, next) => salesController.getSale(req, res, next));
 salesRouter.get('/:id/invoice', requirePermission(PERMISSIONS.SALE_VIEW), (req, res, next) => salesController.getInvoice(req, res, next));
-salesRouter.post('/:id/send-email', requirePermission(PERMISSIONS.SALE_VIEW), (req, res, next) => salesController.sendInvoiceEmail(req, res, next));
+salesRouter.post('/:id/pay', (req, res, next) => salesController.recordPayment(req, res, next));
 salesRouter.delete('/:id', (req, res, next) => salesController.deleteSale(req, res, next));
 
 // Sales Returns Router

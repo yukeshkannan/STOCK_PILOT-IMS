@@ -81,6 +81,15 @@ class SalesController {
     }
   }
 
+  async recordPayment(req, res, next) {
+    try {
+      const sale = await salesService.recordPayment(req.user.tenantId, req.params.id, req.body);
+      return ApiResponse.success(res, sale, 'Payment recorded successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async deleteSale(req, res, next) {
     try {
       await salesService.deleteSale(req.user.tenantId, req.params.id);

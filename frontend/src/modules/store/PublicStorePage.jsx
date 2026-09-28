@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
+import { openRazorpayCheckout } from '../../services/razorpay';
 import {
   Store,
   ShoppingBag,
@@ -94,8 +95,10 @@ export default function PublicStorePage() {
     email: '',
     address: '',
     deliveryType: 'DELIVERY', // 'DELIVERY' | 'PICKUP'
-    paymentMethod: 'COD' // 'COD' | 'UPI'
+    paymentMethod: 'CASH' // 'CASH' | 'UPI'
   });
+  const [cashTendered, setCashTendered] = useState('');
+  const [isPaidAtCounter, setIsPaidAtCounter] = useState(true);
 
   // Order State
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -174,6 +177,8 @@ export default function PublicStorePage() {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
+      const rawTax = product.tax_rate !== undefined && product.tax_rate !== null ? product.tax_rate : product.taxRate;
+      const parsedTax = rawTax !== undefined && rawTax !== null && !isNaN(parseFloat(rawTax)) ? parseFloat(rawTax) : 0;
       return [
         ...prev,
         {
@@ -183,7 +188,7 @@ export default function PublicStorePage() {
           name: product.name,
           unitPrice: parseFloat(product.selling_price) || 0,
           purchasePrice: parseFloat(product.purchase_price) || 0,
-          taxRate: parseFloat(product.tax_rate) || 18,
+          taxRate: parsedTax,
           unit: product.unit || 'PCS',
           quantity: 1,
           availableStock: product.availableStock || 999,
@@ -212,19 +217,92 @@ export default function PublicStorePage() {
     setCart((prev) => prev.filter((item) => item.id !== productId));
   };
 
-  // Cart Financials
+  // Cart Financials with Dynamic Tax Calculation per product
   const cartSubtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   }, [cart]);
 
   const cartTax = useMemo(() => {
-    return Math.round(cartSubtotal * 0.18); // 18% GST standard
-  }, [cartSubtotal]);
+    return cart.reduce((sum, item) => {
+      const rate = typeof item.taxRate === 'number' ? item.taxRate : (parseFloat(item.taxRate) || 0);
+      return sum + (item.unitPrice * item.quantity * (rate / 100));
+    }, 0);
+  }, [cart]);
 
-  const cartGrandTotal = cartSubtotal + cartTax;
+  const effectiveTaxPercent = useMemo(() => {
+    if (cartSubtotal <= 0) return 0;
+    return parseFloat(((cartTax / cartSubtotal) * 100).toFixed(1));
+  }, [cartTax, cartSubtotal]);
+
+  const deliveryFee = useMemo(() => {
+    if (customer.deliveryType === 'PICKUP') return 0;
+    return cartSubtotal >= 499 ? 0 : 49;
+  }, [cartSubtotal, customer.deliveryType]);
+
+  const cartGrandTotal = Math.round(cartSubtotal + cartTax + deliveryFee);
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Place Order Handler
+  // Cash change calculations
+  const tenderedNum = parseFloat(cashTendered) || 0;
+  const changeDue = Math.max(0, tenderedNum - cartGrandTotal);
+  const shortage = Math.max(0, cartGrandTotal - tenderedNum);
+
+  // Place Order Handler with Cash Tender and Razorpay UPI support
+  const submitOrder = async (orderOverrides = {}) => {
+    try {
+      setPlacingOrder(true);
+      const chosenMethod = orderOverrides.paymentMethod || customer.paymentMethod || 'CASH';
+      const isCash = chosenMethod === 'CASH' || chosenMethod === 'COD';
+
+      let isPaid = false;
+      let paidAmount = 0;
+
+      if (orderOverrides.isPaid !== undefined) {
+        isPaid = orderOverrides.isPaid;
+        paidAmount = orderOverrides.paidAmount !== undefined ? orderOverrides.paidAmount : (isPaid ? cartGrandTotal : 0);
+      } else if (isCash) {
+        isPaid = Boolean(isPaidAtCounter || (tenderedNum >= cartGrandTotal && tenderedNum > 0));
+        paidAmount = isPaid ? cartGrandTotal : 0;
+      }
+
+      const payload = {
+        companyCode: companyCode.toUpperCase(),
+        customerName: customer.name.trim(),
+        customerPhone: customer.phone.trim(),
+        customerEmail: customer.email ? customer.email.trim() : null,
+        customerAddress: customer.deliveryType === 'DELIVERY' ? customer.address : 'Store Counter Pickup',
+        paymentMethod: chosenMethod === 'UPI' ? 'UPI' : 'CASH',
+        isPaid,
+        paidAmount,
+        paymentReference: orderOverrides.paymentReference || (isCash ? (tenderedNum > 0 ? `CASH_TENDER_₹${tenderedNum}` : null) : null),
+        cashTendered: isCash ? tenderedNum : 0,
+        changeReturned: isCash ? changeDue : 0,
+        items: cart.map((item) => ({
+          productId: item.id,
+          productCode: item.productCode,
+          productName: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          purchasePrice: item.purchasePrice,
+          taxRate: item.taxRate
+        })),
+        notes: `Online Storefront Order (${customer.deliveryType})${isCash && tenderedNum > 0 ? ` | Tendered: ₹${tenderedNum}, Change: ₹${changeDue}` : ''}${orderOverrides.paymentReference ? ` | Ref: ${orderOverrides.paymentReference}` : ''}`
+      };
+
+      const res = await api.post('/sales/public/order', payload);
+      const orderRes = res?.data || res;
+
+      setOrderSuccess(orderRes);
+      setCart([]);
+      setIsCartOpen(false);
+      toast.success(isPaid ? 'Payment received & Order placed successfully!' : 'Order placed successfully!');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to place order. Please try again.');
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
+
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (cart.length === 0) {
@@ -236,38 +314,40 @@ export default function PublicStorePage() {
       return;
     }
 
-    try {
-      setPlacingOrder(true);
-      const payload = {
-        companyCode: companyCode.toUpperCase(),
-        customerName: customer.name.trim(),
-        customerPhone: customer.phone.trim(),
-        customerEmail: customer.email ? customer.email.trim() : null,
-        customerAddress: customer.deliveryType === 'DELIVERY' ? customer.address : 'Store Counter Pickup',
-        paymentMethod: customer.paymentMethod,
-        items: cart.map((item) => ({
-          productId: item.id,
-          productCode: item.productCode,
-          productName: item.name,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          purchasePrice: item.purchasePrice,
-          taxRate: item.taxRate
-        })),
-        notes: `Online Storefront Order (${customer.deliveryType})`
-      };
-
-      const res = await api.post('/sales/public/order', payload);
-      const orderRes = res?.data || res;
-
-      setOrderSuccess(orderRes);
-      setCart([]);
-      setIsCartOpen(false);
-      toast.success('Order placed successfully!');
-    } catch (err) {
-      toast.error(err?.message || 'Failed to place order. Please try again.');
-    } finally {
-      setPlacingOrder(false);
+    if (customer.paymentMethod === 'UPI') {
+      try {
+        setPlacingOrder(true);
+        await openRazorpayCheckout({
+          amount: cartGrandTotal,
+          companyName: storeData?.tenant?.companyName || 'StockPilot Store',
+          description: `Order Payment (${customer.name})`,
+          userEmail: customer.email,
+          userPhone: customer.phone,
+          themeColor: primaryColor,
+          onSuccess: async (rzpResponse) => {
+            await submitOrder({
+              paymentMethod: 'UPI',
+              isPaid: true,
+              paidAmount: cartGrandTotal,
+              paymentReference: rzpResponse.razorpay_payment_id || `RZP_${Date.now()}`
+            });
+          },
+          onDismiss: (err) => {
+            setPlacingOrder(false);
+            if (err?.description) {
+              toast.warn(`Payment dismissed: ${err.description}`);
+            } else {
+              toast.info('Payment window closed. You can complete payment or choose Cash.');
+            }
+          }
+        });
+      } catch (err) {
+        setPlacingOrder(false);
+        toast.error(err.message || 'Razorpay checkout initialization failed.');
+      }
+    } else {
+      // Cash payment
+      await submitOrder({ paymentMethod: 'CASH' });
     }
   };
 
@@ -996,12 +1076,12 @@ export default function PublicStorePage() {
                     <span>₹{cartSubtotal.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="clean-bill-row">
-                    <span>Estimated GST (18%)</span>
-                    <span>₹{cartTax.toLocaleString('en-IN')}</span>
+                    <span>Estimated GST {effectiveTaxPercent > 0 ? `(${effectiveTaxPercent}%)` : ''}</span>
+                    <span>₹{Math.round(cartTax).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="clean-bill-row">
                     <span>Delivery</span>
-                    <span className="text-emerald">{cartSubtotal >= 499 ? 'FREE' : '₹49'}</span>
+                    <span className="text-emerald">{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span>
                   </div>
                   <div className="clean-bill-row clean-bill-total">
                     <span>Total Payable</span>
@@ -1088,19 +1168,21 @@ export default function PublicStorePage() {
 
                   {/* Payment Mode Selector */}
                   <div className="clean-payment-group">
-                    <label>Payment Mode</label>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.45rem', display: 'block' }}>
+                      Payment Method
+                    </label>
                     <div className="clean-payment-options">
-                      <label className={`clean-pay-radio ${customer.paymentMethod === 'COD' ? 'selected' : ''}`}>
+                      <label className={`clean-pay-radio ${customer.paymentMethod === 'CASH' || customer.paymentMethod === 'COD' ? 'selected' : ''}`}>
                         <input
                           type="radio"
                           name="paymentMethod"
-                          value="COD"
-                          checked={customer.paymentMethod === 'COD'}
-                          onChange={() => setCustomer({ ...customer, paymentMethod: 'COD' })}
+                          value="CASH"
+                          checked={customer.paymentMethod === 'CASH' || customer.paymentMethod === 'COD'}
+                          onChange={() => setCustomer({ ...customer, paymentMethod: 'CASH' })}
                         />
                         <div>
-                          <strong>Cash on Delivery</strong>
-                          <span>Pay upon doorstep delivery</span>
+                          <strong>Cash Payment</strong>
+                          <span>Cash on Delivery or Counter Cash</span>
                         </div>
                       </label>
 
@@ -1113,11 +1195,171 @@ export default function PublicStorePage() {
                           onChange={() => setCustomer({ ...customer, paymentMethod: 'UPI' })}
                         />
                         <div>
-                          <strong>Instant UPI Pay</strong>
-                          <span>GPay, PhonePe, Paytm QR</span>
+                          <strong>UPI / Razorpay</strong>
+                          <span>Test Mode (GPay, PhonePe, Cards)</span>
                         </div>
                       </label>
                     </div>
+
+                    {/* Cash Tendered & Balance Calculator */}
+                    {(customer.paymentMethod === 'CASH' || customer.paymentMethod === 'COD') && (
+                      <div style={{
+                        marginTop: '0.85rem',
+                        padding: '0.85rem',
+                        borderRadius: '8px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.65rem'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
+                            Cash Tendered by Customer:
+                          </span>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.74rem', color: '#059669', fontWeight: 600, cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={isPaidAtCounter}
+                              onChange={(e) => setIsPaidAtCounter(e.target.checked)}
+                            />
+                            Mark as Paid Now
+                          </label>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <div style={{ position: 'relative', flex: 1 }}>
+                            <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#64748b' }}>₹</span>
+                            <input
+                              type="number"
+                              step="1"
+                              placeholder={`Enter amount (e.g. ${cartGrandTotal})`}
+                              value={cashTendered}
+                              onChange={(e) => setCashTendered(e.target.value)}
+                              style={{
+                                width: '100%',
+                                padding: '0.45rem 0.65rem 0.45rem 1.6rem',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                fontSize: '0.9rem',
+                                fontWeight: 700,
+                                color: '#0f172a'
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Quick amount suggestion chips */}
+                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => setCashTendered(String(cartGrandTotal))}
+                            style={{
+                              padding: '0.2rem 0.45rem',
+                              fontSize: '0.72rem',
+                              borderRadius: '4px',
+                              background: '#ffffff',
+                              border: '1px solid #cbd5e1',
+                              cursor: 'pointer',
+                              fontWeight: 600
+                            }}
+                          >
+                            Exact (₹{cartGrandTotal.toLocaleString('en-IN')})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCashTendered(String(cartGrandTotal + 100))}
+                            style={{
+                              padding: '0.2rem 0.45rem',
+                              fontSize: '0.72rem',
+                              borderRadius: '4px',
+                              background: '#ffffff',
+                              border: '1px solid #cbd5e1',
+                              cursor: 'pointer',
+                              fontWeight: 600
+                            }}
+                          >
+                            +₹100
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCashTendered(String(cartGrandTotal + 500))}
+                            style={{
+                              padding: '0.2rem 0.45rem',
+                              fontSize: '0.72rem',
+                              borderRadius: '4px',
+                              background: '#ffffff',
+                              border: '1px solid #cbd5e1',
+                              cursor: 'pointer',
+                              fontWeight: 600
+                            }}
+                          >
+                            +₹500
+                          </button>
+                          {cartGrandTotal > 500 && (
+                            <button
+                              type="button"
+                              onClick={() => setCashTendered(String(Math.ceil(cartGrandTotal / 1000) * 1000))}
+                              style={{
+                                padding: '0.2rem 0.45rem',
+                                fontSize: '0.72rem',
+                                borderRadius: '4px',
+                                background: '#ffffff',
+                                border: '1px solid #cbd5e1',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                              }}
+                            >
+                              Round ₹{(Math.ceil(cartGrandTotal / 1000) * 1000).toLocaleString('en-IN')}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Balance / Change Indicator */}
+                        {tenderedNum > 0 && (
+                          <div style={{
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            background: changeDue > 0 ? '#ecfdf5' : (shortage > 0 ? '#fef3c7' : '#f0fdf4'),
+                            border: `1px solid ${changeDue > 0 ? '#a7f3d0' : (shortage > 0 ? '#fde68a' : '#bbf7d0')}`,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: changeDue > 0 ? '#047857' : (shortage > 0 ? '#b45309' : '#15803d') }}>
+                              {changeDue > 0 ? 'Change to Return to Customer:' : (shortage > 0 ? 'Amount Remaining / Shortage:' : 'Exact Amount Tendered:')}
+                            </span>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: changeDue > 0 ? '#059669' : (shortage > 0 ? '#d97706' : '#16a34a') }}>
+                              ₹{(changeDue > 0 ? changeDue : (shortage > 0 ? shortage : 0)).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Razorpay Test Mode Badge */}
+                    {customer.paymentMethod === 'UPI' && (
+                      <div style={{
+                        marginTop: '0.75rem',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '8px',
+                        background: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.55rem'
+                      }}>
+                        <ShieldCheck size={18} color="#2563eb" />
+                        <div>
+                          <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#1e40af' }}>
+                            Razorpay Sandbox / Test Mode
+                          </div>
+                          <div style={{ fontSize: '0.68rem', color: '#3b82f6' }}>
+                            Simulates real UPI, Card &amp; Netbanking payments. No real money deducted.
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <button
@@ -1132,7 +1374,11 @@ export default function PublicStorePage() {
                         <span>Processing Order...</span>
                       </>
                     ) : (
-                      <span>Place Order • ₹{cartGrandTotal.toLocaleString('en-IN')}</span>
+                      <span>
+                        {customer.paymentMethod === 'UPI'
+                          ? `Pay with Razorpay • ₹${cartGrandTotal.toLocaleString('en-IN')}`
+                          : `Place Order • ₹${cartGrandTotal.toLocaleString('en-IN')}`}
+                      </span>
                     )}
                   </button>
                 </form>
