@@ -146,10 +146,18 @@ export default function TenantSupportPage() {
 
     try {
       setSubmitting(true);
+      const extractPrimitive = (val, fallback = '') => {
+        if (!val) return fallback;
+        if (typeof val === 'object') {
+          return val.value !== undefined ? val.value : (val.target?.value !== undefined ? val.target.value : fallback);
+        }
+        return String(val);
+      };
+
       const payload = {
         subject: formData.subject.trim(),
-        category: formData.category,
-        priority: formData.priority,
+        category: extractPrimitive(formData.category, 'GENERAL'),
+        priority: extractPrimitive(formData.priority, 'MEDIUM'),
         description: formData.description.trim()
       };
 
@@ -671,8 +679,8 @@ export default function TenantSupportPage() {
                   <div className="form-field-group">
                     <label>Module / Category *</label>
                     <CustomSelect
-                      value={formData.category}
-                      onChange={(val) => setFormData({ ...formData, category: val })}
+                      value={typeof formData.category === 'object' ? (formData.category?.value || 'GENERAL') : formData.category}
+                      onChange={(e, val) => setFormData({ ...formData, category: val || e?.target?.value || e?.value || e })}
                       options={CATEGORY_OPTIONS}
                       size="md"
                     />
@@ -681,8 +689,8 @@ export default function TenantSupportPage() {
                   <div className="form-field-group">
                     <label>Priority SLA *</label>
                     <CustomSelect
-                      value={formData.priority}
-                      onChange={(val) => setFormData({ ...formData, priority: val })}
+                      value={typeof formData.priority === 'object' ? (formData.priority?.value || 'MEDIUM') : formData.priority}
+                      onChange={(e, val) => setFormData({ ...formData, priority: val || e?.target?.value || e?.value || e })}
                       options={PRIORITY_OPTIONS}
                       size="md"
                     />

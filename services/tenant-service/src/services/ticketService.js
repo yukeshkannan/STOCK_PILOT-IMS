@@ -80,6 +80,20 @@ class TicketService {
       ticketId = `${prefix}-${String(count + 1).padStart(4, '0')}`;
     }
 
+    // Helper to safely extract string from either primitives or event/option objects
+    const extractString = (val, defaultVal = '') => {
+      if (val === null || val === undefined) return defaultVal;
+      if (typeof val === 'object') {
+        val = val.value !== undefined ? val.value : (val.target?.value !== undefined ? val.target.value : defaultVal);
+      }
+      return String(val !== undefined && val !== null ? val : defaultVal).trim();
+    };
+
+    const cleanCategory = extractString(data.category, 'GENERAL').slice(0, 50);
+    const cleanPriority = extractString(data.priority, 'MEDIUM').slice(0, 50);
+    const cleanSubject = extractString(data.subject, 'Support Request').slice(0, 255);
+    const cleanDescription = extractString(data.description, '');
+
     const ticket = await SupportTicket.create({
       ticket_id: ticketId,
       tenant_id: tenantId,
@@ -89,11 +103,11 @@ class TicketService {
       user_name: userName.slice(0, 100),
       user_email: userEmail.slice(0, 150),
       user_phone: userPhone ? String(userPhone).slice(0, 50) : null,
-      category: (data.category || 'GENERAL').slice(0, 50),
-      priority: (data.priority || 'MEDIUM').slice(0, 50),
+      category: cleanCategory,
+      priority: cleanPriority,
       status: 'OPEN',
-      subject: (data.subject?.trim() || 'Support Request').slice(0, 255),
-      description: data.description?.trim() || '',
+      subject: cleanSubject,
+      description: cleanDescription,
       assigned_to: 'Unassigned'
     });
 
@@ -104,7 +118,7 @@ class TicketService {
         sender_type: 'CLIENT',
         sender_name: userName.slice(0, 100),
         sender_email: userEmail.slice(0, 150),
-        message: data.description?.trim() || data.subject || 'Support ticket raised',
+        message: cleanDescription || cleanSubject || 'Support ticket raised',
         is_internal_note: false
       });
     } catch (msgErr) {
