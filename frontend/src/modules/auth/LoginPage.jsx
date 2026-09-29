@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { setCredentials } from '../../app/authSlice';
 import api from '../../services/api';
-import { Mail, Lock, LogIn, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, LogIn, ShieldAlert, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const dispatch = useDispatch();
@@ -157,6 +157,43 @@ export default function LoginPage() {
           <LogIn size={18} />
           <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
         </button>
+
+        {/* Back to Home Button */}
+        <Link
+          to="/"
+          className="btn-back-home"
+          style={{
+            width: '100%',
+            marginTop: '0.75rem',
+            padding: '0.7rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            textDecoration: 'none',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            border: '1px solid var(--border-color, #e2e8f0)',
+            background: 'transparent',
+            color: 'var(--text-secondary, #475569)',
+            borderRadius: 'var(--radius-md, 8px)',
+            transition: 'all 0.2s ease',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--primary, #982A86)';
+            e.currentTarget.style.color = 'var(--primary, #982A86)';
+            e.currentTarget.style.background = 'rgba(152, 42, 134, 0.06)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-color, #e2e8f0)';
+            e.currentTarget.style.color = 'var(--text-secondary, #475569)';
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          <ArrowLeft size={16} />
+          <span>Back to Home</span>
+        </Link>
       </form>
 
       <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
