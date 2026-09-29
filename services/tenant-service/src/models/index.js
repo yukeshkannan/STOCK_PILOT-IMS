@@ -392,8 +392,8 @@ const SupportMember = sequelize.define('SupportMember', {
   underscored: true
 });
 
-SupportTicket.hasMany(TicketMessage, { foreignKey: 'ticket_id', sourceKey: 'ticket_id', as: 'messages' });
-TicketMessage.belongsTo(SupportTicket, { foreignKey: 'ticket_id', targetKey: 'ticket_id', as: 'ticket' });
+SupportTicket.hasMany(TicketMessage, { foreignKey: 'ticket_id', sourceKey: 'ticket_id', as: 'messages', constraints: false });
+TicketMessage.belongsTo(SupportTicket, { foreignKey: 'ticket_id', targetKey: 'ticket_id', as: 'ticket', constraints: false });
 
 AuditLog.belongsTo(Tenant, { foreignKey: 'tenant_id', as: 'tenant' });
 Tenant.hasMany(AuditLog, { foreignKey: 'tenant_id', as: 'audit_logs' });

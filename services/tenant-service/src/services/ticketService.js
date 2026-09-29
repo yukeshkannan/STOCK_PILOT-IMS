@@ -11,19 +11,27 @@ class TicketService {
   async ensureTables() {
     if (tablesInitialized) return;
     try {
-      await SupportTicket.sync({ alter: true });
-      await TicketMessage.sync({ alter: true });
-      await SupportMember.sync({ alter: true });
+      await SupportTicket.sync();
+      await TicketMessage.sync();
+      await SupportMember.sync();
       tablesInitialized = true;
     } catch (e) {
       console.warn('[Ticket Tables Sync Note]:', e.message);
+      try {
+        await SupportTicket.sync({ alter: false });
+        await TicketMessage.sync({ alter: false });
+        await SupportMember.sync({ alter: false });
+        tablesInitialized = true;
+      } catch (err2) {
+        console.warn('[Ticket Tables Fallback Sync Note]:', err2.message);
+      }
     }
   }
 
   /**
    * Create a new support ticket from Tenant Portal with strict auto-increment 0001
    */
-  async createTicket(userContext, data) {
+  async createTicket(userContext = {}, data = {}) {
     await this.ensureTables();
 
     const tenantId = Number(userContext.tenantId || userContext.tenant_id) || 1;
@@ -32,57 +40,83 @@ class TicketService {
 
     if ((!companyCode || !companyName) && tenantId) {
       try {
-        const tenantRecord = await Tenant.findByPk(tenantId);
+        const tenantRecord = await Tenant.findByPk(tenantId, {
+          attributes: ['id', 'company_code', 'company_name']
+        });
         if (tenantRecord) {
-          companyCode = (tenantRecord.company_code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-          companyName = tenantRecord.company_name;
+          companyCode = companyCode || (tenantRecord.company_code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+          companyName = companyName || tenantRecord.company_name;
         }
-      } catch {}
+      } catch (err) {
+        console.warn('Tenant lookup note in createTicket:', err.message);
+      }
     }
     if (!companyCode) companyCode = 'TKT';
     if (!companyName) companyName = 'Business Organization';
 
-    const userName = (userContext.name || `${userContext.firstName || userContext.first_name || ''} ${userContext.lastName || userContext.last_name || ''}`).trim() || userContext.email || 'Tenant Admin';
+    // Clamp string lengths to fit database column types
+    companyCode = companyCode.slice(0, 20);
+    companyName = companyName.slice(0, 150);
+
+    const userName = (
+      userContext.name ||
+      `${userContext.firstName || userContext.first_name || ''} ${userContext.lastName || userContext.last_name || ''}`
+    ).trim() || userContext.email || 'Tenant Admin';
     const userEmail = (userContext.email || '').toLowerCase().trim() || 'admin@tenant.io';
     const userPhone = userContext.phone || data.phone || null;
 
+    // Safely parse user_id so it is an integer or null (avoid invalid string for INT in MySQL)
+    const rawUserId = userContext.userId || userContext.id;
+    const safeUserId = (rawUserId && !isNaN(Number(rawUserId))) ? parseInt(rawUserId, 10) : null;
+
     // Strict sequential ticket ID: e.g. TKT-ZARA-0001, TKT-ZARA-0002
-    const prefix = `TKT-${companyCode}`;
-    const ticketId = await getNextSequenceNumber(sequelize, tenantId, 'SUPPORT_TICKET', prefix, 4);
+    const prefix = `TKT-${companyCode}`.slice(0, 25);
+    let ticketId;
+    try {
+      ticketId = await getNextSequenceNumber(sequelize, tenantId, 'SUPPORT_TICKET', prefix, 4);
+    } catch (seqErr) {
+      console.warn('[Ticket Sequence Warning]:', seqErr.message);
+      const count = await SupportTicket.count({ where: { tenant_id: tenantId } }).catch(() => 0);
+      ticketId = `${prefix}-${String(count + 1).padStart(4, '0')}`;
+    }
 
     const ticket = await SupportTicket.create({
       ticket_id: ticketId,
       tenant_id: tenantId,
       company_name: companyName,
       company_code: companyCode,
-      user_id: userContext.userId || userContext.id || null,
-      user_name: userName,
-      user_email: userEmail,
-      user_phone: userPhone,
-      category: data.category || 'GENERAL',
-      priority: data.priority || 'MEDIUM',
+      user_id: safeUserId,
+      user_name: userName.slice(0, 100),
+      user_email: userEmail.slice(0, 150),
+      user_phone: userPhone ? String(userPhone).slice(0, 50) : null,
+      category: (data.category || 'GENERAL').slice(0, 50),
+      priority: (data.priority || 'MEDIUM').slice(0, 50),
       status: 'OPEN',
-      subject: data.subject?.trim() || 'Support Request',
+      subject: (data.subject?.trim() || 'Support Request').slice(0, 255),
       description: data.description?.trim() || '',
       assigned_to: 'Unassigned'
     });
 
     // Create Initial Message Thread
-    await TicketMessage.create({
-      ticket_id: ticketId,
-      sender_type: 'CLIENT',
-      sender_name: userName,
-      sender_email: userEmail,
-      message: data.description?.trim() || data.subject,
-      is_internal_note: false
-    });
+    try {
+      await TicketMessage.create({
+        ticket_id: ticketId,
+        sender_type: 'CLIENT',
+        sender_name: userName.slice(0, 100),
+        sender_email: userEmail.slice(0, 150),
+        message: data.description?.trim() || data.subject || 'Support ticket raised',
+        is_internal_note: false
+      });
+    } catch (msgErr) {
+      console.error('[Ticket Message Creation Note]:', msgErr.message);
+    }
 
     // Log Audit Trail
     try {
       await AuditLog.create({
         tenant_id: tenantId,
-        user_id: userContext.userId || null,
-        user_name: userName,
+        user_id: safeUserId,
+        user_name: userName.slice(0, 100),
         action: 'TICKET_CREATED',
         module: 'SUPPORT',
         record_id: ticketId,

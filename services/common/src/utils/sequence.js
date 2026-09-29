@@ -11,7 +11,7 @@ async function ensureSequenceTable(sequelize) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tenant_id INTEGER NOT NULL,
         entity_type VARCHAR(50) NOT NULL,
-        prefix VARCHAR(30) NOT NULL,
+        prefix VARCHAR(60) NOT NULL,
         current_number INTEGER NOT NULL DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -24,13 +24,16 @@ async function ensureSequenceTable(sequelize) {
         \`id\` INT AUTO_INCREMENT PRIMARY KEY,
         \`tenant_id\` INT NOT NULL,
         \`entity_type\` VARCHAR(50) NOT NULL,
-        \`prefix\` VARCHAR(30) NOT NULL,
+        \`prefix\` VARCHAR(60) NOT NULL,
         \`current_number\` INT NOT NULL DEFAULT 0,
         \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
         \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY \`tenant_entity_prefix_unique\` (\`tenant_id\`, \`entity_type\`, \`prefix\`)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+    try {
+      await sequelize.query(`ALTER TABLE \`tenant_sequences\` MODIFY COLUMN \`prefix\` VARCHAR(60) NOT NULL;`);
+    } catch {}
   }
 }
 

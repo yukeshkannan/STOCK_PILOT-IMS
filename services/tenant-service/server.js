@@ -1,7 +1,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
 const app = require('./src/app');
-const { sequelize, Tenant, TenantUser, Role, Permission } = require('./src/models');
+const { sequelize, Tenant, TenantUser, Role, Permission, SupportTicket, TicketMessage, SupportMember } = require('./src/models');
 const { initDatabase, eventBus, EVENTS, PERMISSIONS, ROLES, DEFAULT_ROLE_PERMISSIONS } = require('@stockpilot/common');
 
 const PORT = process.env.PORT || 5002;
@@ -47,6 +47,13 @@ async function seedDefaultRolesAndPermissions() {
 async function startServer() {
   try {
     await initDatabase(sequelize, process.env.DB_NAME || 'tenant_db');
+    try {
+      await SupportTicket.sync();
+      await TicketMessage.sync();
+      await SupportMember.sync();
+    } catch (tblErr) {
+      console.warn('Support ticket tables bootstrap note:', tblErr.message);
+    }
     await seedDefaultRolesAndPermissions();
     await eventBus.connect();
 

@@ -10,6 +10,7 @@ class TicketController {
       const ticket = await ticketService.createTicket(req.user, req.body);
       return ApiResponse.created(res, ticket, `Support ticket [${ticket.ticket_id}] raised successfully`);
     } catch (err) {
+      console.error('[TicketController createTicket Error]:', err);
       next(err);
     }
   }
