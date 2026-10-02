@@ -568,50 +568,16 @@ class ProductService {
       }
     } catch (e) {}
 
-    // Check which products have purchase records in purchase_db or purchase stock movements in inventory_db
-    let purchasedProductIds = new Set();
-    try {
-      const { createDatabaseConnection } = require('@stockpilot/common');
-      const purDb = createDatabaseConnection('purchase_db');
-      const [purItems] = await purDb.query(
-        `SELECT DISTINCT pi.product_id 
-         FROM purchase_items pi 
-         JOIN purchases p ON p.id = pi.purchase_id 
-         WHERE p.tenant_id = :tenantId AND p.status != 'CANCELLED';`,
-        { replacements: { tenantId } }
-      );
-      if (purItems) {
-        purItems.forEach((pi) => purchasedProductIds.add(Number(pi.product_id)));
-      }
-    } catch (e) {}
-
-    try {
-      const { createDatabaseConnection } = require('@stockpilot/common');
-      const invDb = createDatabaseConnection('inventory_db');
-      const [invItems] = await invDb.query(
-        `SELECT DISTINCT product_id FROM stock_movements 
-         WHERE tenant_id = :tenantId 
-           AND (movement_type = 'PURCHASE' OR reference_type = 'PURCHASE' OR reference_type = 'PO');`,
-        { replacements: { tenantId } }
-      );
-      if (invItems) {
-        invItems.forEach((im) => purchasedProductIds.add(Number(im.product_id)));
-      }
-    } catch (e) {}
-
-    // Strictly include ONLY products that have been purchased via purchases
-    let catalog = products
-      .filter((p) => purchasedProductIds.has(Number(p.id)))
-      .map((p) => {
-        const pJson = p.toJSON();
-        const currentStock = stockMap[p.id] !== undefined ? stockMap[p.id] : 0;
-        return {
-          ...pJson,
-          availableStock: currentStock,
-          inStock: currentStock > 0,
-          isPurchased: true
-        };
-      });
+    // Map all active products with real-time stock levels
+    let catalog = products.map((p) => {
+      const pJson = p.toJSON();
+      const currentStock = stockMap[p.id] !== undefined ? stockMap[p.id] : 0;
+      return {
+        ...pJson,
+        availableStock: currentStock,
+        inStock: currentStock > 0
+      };
+    });
 
     // Filter by selected products if configured by admin in storefront builder
     const savedConfig = tenantInfo.storeConfig || {};
@@ -620,9 +586,14 @@ class ProductService {
       catalog = catalog.filter((p) => selectedIds.includes(p.id));
     }
 
-    // Only return categories that belong to the purchased products
-    const purchasedCategoryIds = new Set(catalog.map((p) => p.category_id).filter(Boolean));
-    const activeCategories = categories.filter((c) => purchasedCategoryIds.has(c.id));
+    // Filter by showOnlyInStock if explicitly configured by tenant
+    if (savedConfig.productsSection?.showOnlyInStock) {
+      catalog = catalog.filter((p) => p.inStock);
+    }
+
+    // Only return categories that belong to the catalog products
+    const catalogCategoryIds = new Set(catalog.map((p) => p.category_id).filter(Boolean));
+    const activeCategories = categories.filter((c) => catalogCategoryIds.has(c.id));
 
     // Merge default store config
     const defaultConfig = {

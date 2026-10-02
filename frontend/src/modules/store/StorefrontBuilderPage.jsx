@@ -224,8 +224,8 @@ export default function StorefrontBuilderPage() {
     }
   };
 
-  // Dynamic categories from purchased products
-  const purchasedCategories = useMemo(() => {
+  // Dynamic categories from catalog products
+  const catalogCategories = useMemo(() => {
     const cats = new Set();
     tenantProducts.forEach((p) => {
       const cat = p.category?.name || p.category_name || (typeof p.category === 'string' ? p.category : null);
@@ -233,6 +233,7 @@ export default function StorefrontBuilderPage() {
     });
     return Array.from(cats);
   }, [tenantProducts]);
+  const purchasedCategories = catalogCategories; // Backward compatibility alias
 
   // Active Sidebar Mode: 'sections' | 'theme'
   const [activeTab, setActiveTab] = useState('sections');
@@ -299,7 +300,7 @@ export default function StorefrontBuilderPage() {
       showSearch: true,
       showCategories: true,
       showStockBadge: true,
-      showOnlyInStock: true,
+      showOnlyInStock: false,
       selectedProductIds: []
     },
     testimonials: {
@@ -408,43 +409,32 @@ export default function StorefrontBuilderPage() {
   const fetchTenantProducts = async () => {
     try {
       setLoadingProducts(true);
-      const [prodRes, stockRes, purRes] = await Promise.allSettled([
+      const [prodRes, stockRes] = await Promise.allSettled([
         api.get('/products?limit=200'),
-        api.get('/inventory'),
-        api.get('/purchases?limit=200')
+        api.get('/inventory')
       ]);
 
       const rawProds = prodRes.status === 'fulfilled' ? (prodRes.value?.data?.products || (Array.isArray(prodRes.value?.data) ? prodRes.value.data : [])) : [];
       const rawStocks = stockRes.status === 'fulfilled' ? (stockRes.value?.data || []) : [];
-      const rawPurchases = purRes.status === 'fulfilled' ? (purRes.value?.data?.purchases || (Array.isArray(purRes.value?.data) ? purRes.value.data : [])) : [];
 
       const stockMap = {};
       rawStocks.forEach((s) => {
         stockMap[s.product_id] = (stockMap[s.product_id] || 0) + (Number(s.current_stock) || 0);
       });
 
-      // ONLY include products that have been purchased via a purchase order
-      const purchasedProductIds = new Set();
-      rawPurchases.forEach((po) => {
-        if (po.status !== 'CANCELLED' && Array.isArray(po.items)) {
-          po.items.forEach((item) => {
-            if (item.product_id) purchasedProductIds.add(Number(item.product_id));
-          });
-        }
-      });
-
-      const onlyPurchased = rawProds
-        .filter((p) => purchasedProductIds.has(Number(p.id)))
+      // Include all active tenant products with real-time stock
+      const catalogProducts = rawProds
+        .filter((p) => !p.status || p.status === 'ACTIVE')
         .map((p) => {
           const stock = stockMap[p.id] !== undefined ? stockMap[p.id] : 0;
           return {
             ...p,
             currentStock: stock,
-            isPurchased: true
+            inStock: stock > 0
           };
         });
 
-      setTenantProducts(onlyPurchased);
+      setTenantProducts(catalogProducts);
     } catch (err) {
       console.warn('Failed to load products for storefront builder:', err);
     } finally {
@@ -1284,7 +1274,7 @@ export default function StorefrontBuilderPage() {
                         <label className="shopify-switch">
                           <input
                             type="checkbox"
-                            checked={config.productsSection?.showOnlyInStock !== false}
+                            checked={Boolean(config.productsSection?.showOnlyInStock)}
                             onChange={(e) =>
                               setConfig({
                                 ...config,
@@ -1304,15 +1294,15 @@ export default function StorefrontBuilderPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
                           <div>
                             <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>
-                              Purchased Catalog ({tenantProducts.length} Items)
+                              Store Catalog ({tenantProducts.length} Items)
                             </span>
                             <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '1px' }}>
-                              Only items purchased into inventory are shown
+                              Select products to display on your storefront
                             </p>
                           </div>
                           <div>
                             <Link
-                              to="/purchases"
+                              to="/products"
                               target="_blank"
                               style={{
                                 fontSize: '0.72rem',
@@ -1323,9 +1313,9 @@ export default function StorefrontBuilderPage() {
                                 alignItems: 'center',
                                 gap: '3px'
                               }}
-                              title="Go to Purchases"
+                              title="Go to Products Catalog"
                             >
-                              + New PO <ExternalLink size={10} />
+                              + Manage Products <ExternalLink size={10} />
                             </Link>
                           </div>
                         </div>
@@ -1334,7 +1324,7 @@ export default function StorefrontBuilderPage() {
                         <div style={{ marginBottom: '0.65rem' }}>
                           <input
                             type="text"
-                            placeholder="Search purchased items..."
+                            placeholder="Search catalog items..."
                             value={builderProductSearch}
                             onChange={(e) => setBuilderProductSearch(e.target.value)}
                             className="shopify-input"
@@ -1348,18 +1338,18 @@ export default function StorefrontBuilderPage() {
                             <div style={{ textAlign: 'center', padding: '1.25rem 0.5rem', color: '#64748b' }}>
                               <ShoppingBag size={26} color="#94a3b8" style={{ marginBottom: '0.35rem' }} />
                               <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155' }}>
-                                No Purchased Products in Inventory
+                                No Products in Catalog Yet
                               </div>
                               <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: '0.25rem 0 0.65rem' }}>
-                                Products must be purchased via a Purchase Order before they can appear in your online store.
+                                Add products in your Products section to display and sell them on your online storefront.
                               </p>
                               <Link
-                                to="/purchases"
+                                to="/products"
                                 target="_blank"
                                 className="shopify-btn-primary"
                                 style={{ fontSize: '0.72rem', padding: '0.35rem 0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                               >
-                                Go to Purchases <ExternalLink size={11} />
+                                Go to Products <ExternalLink size={11} />
                               </Link>
                             </div>
                           ) : (
@@ -2023,25 +2013,25 @@ export default function StorefrontBuilderPage() {
                       <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2.5rem 1rem', color: '#64748b' }}>
                         <ShoppingBag size={34} color="#94a3b8" style={{ marginBottom: '0.65rem' }} />
                         <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: config.branding.textColor || selectedPreset.text }}>
-                          No Purchased Products in Inventory Yet
+                          No Products in Store Catalog Yet
                         </h4>
                         <p style={{ fontSize: '0.78rem', marginTop: '0.25rem', color: '#94a3b8', maxWidth: '380px', margin: '0.25rem auto 1rem' }}>
-                          Only products purchased into inventory will be displayed on your live customer storefront.
+                          Add products in the Products module to showcase them on your live customer storefront.
                         </p>
                         <Link
-                          to="/purchases"
+                          to="/products"
                           target="_blank"
                           className="shopify-btn-primary"
                           style={{ fontSize: '0.78rem', padding: '0.4rem 1rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         >
-                          Go to Purchases <ExternalLink size={12} />
+                          Manage Products <ExternalLink size={12} />
                         </Link>
                       </div>
                     ) : (
                       tenantProducts
                         .filter((p) => {
                           const isSelected = !config.productsSection?.selectedProductIds || config.productsSection.selectedProductIds.length === 0 || config.productsSection.selectedProductIds.includes(p.id);
-                          const inStockCheck = config.productsSection?.showOnlyInStock !== false ? p.currentStock > 0 : true;
+                          const inStockCheck = config.productsSection?.showOnlyInStock ? p.currentStock > 0 : true;
                           const catName = p.category?.name || p.category_name || (typeof p.category === 'string' ? p.category : null);
                           const catCheck = selectedSimCategory === 'ALL' || catName === selectedSimCategory;
                           return isSelected && inStockCheck && catCheck;
@@ -2081,9 +2071,13 @@ export default function StorefrontBuilderPage() {
                                 </span>
                                 <button
                                   className="sim-btn-add"
-                                  style={{ background: config.branding.primaryColor }}
+                                  style={{
+                                    background: p.currentStock > 0 ? (config.branding.primaryColor || selectedPreset.primary) : '#94a3b8',
+                                    cursor: p.currentStock > 0 ? 'pointer' : 'not-allowed'
+                                  }}
+                                  disabled={p.currentStock <= 0}
                                 >
-                                  + Add
+                                  {p.currentStock > 0 ? '+ Add' : 'Out of Stock'}
                                 </button>
                               </div>
                               {config.productsSection?.showStockBadge !== false && (
