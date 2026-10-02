@@ -202,9 +202,10 @@ class ProductService {
     });
 
     // Automatically initialize stock record in Inventory Service
-    const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
+    const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || (process.env.NODE_ENV === 'production' ? 'http://inventory-service:5004' : 'http://localhost:5004');
+    let stockInitSuccess = false;
     try {
-      await fetch(`${INVENTORY_SERVICE_URL}/api/v1/inventory/internal/init-stock`, {
+      const res = await fetch(`${INVENTORY_SERVICE_URL}/api/v1/inventory/internal/init-stock`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -221,8 +222,69 @@ class ProductService {
           createdBy: productData.createdBy || 'Admin'
         })
       });
+      if (res.ok) {
+        stockInitSuccess = true;
+      }
     } catch (err) {
-      console.warn('Inventory stock init notice:', err.message);
+      console.warn('Inventory HTTP stock init notice:', err.message);
+    }
+
+    // Direct database fallback if HTTP request didn't succeed
+    if (!stockInitSuccess) {
+      try {
+        const { createDatabaseConnection } = require('@stockpilot/common');
+        const invDb = createDatabaseConnection('inventory_db');
+        const whId = productData.warehouseId ? parseInt(productData.warehouseId, 10) : 1;
+        const whName = productData.warehouseName || 'Main Warehouse';
+        const initQty = parseInt(productData.initialStock, 10) || 0;
+        const minStock = product.minimum_stock || 5;
+
+        const [existingStock] = await invDb.query(
+          `SELECT id, current_stock FROM stocks WHERE tenant_id = :tenantId AND product_id = :productId AND warehouse_id = :whId LIMIT 1;`,
+          { replacements: { tenantId, productId: product.id, whId } }
+        );
+
+        if (!existingStock || existingStock.length === 0) {
+          await invDb.query(
+            `INSERT INTO stocks (tenant_id, product_id, product_code, product_name, warehouse_id, warehouse_name, current_stock, reserved_stock, available_stock, minimum_stock, created_at, updated_at)
+             VALUES (:tenantId, :productId, :productCode, :productName, :whId, :whName, :initQty, 0, :initQty, :minStock, NOW(), NOW());`,
+            {
+              replacements: {
+                tenantId,
+                productId: product.id,
+                productCode: product.product_code,
+                productName: product.name,
+                whId,
+                whName,
+                initQty,
+                minStock
+              }
+            }
+          );
+
+          if (initQty > 0) {
+            await invDb.query(
+              `INSERT INTO stock_movements (tenant_id, product_id, product_code, product_name, warehouse_id, warehouse_name, movement_type, quantity, balance_after, reference_type, reference_id, notes, created_by, created_at, updated_at)
+               VALUES (:tenantId, :productId, :productCode, :productName, :whId, :whName, 'ADJUSTMENT', :initQty, :initQty, 'INITIAL_STOCK', :refId, 'Initial Opening Stock Balance', :createdBy, NOW(), NOW());`,
+              {
+                replacements: {
+                  tenantId,
+                  productId: product.id,
+                  productCode: product.product_code,
+                  productName: product.name,
+                  whId,
+                  whName,
+                  initQty,
+                  refId: `INIT-${product.id}`,
+                  createdBy: productData.createdBy || 'Admin'
+                }
+              }
+            );
+          }
+        }
+      } catch (dbErr) {
+        console.warn('Inventory DB direct stock fallback notice:', dbErr.message);
+      }
     }
 
     // Invalidate product cache

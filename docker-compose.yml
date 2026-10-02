@@ -141,6 +141,7 @@ services:
       - DB_PORT=3306
       - DB_USER=root
       - DB_PASSWORD=rootpassword
+      - INVENTORY_SERVICE_URL=http://inventory-service:5004
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - mysql

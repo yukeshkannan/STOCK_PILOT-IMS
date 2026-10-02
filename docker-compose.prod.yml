@@ -148,6 +148,7 @@ services:
       - DB_PORT=3306
       - DB_USER=root
       - DB_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - INVENTORY_SERVICE_URL=http://inventory-service:5004
       - JWT_SECRET=${JWT_SECRET:-stockpilot_jwt_prod_secret_key_2026}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_jwt_refresh_prod_secret_key_2026}
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672

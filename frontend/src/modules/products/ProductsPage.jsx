@@ -154,19 +154,21 @@ export default function ProductsPage() {
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     try {
-      const selectedWh = warehouses.find(w => String(w.id) === String(productForm.warehouseId));
+      const defaultWh = warehouses[0];
+      const selectedWh = warehouses.find(w => String(w.id) === String(productForm.warehouseId)) || defaultWh;
+      const whId = productForm.warehouseId ? parseInt(productForm.warehouseId, 10) : (defaultWh?.id ? parseInt(defaultWh.id, 10) : 1);
       const payload = {
         ...productForm,
-        purchasePrice: parseFloat(productForm.purchasePrice),
-        sellingPrice: parseFloat(productForm.sellingPrice),
-        taxRate: parseFloat(productForm.taxRate),
-        minimumStock: parseInt(productForm.minimumStock, 10),
-        maximumStock: parseInt(productForm.maximumStock, 10),
+        purchasePrice: parseFloat(productForm.purchasePrice) || 0,
+        sellingPrice: parseFloat(productForm.sellingPrice) || 0,
+        taxRate: parseFloat(productForm.taxRate) || 0,
+        minimumStock: parseInt(productForm.minimumStock, 10) || 5,
+        maximumStock: parseInt(productForm.maximumStock, 10) || 500,
         categoryId: productForm.categoryId ? parseInt(productForm.categoryId, 10) : null,
         brandId: productForm.brandId ? parseInt(productForm.brandId, 10) : null,
         initialStock: productForm.initialStock ? parseInt(productForm.initialStock, 10) : 0,
-        warehouseId: productForm.warehouseId ? parseInt(productForm.warehouseId, 10) : undefined,
-        warehouseName: selectedWh?.name
+        warehouseId: whId,
+        warehouseName: selectedWh?.name || 'Main Warehouse'
       };
 
       if (editingProduct) {
@@ -559,6 +561,44 @@ export default function ProductsPage() {
               />
             </div>
           </div>
+
+          {!editingProduct && (
+            <div className="form-row" style={{ marginTop: '0.25rem' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Opening Stock Quantity</span>
+                  <span style={{ fontSize: '0.72rem', color: '#982A86', fontWeight: 600 }}>Initial In-Stock</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-input"
+                  value={productForm.initialStock}
+                  onChange={(e) => setProductForm({ ...productForm, initialStock: e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                  placeholder="0 (e.g. 50 pcs)"
+                />
+                <p style={{ fontSize: '0.7rem', color: '#64748b', margin: '3px 0 0' }}>
+                  Immediate available inventory without requiring a Purchase Order.
+                </p>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Initial Warehouse</label>
+                <CustomSelect
+                  value={productForm.warehouseId}
+                  onChange={(e) => setProductForm({ ...productForm, warehouseId: e.target.value })}
+                  options={
+                    warehouses.length > 0
+                      ? warehouses.map((w) => ({ value: w.id, label: `${w.name}${w.code ? ` (${w.code})` : ''}` }))
+                      : [{ value: 1, label: 'Main Warehouse' }]
+                  }
+                />
+                <p style={{ fontSize: '0.7rem', color: '#64748b', margin: '3px 0 0' }}>
+                  Storage location where opening stock will be recorded.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="form-group" style={{ marginTop: '0.5rem' }}>
             <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
