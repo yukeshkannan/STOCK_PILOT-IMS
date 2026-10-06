@@ -208,6 +208,19 @@ export default function SuperAdminTicketsPage() {
               : t
           )
         );
+
+        // Broadcast event for live sidebar badge synchronization
+        window.dispatchEvent(new CustomEvent('stockpilot_ticket_updated', { detail: cleanUpdates }));
+        try {
+          if (typeof BroadcastChannel !== 'undefined') {
+            const bc = new BroadcastChannel('stockpilot_helpdesk_channel');
+            bc.postMessage({ type: 'TICKET_UPDATED', updates: cleanUpdates });
+            setTimeout(() => bc.close(), 1000);
+          }
+        } catch {}
+        try {
+          localStorage.setItem('stockpilot_helpdesk_ping', Date.now().toString());
+        } catch {}
       }
     } catch (err) {
       console.error('Failed to update ticket status/assignee:', err);
@@ -220,9 +233,17 @@ export default function SuperAdminTicketsPage() {
     e.preventDefault();
     if (!composerText.trim() || !selectedTicket) return;
 
+    const isInternal = replyMode === 'INTERNAL';
+    const assignedDev = (selectedTicket.assigned_to || '').trim();
+    const isDevAssigned = Boolean(assignedDev && assignedDev.toLowerCase() !== 'unassigned');
+
+    if (isInternal && !isDevAssigned) {
+      toast.warning('Please assign a developer to this ticket before adding an internal developer note.');
+      return;
+    }
+
     try {
       setSendingMessage(true);
-      const isInternal = replyMode === 'INTERNAL';
       const ticketKey = selectedTicket.ticket_id || selectedTicket.id;
       const res = await api.post(`/admin/tickets/${ticketKey}/messages`, {
         message: composerText.trim(),
@@ -231,12 +252,13 @@ export default function SuperAdminTicketsPage() {
 
       if (res) {
         setComposerText('');
-        toast.success(isInternal ? 'Internal dev note added' : 'Reply sent to client');
+        toast.success(isInternal ? `Internal dev note routed to ${assignedDev}` : 'Reply sent to client');
         loadTicketDetails(ticketKey);
+        fetchTicketsAndStats();
       }
     } catch (err) {
       console.error('Failed to send admin message:', err);
-      toast.error('Failed to post message');
+      toast.error(err?.response?.data?.message || 'Failed to post message');
     } finally {
       setSendingMessage(false);
     }
@@ -256,6 +278,20 @@ export default function SuperAdminTicketsPage() {
       setDeletingTicket(true);
       await api.delete(`/admin/tickets/${ticketIdentifier}`);
       toast.success(`Ticket #${ticketIdentifier} deleted successfully`);
+
+      // Broadcast event for live sidebar badge synchronization
+      window.dispatchEvent(new CustomEvent('stockpilot_ticket_updated', { detail: { id: ticketIdentifier } }));
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const bc = new BroadcastChannel('stockpilot_helpdesk_channel');
+          bc.postMessage({ type: 'TICKET_UPDATED', id: ticketIdentifier });
+          setTimeout(() => bc.close(), 1000);
+        }
+      } catch {}
+      try {
+        localStorage.setItem('stockpilot_helpdesk_ping', Date.now().toString());
+      } catch {}
+
       if (
         selectedTicket?.ticket_id === ticketIdentifier ||
         selectedTicket?.id === ticketIdentifier ||
@@ -666,110 +702,163 @@ export default function SuperAdminTicketsPage() {
                 </div>
 
                 {/* Messages & Notes */}
-                {(selectedTicket.messages || []).map((msg) => {
-                  const isClient = msg.sender_type === 'CLIENT' || msg.sender_role === 'CLIENT';
-                  const isInternal = msg.is_internal_note;
-
-                  if (isInternal) {
-                    return (
-                      <div key={msg.id} className="internal-note-card">
-                        <div className="internal-note-header">
-                          <div className="internal-note-badge-row">
-                            <div className="lock-icon-circle">
-                              <Lock size={12} color="#ffffff" />
-                            </div>
-                            <span className="internal-note-badge">Internal Dev Note</span>
-                            <span className="internal-note-author">
-                              {msg.sender_name || 'Super Admin'}
-                            </span>
-                          </div>
-                          <span className="internal-note-time">
-                            {formatTime(msg.createdAt || msg.created_at)}
-                          </span>
-                        </div>
-                        <div className="internal-note-text">
-                          {msg.message}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  const senderName = isClient
-                    ? (msg.sender_name || selectedTicket.user_name || 'Tenant Admin')
-                    : (msg.sender_name || 'StockPilot Support');
+                {(() => {
+                  const assignedDev = (selectedTicket.assigned_to || '').trim();
+                  const isDevAssigned = Boolean(assignedDev && assignedDev.toLowerCase() !== 'unassigned');
 
                   return (
-                    <div
-                      key={msg.id}
-                      className={`admin-chat-row ${isClient ? 'from-client' : 'from-admin'}`}
-                    >
-                      <div className={`chat-avatar ${isClient ? 'client-avatar' : 'admin-avatar'}`}>
-                        {getInitials(senderName)}
-                      </div>
-                      <div className="chat-bubble-container">
-                        <div className="chat-bubble-meta">
-                          <strong className="chat-sender-name">{senderName}</strong>
-                          <span className={`chat-role-badge ${isClient ? 'client-role' : 'admin-role'}`}>
-                            {isClient ? 'Client / Tenant' : 'Support / Dev'}
-                          </span>
-                          <span className="chat-time">{formatTime(msg.createdAt || msg.created_at)}</span>
-                        </div>
-                        <div className="chat-bubble-content">{msg.message}</div>
-                      </div>
-                    </div>
+                    <>
+                      {(selectedTicket.messages || []).map((msg) => {
+                        const isClient = msg.sender_type === 'CLIENT' || msg.sender_role === 'CLIENT';
+                        const isInternal = msg.is_internal_note;
+
+                        if (isInternal) {
+                          return (
+                            <div key={msg.id} className="internal-note-card">
+                              <div className="internal-note-header">
+                                <div className="internal-note-badge-row">
+                                  <div className="lock-icon-circle">
+                                    <Lock size={12} color="#ffffff" />
+                                  </div>
+                                  <span className="internal-note-badge">Internal Dev Note</span>
+                                  <span className="internal-note-author">
+                                    {msg.sender_name || 'Super Admin'}
+                                  </span>
+                                  {isDevAssigned && (
+                                    <span className="internal-note-target-pill">
+                                      → {assignedDev}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="internal-note-time">
+                                  {formatTime(msg.createdAt || msg.created_at)}
+                                </span>
+                              </div>
+                              <div className="internal-note-text">
+                                {msg.message}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        const senderName = isClient
+                          ? (msg.sender_name || selectedTicket.user_name || 'Tenant Admin')
+                          : (msg.sender_name || 'StockPilot Support');
+
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`admin-chat-row ${isClient ? 'from-client' : 'from-admin'}`}
+                          >
+                            <div className={`chat-avatar ${isClient ? 'client-avatar' : 'admin-avatar'}`}>
+                              {getInitials(senderName)}
+                            </div>
+                            <div className="chat-bubble-container">
+                              <div className="chat-bubble-meta">
+                                <strong className="chat-sender-name">{senderName}</strong>
+                                <span className={`chat-role-badge ${isClient ? 'client-role' : 'admin-role'}`}>
+                                  {isClient ? 'Client / Tenant' : 'Support / Dev'}
+                                </span>
+                                <span className="chat-time">{formatTime(msg.createdAt || msg.created_at)}</span>
+                              </div>
+                              <div className="chat-bubble-content">{msg.message}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div ref={chatEndRef} />
+                    </>
                   );
-                })}
-                <div ref={chatEndRef} />
+                })()}
               </div>
 
               {/* Dual Mode Reply Console */}
-              <div className="admin-console-footer">
-                <div className="mode-toggle-bar">
-                  <button
-                    type="button"
-                    className={`mode-tab-btn ${replyMode === 'CLIENT' ? 'active client-mode' : ''}`}
-                    onClick={() => setReplyMode('CLIENT')}
-                  >
-                    <Send size={13} />
-                    <span>Public Reply to Client</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`mode-tab-btn ${replyMode === 'INTERNAL' ? 'active internal-mode' : ''}`}
-                    onClick={() => setReplyMode('INTERNAL')}
-                  >
-                    <Lock size={13} />
-                    <span>Internal Developer Note (Hidden from Tenant)</span>
-                  </button>
-                </div>
+              {(() => {
+                const assignedDev = (selectedTicket.assigned_to || '').trim();
+                const isDevAssigned = Boolean(assignedDev && assignedDev.toLowerCase() !== 'unassigned');
 
-                <form onSubmit={handleSendAdminMessage} className="admin-composer-row">
-                  <textarea
-                    className={replyMode === 'INTERNAL' ? 'internal-active' : 'client-active'}
-                    placeholder={
-                      replyMode === 'INTERNAL'
-                        ? 'Write an internal developer note, debugging observations or task handoff...'
-                        : 'Write official response to client...'
-                    }
-                    value={composerText}
-                    onChange={(e) => setComposerText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendAdminMessage(e);
-                      }
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    className={`btn-admin-send ${replyMode === 'INTERNAL' ? 'internal-mode' : 'client-mode'}`}
-                    disabled={sendingMessage || !composerText.trim()}
-                  >
-                    <Send size={15} />
-                    <span>{replyMode === 'INTERNAL' ? 'Save Note' : 'Send'}</span>
-                  </button>
-                </form>
-              </div>
+                return (
+                  <div className="admin-console-footer">
+                    <div className="mode-toggle-bar">
+                      <button
+                        type="button"
+                        className={`mode-tab-btn ${replyMode === 'CLIENT' ? 'active client-mode' : ''}`}
+                        onClick={() => setReplyMode('CLIENT')}
+                      >
+                        <Send size={13} />
+                        <span>Public Reply to Client</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`mode-tab-btn ${replyMode === 'INTERNAL' ? 'active internal-mode' : ''}`}
+                        onClick={() => setReplyMode('INTERNAL')}
+                      >
+                        <Lock size={13} />
+                        <span>
+                          {isDevAssigned
+                            ? `Internal Dev Note (Routed to: ${assignedDev})`
+                            : 'Internal Developer Note (Developer Required)'}
+                        </span>
+                        {isDevAssigned ? (
+                          <span className="tab-dev-chip">{assignedDev}</span>
+                        ) : (
+                          <span className="tab-unassigned-chip">Unassigned</span>
+                        )}
+                      </button>
+                    </div>
+
+                    {replyMode === 'INTERNAL' && !isDevAssigned && (
+                      <div className="dev-assignment-required-banner">
+                        <div className="dev-req-icon-box">
+                          <UserCheck size={16} />
+                        </div>
+                        <div className="dev-req-content">
+                          <strong>Developer Assignment Required</strong>
+                          <p>
+                            Internal developer notes are confidential task handoffs routed directly to an assigned engineer.
+                            Please assign an engineer in the <strong>Developer</strong> dropdown in the toolbar above before adding internal notes.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleSendAdminMessage} className="admin-composer-row">
+                      <textarea
+                        disabled={replyMode === 'INTERNAL' && !isDevAssigned}
+                        className={replyMode === 'INTERNAL' ? 'internal-active' : 'client-active'}
+                        placeholder={
+                          replyMode === 'INTERNAL'
+                            ? isDevAssigned
+                              ? `Write internal developer note, debugging guidance or task handoff for ${assignedDev}...`
+                              : 'Please assign a developer above to enable internal developer notes...'
+                            : 'Write official response to client...'
+                        }
+                        value={composerText}
+                        onChange={(e) => setComposerText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (replyMode === 'INTERNAL' && !isDevAssigned) {
+                              toast.warning('Please assign a developer to this ticket before saving an internal dev note.');
+                              return;
+                            }
+                            handleSendAdminMessage(e);
+                          }
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        className={`btn-admin-send ${replyMode === 'INTERNAL' ? 'internal-mode' : 'client-mode'}`}
+                        disabled={sendingMessage || !composerText.trim() || (replyMode === 'INTERNAL' && !isDevAssigned)}
+                        title={replyMode === 'INTERNAL' && !isDevAssigned ? 'Assign a developer first to send internal notes' : undefined}
+                      >
+                        <Send size={15} />
+                        <span>{replyMode === 'INTERNAL' ? 'Save Note' : 'Send'}</span>
+                      </button>
+                    </form>
+                  </div>
+                );
+              })()}
             </>
           ) : (
             <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>

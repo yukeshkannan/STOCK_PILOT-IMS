@@ -639,9 +639,9 @@ export default function DeveloperWorkspacePage() {
                       <div
                         key={msg.id}
                         style={{
-                          background: '#fffbeb',
-                          border: '1px solid #fde68a',
-                          borderLeft: '4px solid #f59e0b',
+                          background: 'rgba(152, 42, 134, 0.05)',
+                          border: '1px solid rgba(152, 42, 134, 0.22)',
+                          borderLeft: '4px solid #982A86',
                           borderRadius: '12px',
                           padding: '1rem',
                           display: 'flex',
@@ -651,17 +651,17 @@ export default function DeveloperWorkspacePage() {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <Lock size={13} color="#f59e0b" />
-                            <span style={{ fontSize: '0.7rem', fontWeight: 800, background: '#fef3c7', color: '#b45309', padding: '0.15rem 0.45rem', borderRadius: '6px' }}>
+                            <Lock size={13} color="#982A86" />
+                            <span style={{ fontSize: '0.7rem', fontWeight: 800, background: 'rgba(152, 42, 134, 0.12)', color: '#982A86', padding: '0.15rem 0.45rem', borderRadius: '6px' }}>
                               Internal Engineering Log
                             </span>
-                            <strong style={{ fontSize: '0.82rem', color: '#78350f' }}>{msg.sender_name || 'Developer'}</strong>
+                            <strong style={{ fontSize: '0.82rem', color: '#761867' }}>{msg.sender_name || 'Developer'}</strong>
                           </div>
-                          <span style={{ fontSize: '0.72rem', color: '#b45309' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
                             {formatTime(msg.createdAt || msg.created_at)}
                           </span>
                         </div>
-                        <div style={{ color: '#78350f', fontSize: '0.86rem', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                        <div style={{ color: '#1e293b', fontSize: '0.86rem', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
                           {msg.message}
                         </div>
                       </div>
@@ -706,9 +706,9 @@ export default function DeveloperWorkspacePage() {
                     <button
                       type="button"
                       style={{
-                        background: replyMode === 'INTERNAL' ? '#f59e0b' : '#f8fafc',
+                        background: replyMode === 'INTERNAL' ? 'linear-gradient(135deg, #982A86 0%, #761867 100%)' : '#f8fafc',
                         color: replyMode === 'INTERNAL' ? '#ffffff' : '#64748b',
-                        border: '1px solid #cbd5e1',
+                        border: '1px solid ' + (replyMode === 'INTERNAL' ? '#982A86' : '#cbd5e1'),
                         borderRadius: '8px',
                         padding: '0.4rem 0.85rem',
                         fontSize: '0.78rem',
@@ -716,7 +716,8 @@ export default function DeveloperWorkspacePage() {
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.35rem'
+                        gap: '0.35rem',
+                        boxShadow: replyMode === 'INTERNAL' ? '0 2px 8px rgba(152, 42, 134, 0.25)' : 'none'
                       }}
                       onClick={() => setReplyMode('INTERNAL')}
                     >
@@ -727,9 +728,9 @@ export default function DeveloperWorkspacePage() {
                     <button
                       type="button"
                       style={{
-                        background: replyMode === 'CLIENT' ? '#982A86' : '#f8fafc',
+                        background: replyMode === 'CLIENT' ? '#0284c7' : '#f8fafc',
                         color: replyMode === 'CLIENT' ? '#ffffff' : '#64748b',
-                        border: '1px solid #cbd5e1',
+                        border: '1px solid ' + (replyMode === 'CLIENT' ? '#0284c7' : '#cbd5e1'),
                         borderRadius: '8px',
                         padding: '0.4rem 0.85rem',
                         fontSize: '0.78rem',
@@ -737,7 +738,8 @@ export default function DeveloperWorkspacePage() {
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.35rem'
+                        gap: '0.35rem',
+                        boxShadow: replyMode === 'CLIENT' ? '0 2px 8px rgba(2, 132, 199, 0.25)' : 'none'
                       }}
                       onClick={() => setReplyMode('CLIENT')}
                     >
@@ -757,8 +759,8 @@ export default function DeveloperWorkspacePage() {
                       onChange={(e) => setComposerText(e.target.value)}
                       style={{
                         flex: 1,
-                        border: replyMode === 'INTERNAL' ? '1px solid #f59e0b' : '1px solid #cbd5e1',
-                        background: replyMode === 'INTERNAL' ? '#fffdf5' : '#ffffff',
+                        border: replyMode === 'INTERNAL' ? '1px solid rgba(152, 42, 134, 0.45)' : '1px solid #cbd5e1',
+                        background: replyMode === 'INTERNAL' ? 'rgba(152, 42, 134, 0.02)' : '#ffffff',
                         borderRadius: '10px',
                         padding: '0.75rem',
                         fontSize: '0.88rem',

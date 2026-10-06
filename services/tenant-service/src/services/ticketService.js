@@ -138,6 +138,25 @@ class TicketService {
       });
     } catch {}
 
+    // Instantly notify Super Admin in notification_db
+    try {
+      const { createDatabaseConnection } = require('@stockpilot/common');
+      const notifDb = createDatabaseConnection('notification_db');
+      await notifDb.query(
+        `INSERT INTO notifications (tenant_id, user_id, title, message, type, category, action_type, action_id, link, is_read, created_at, updated_at)
+         VALUES (0, NULL, :title, :message, 'SUPPORT', 'REQUESTS', 'SUPPORT_TICKET', :ticketId, '/admin/tickets', false, NOW(), NOW())`,
+        {
+          replacements: {
+            title: `New Support Ticket [#${ticketId}] from ${companyName || 'Tenant'}`,
+            message: `${userName}: ${cleanSubject} (${cleanPriority})`,
+            ticketId: ticketId
+          }
+        }
+      );
+    } catch (notifErr) {
+      console.warn('[Ticket Service SuperAdmin Notif Note]:', notifErr.message);
+    }
+
     return ticket;
   }
 
@@ -175,10 +194,17 @@ class TicketService {
       throw { statusCode: 404, message: 'Support ticket not found or access denied.' };
     }
 
-    // Filter messages: Client users cannot see internal developer notes
+    // Filter messages: Client users cannot see internal developer notes.
+    // If a developer user (not Super Admin) is viewing, only allow seeing internal notes if assigned to this ticket.
     const messageWhere = { ticket_id: ticket.ticket_id };
+    const isSuper = Boolean(userContext?.isSuperAdmin || userContext?.is_super_admin);
     if (!isPrivileged) {
       messageWhere.is_internal_note = false;
+    } else if (!isSuper) {
+      const isAssigned = this.isUserAssignedToTicket(ticket, userContext);
+      if (!isAssigned) {
+        messageWhere.is_internal_note = false;
+      }
     }
 
     const messages = await TicketMessage.findAll({
@@ -259,6 +285,16 @@ class TicketService {
     }
 
     const isInternal = Boolean(isPrivileged && messageData.is_internal_note);
+    if (isInternal) {
+      const assignedDev = (ticket.assigned_to || '').trim();
+      if (!assignedDev || assignedDev.toLowerCase() === 'unassigned') {
+        throw {
+          statusCode: 400,
+          message: 'Cannot send internal developer note: No developer is assigned to this ticket. Please assign a developer first.'
+        };
+      }
+    }
+
     const senderType = isPrivileged
       ? (isInternal ? 'DEVELOPER' : (userContext?.isDeveloper || userContext?.role === 'DEVELOPER' ? 'DEVELOPER' : 'SUPPORT'))
       : 'CLIENT';
@@ -274,6 +310,27 @@ class TicketService {
       message: messageData.message?.trim() || '',
       is_internal_note: isInternal
     });
+
+    // Notify assigned developer of the internal note
+    if (isInternal) {
+      try {
+        const { createDatabaseConnection } = require('@stockpilot/common');
+        const notifDb = createDatabaseConnection('notification_db');
+        await notifDb.query(
+          `INSERT INTO notifications (tenant_id, user_id, title, message, type, category, action_type, action_id, link, is_read, created_at, updated_at)
+           VALUES (0, NULL, :title, :message, 'SUPPORT', 'REQUESTS', 'INTERNAL_DEV_NOTE', :ticketId, '/dev/workspace', false, NOW(), NOW())`,
+          {
+            replacements: {
+              title: `Internal Note on [#${ticket.ticket_id}] for ${ticket.assigned_to}`,
+              message: `${userName}: "${(messageData.message || '').trim().slice(0, 100)}"`,
+              ticketId: ticket.ticket_id
+            }
+          }
+        );
+      } catch (e) {
+        console.warn('[Internal Note Notif Warning]:', e.message);
+      }
+    }
 
     // Auto-update ticket status based on communication
     let updatedStatus = ticket.status;

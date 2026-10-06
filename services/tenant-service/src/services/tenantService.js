@@ -448,7 +448,9 @@ class TenantService {
             },
             contact: { ...defaultConfig.contact, ...(parsedConfig.contact || {}) },
             announcement: { ...defaultConfig.announcement, ...(parsedConfig.announcement || {}) },
-            sections: { ...defaultConfig.sections, ...(parsedConfig.sections || {}) },
+            sections: Array.isArray(parsedConfig.sections)
+              ? parsedConfig.sections
+              : { ...defaultConfig.sections, ...(parsedConfig.sections || {}) },
             whatsapp: { ...defaultConfig.whatsapp, ...(parsedConfig.whatsapp || {}) }
           }
         : defaultConfig)

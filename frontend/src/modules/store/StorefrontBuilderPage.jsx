@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
@@ -7,8 +7,6 @@ import {
   Store,
   Palette,
   Layout,
-  Megaphone,
-  Image as ImageIcon,
   Sparkles,
   Phone,
   CheckCircle2,
@@ -16,8 +14,10 @@ import {
   Copy,
   Save,
   Monitor,
+  Tablet,
   Smartphone,
   Eye,
+  EyeOff,
   ShoppingBag,
   Zap,
   ShieldCheck,
@@ -32,26 +32,36 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  CheckCheck,
   ChevronLeft,
   ChevronRight,
   ArrowRight,
-  Lock,
-  Link as LinkIcon,
-  Globe,
+  ArrowUp,
+  ArrowDown,
   GripVertical,
   Package,
-  Settings
+  Settings,
+  Flame,
+  Tag,
+  HelpCircle,
+  FileText,
+  Layers,
+  CopyPlus,
+  Info,
+  CheckCheck,
+  X,
+  SlidersHorizontal,
+  Image as ImageIcon
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { WhatsAppBrandIcon } from './PublicStorePage';
 import './StorefrontBuilderPage.css';
 
+// 6 Handcrafted Theme Palettes matching StockPilot Platform
 export const THEME_PRESETS = [
   {
     id: 'CLEAN_LIGHT',
     name: 'StockPilot Signature',
-    description: 'Crisp white surface with signature Knack Berry Plum accents',
+    description: 'Crisp white surface with signature Berry Plum (#982A86) accents',
     primary: '#982A86',
     accent: '#10b981',
     bg: '#ffffff',
@@ -62,7 +72,7 @@ export const THEME_PRESETS = [
   {
     id: 'MINIMAL_WHITE',
     name: 'Minimalist Slate',
-    description: 'Neutral monochrome for boutique fashion and lifestyle stores',
+    description: 'Neutral monochrome for boutique fashion and curated lifestyle stores',
     primary: '#0f172a',
     accent: '#2563eb',
     bg: '#f8fafc',
@@ -73,7 +83,7 @@ export const THEME_PRESETS = [
   {
     id: 'ROYAL_INDIGO',
     name: 'Royal Indigo',
-    description: 'Deep royal blue & cyan for tech, corporate & B2B brands',
+    description: 'Deep royal blue & cyan for corporate brands, gadgets & B2B retail',
     primary: '#4f46e5',
     accent: '#06b6d4',
     bg: '#f8fafc',
@@ -84,7 +94,7 @@ export const THEME_PRESETS = [
   {
     id: 'VIBRANT_RETAIL',
     name: 'Vibrant Retail',
-    description: 'High-energy crimson & amber for supermarkets & marts',
+    description: 'High-energy crimson & amber for supermarkets, marts & groceries',
     primary: '#e11d48',
     accent: '#f59e0b',
     bg: '#ffffff',
@@ -95,7 +105,7 @@ export const THEME_PRESETS = [
   {
     id: 'EMERALD_NATURE',
     name: 'Emerald Organic',
-    description: 'Fresh botanical greens for wellness, beauty & organics',
+    description: 'Fresh botanical greens for wellness, beauty & natural organics',
     primary: '#059669',
     accent: '#10b981',
     bg: '#f0fdf4',
@@ -106,7 +116,7 @@ export const THEME_PRESETS = [
   {
     id: 'MODERN_DARK',
     name: 'Midnight Dark',
-    description: 'Modern dark aesthetic for electronics & luxury goods',
+    description: 'Modern luxury dark aesthetic for electronics, gaming & watches',
     primary: '#982A86',
     accent: '#10b981',
     bg: '#0f172a',
@@ -116,31 +126,228 @@ export const THEME_PRESETS = [
   }
 ];
 
-export const BANNER_IMAGE_PRESETS = [
+// 12 Enterprise Modular Blocks Definitions
+export const AVAILABLE_BLOCK_TYPES = [
   {
-    category: 'Fashion & Apparel',
-    url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80',
-    title: 'Modern Retail Boutique'
+    type: 'HERO_BANNER',
+    name: 'Hero Showcase Banner',
+    category: 'Header & Intro',
+    icon: Sparkles,
+    badgeText: 'Essential',
+    description: 'Full-width cinematic hero banner with headline, badges, CTA buttons and image overlay.',
+    defaultData: {
+      badge: 'Official Online Store',
+      title: 'Welcome to Our Online Store',
+      subtitle: 'Shop the freshest arrivals, exclusive offers, and verified products delivered quickly.',
+      ctaText: 'Explore Catalog',
+      imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
+    }
   },
   {
-    category: 'Electronics & Tech',
-    url: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=1600&q=80',
-    title: 'Gadgets & Audio'
+    type: 'PRODUCT_GRID',
+    name: 'Product Catalog Grid',
+    category: 'Catalog & Store',
+    icon: Package,
+    badgeText: 'Core',
+    description: 'Full interactive catalog with real-time inventory, category filter chips, search & GST calculation.',
+    defaultData: {
+      title: 'Featured Catalog',
+      subtitle: 'Browse all available products in real-time inventory',
+      showSearch: true,
+      showCategories: true,
+      showStockBadge: true
+    }
   },
   {
-    category: 'Supermarket & Grocery',
-    url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80',
-    title: 'Organic Food & Fresh Mart'
+    type: 'PRODUCT_CAROUSEL',
+    name: 'Product Carousel Slider',
+    category: 'Catalog & Store',
+    icon: Sliders,
+    badgeText: 'Dynamic',
+    description: 'Smooth horizontal scrolling slider showcasing trending, featured, or new arrival products.',
+    defaultData: {
+      title: 'Trending Highlights',
+      subtitle: 'Top-selling picks delivered directly from our central inventory'
+    }
   },
   {
-    category: 'Footwear & Shoes',
-    url: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&w=1600&q=80',
-    title: 'Sneakers & Leather Shoes'
+    type: 'CATEGORY_TILES',
+    name: 'Visual Category Cards',
+    category: 'Navigation',
+    icon: Layers,
+    badgeText: 'Discovery',
+    description: 'Visual category cards with intuitive icons and direct collection filtering.',
+    defaultData: {
+      title: 'Explore by Category',
+      subtitle: 'Find exactly what you need with quick category filters'
+    }
   },
   {
-    category: 'Luxury & Accessories',
-    url: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=1600&q=80',
-    title: 'Store Interior & Watches'
+    type: 'FLASH_SALE',
+    name: 'Flash Sale Countdown',
+    category: 'Promotions',
+    icon: Flame,
+    badgeText: 'High Converting',
+    description: 'High-urgency promotional banner with live days, hours, mins, secs countdown timer.',
+    defaultData: {
+      badge: 'FLASH DEAL',
+      endsIn: 'Limited Weekend Promo',
+      title: 'Super Saver Weekend Deals',
+      subtitle: 'Exclusive direct discounts on handpicked catalog products. Don’t miss out!',
+      discountText: 'UP TO 40% OFF',
+      ctaText: 'Shop Deals Now'
+    }
+  },
+  {
+    type: 'TRUST_BADGES',
+    name: 'Value Proposition Strip',
+    category: 'Trust & Proof',
+    icon: ShieldCheck,
+    badgeText: 'Assurance',
+    description: '4-column value strip with icons (Express Dispatch, 100% Genuine, Flexible Payments, WhatsApp Support).',
+    defaultData: {
+      badges: [
+        { icon: 'Zap', title: 'Express Dispatch', desc: 'Fast doorstep delivery' },
+        { icon: 'ShieldCheck', title: '100% Genuine', desc: 'Verified from authorized stock' },
+        { icon: 'CreditCard', title: 'Flexible Payments', desc: 'UPI, Card & COD' },
+        { icon: 'Phone', title: 'Direct Store Support', desc: 'Instant WhatsApp & Call help' }
+      ]
+    }
+  },
+  {
+    type: 'BRAND_STORY',
+    name: 'Brand Story & About',
+    category: 'About & Branding',
+    icon: FileText,
+    badgeText: 'Story',
+    description: 'Split 2-column image + narrative story showcasing your business vision and credibility.',
+    defaultData: {
+      badge: 'OUR HERITAGE',
+      title: 'Crafted with Passion & Precision',
+      narrative: 'Founded with a clear vision: to bring authenticated, premium-grade products directly to our community. Every single item in our inventory is inspected, certified, and dispatched from verified facilities to guarantee genuine quality.',
+      imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80'
+    }
+  },
+  {
+    type: 'IMAGE_LOOKBOOK',
+    name: 'Visual Lookbook Gallery',
+    category: 'Media & Visuals',
+    icon: ImageIcon,
+    badgeText: 'Lifestyle',
+    description: 'Curated photo lookbook gallery showcasing store aesthetics, product photography, or lookbooks.',
+    defaultData: {
+      title: 'Store Showcase & Visual Lookbook',
+      subtitle: 'Step inside our store atmosphere and curated collections',
+      items: [
+        { imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80', caption: 'Flagship Store Experience' },
+        { imageUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=800&q=80', caption: 'Handcrafted Quality' },
+        { imageUrl: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&w=800&q=80', caption: 'Latest Season Arrivals' }
+      ]
+    }
+  },
+  {
+    type: 'TESTIMONIALS',
+    name: 'Customer Reviews Carousel',
+    category: 'Trust & Proof',
+    icon: Star,
+    badgeText: 'Social Proof',
+    description: 'Verified buyer feedback cards with 5-star ratings, buyer name, role, and city location.',
+    defaultData: {
+      title: 'What Our Customers Say',
+      subtitle: 'Real feedback from verified buyers across India',
+      reviews: [
+        { id: 1, name: 'Priya Sharma', rating: 5, comment: 'Outstanding product quality and super fast delivery. The ordering experience was seamless!', role: 'Verified Buyer', location: 'Chennai' },
+        { id: 2, name: 'Rajesh Kumar', rating: 5, comment: '100% genuine stock. Direct WhatsApp updates made the whole checkout effortless.', role: 'Verified Customer', location: 'Bengaluru' },
+        { id: 3, name: 'Sneha Patel', rating: 5, comment: 'Great pricing and prompt customer assistance. We will definitely continue ordering!', role: 'Verified Buyer', location: 'Mumbai' }
+      ]
+    }
+  },
+  {
+    type: 'FAQ_ACCORDION',
+    name: 'FAQ Accordion List',
+    category: 'Information & Support',
+    icon: HelpCircle,
+    badgeText: 'Support',
+    description: 'Expandable Q&A accordion resolving questions about shipping time, payment modes, and returns.',
+    defaultData: {
+      title: 'Frequently Asked Questions',
+      subtitle: 'Everything you need to know about purchasing, shipping, and returns',
+      faqs: [
+        { q: 'How long does delivery take?', a: 'Standard deliveries are dispatched within 24 hours and typically reach your address within 2-4 business days.' },
+        { q: 'What payment methods do you accept?', a: 'We accept instant UPI (Google Pay, PhonePe, Paytm), Credit & Debit Cards, Netbanking via Razorpay, and Cash on Delivery.' },
+        { q: 'Are all products 100% genuine?', a: 'Yes! All inventory in our catalog is backed by verified direct stock, checked before dispatch, and covered with GST invoices.' },
+        { q: 'Can I track my order on WhatsApp?', a: 'Absolutely. Immediately after placing your order, you can confirm via WhatsApp to receive tracking updates directly on your chat.' }
+      ]
+    }
+  },
+  {
+    type: 'NEWSLETTER_BAR',
+    name: 'Promo Coupon Offer Bar',
+    category: 'Promotions',
+    icon: Tag,
+    badgeText: 'Incentive',
+    description: 'Promotional discount banner with one-click copyable coupon code pill.',
+    defaultData: {
+      title: 'Unlock 10% Off Your Next Purchase',
+      subtitle: 'Use this special coupon code during checkout to enjoy an instant discount on all orders.',
+      couponCode: 'FIRST10'
+    }
+  },
+  {
+    type: 'CONTACT_MAP',
+    name: 'Store Locator & Contact',
+    category: 'Information & Support',
+    icon: MapPin,
+    badgeText: 'Contact',
+    description: 'Physical location card with operating hours, phone, email, and instant WhatsApp chat button.',
+    defaultData: {
+      title: 'Visit Our Store & Contact',
+      subtitle: 'Reach out directly for inquiries, custom orders, or customer support'
+    }
+  }
+];
+
+// 5 Industry 1-Click Templates
+export const INDUSTRY_TEMPLATES = [
+  {
+    id: 'FASHION_BOUTIQUE',
+    name: 'Fashion Boutique',
+    tagline: 'Modern Apparel, Accessories & Lifestyle',
+    theme: 'CLEAN_LIGHT',
+    icon: Sparkles,
+    sections: ['HERO_BANNER', 'FLASH_SALE', 'PRODUCT_CAROUSEL', 'CATEGORY_TILES', 'PRODUCT_GRID', 'IMAGE_LOOKBOOK', 'BRAND_STORY', 'TESTIMONIALS', 'FAQ_ACCORDION', 'CONTACT_MAP']
+  },
+  {
+    id: 'RETAIL_SUPERMART',
+    name: 'Retail Supermarket',
+    tagline: 'Groceries, Daily Essentials & FMCG',
+    theme: 'VIBRANT_RETAIL',
+    icon: Package,
+    sections: ['FLASH_SALE', 'HERO_BANNER', 'CATEGORY_TILES', 'PRODUCT_GRID', 'TRUST_BADGES', 'NEWSLETTER_BAR', 'TESTIMONIALS', 'CONTACT_MAP']
+  },
+  {
+    id: 'TECH_ELECTRONICS',
+    name: 'Tech & Electronics Hub',
+    tagline: 'Smartphones, Audio Gear & Gadgets',
+    theme: 'MODERN_DARK',
+    icon: Zap,
+    sections: ['HERO_BANNER', 'TRUST_BADGES', 'PRODUCT_CAROUSEL', 'PRODUCT_GRID', 'FLASH_SALE', 'BRAND_STORY', 'FAQ_ACCORDION', 'CONTACT_MAP']
+  },
+  {
+    id: 'ORGANIC_WELLNESS',
+    name: 'Organic & Wellness Mart',
+    tagline: 'Farm Fresh, Ayurvedic & Health',
+    theme: 'EMERALD_NATURE',
+    icon: ShieldCheck,
+    sections: ['HERO_BANNER', 'TRUST_BADGES', 'CATEGORY_TILES', 'PRODUCT_GRID', 'BRAND_STORY', 'NEWSLETTER_BAR', 'TESTIMONIALS', 'FAQ_ACCORDION', 'CONTACT_MAP']
+  },
+  {
+    id: 'LUXURY_LIFESTYLE',
+    name: 'Luxury & Lifestyle Studio',
+    tagline: 'High-end Watches, Jewelry & Decor',
+    theme: 'MINIMAL_WHITE',
+    icon: Star,
+    sections: ['HERO_BANNER', 'IMAGE_LOOKBOOK', 'PRODUCT_CAROUSEL', 'PRODUCT_GRID', 'BRAND_STORY', 'TESTIMONIALS', 'NEWSLETTER_BAR', 'CONTACT_MAP']
   }
 ];
 
@@ -160,6 +367,20 @@ export default function StorefrontBuilderPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+
+  // Studio Mode: 'layers' | 'add' | 'theme' | 'inspector'
+  const [activeTab, setActiveTab] = useState('layers');
+  const [selectedSectionId, setSelectedSectionId] = useState(null);
+
+  // Device Switcher: 'desktop' | 'tablet' | 'mobile'
+  const [previewDevice, setPreviewDevice] = useState('desktop');
+
+  // 1-Click Templates Modal
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+
+  // Drag and Drop State
+  const [draggedSectionIndex, setDraggedSectionIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   // Real Tenant Products & Stocks State
   const [tenantProducts, setTenantProducts] = useState([]);
@@ -181,6 +402,429 @@ export default function StorefrontBuilderPage() {
   });
   const [isSavingProduct, setIsSavingProduct] = useState(false);
 
+  // Master Configuration State
+  const [config, setConfig] = useState({
+    template: 'CUSTOM',
+    theme: 'CLEAN_LIGHT',
+    branding: {
+      storeName: user?.companyName || 'My Online Store',
+      tagline: 'Quality Products Delivered Directly to Your Doorstep',
+      primaryColor: '#982A86',
+      accentColor: '#10b981',
+      bgColor: '#ffffff',
+      cardColor: '#ffffff',
+      textColor: '#0f172a',
+      logoUrl: ''
+    },
+    announcement: {
+      enabled: false,
+      text: 'Free express delivery on orders above ₹499 | 100% Genuine Quality Guaranteed'
+    },
+    navbar: {
+      enabled: true,
+      showPhone: true,
+      showAddress: true,
+      showWhatsApp: true,
+      showCart: true,
+      navLinks: DEFAULT_NAV_LINKS
+    },
+    sections: [
+      {
+        id: 'sec-hero',
+        type: 'HERO_BANNER',
+        enabled: true,
+        data: {
+          badge: 'Official Online Store',
+          title: `Welcome to ${user?.companyName || 'Our Store'}`,
+          subtitle: 'Shop the freshest arrivals, exclusive store offers, and verified products delivered quickly.',
+          ctaText: 'Explore Catalog',
+          imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
+        }
+      },
+      {
+        id: 'sec-trust',
+        type: 'TRUST_BADGES',
+        enabled: true,
+        data: {
+          badges: [
+            { icon: 'Zap', title: 'Express Dispatch', desc: 'Fast doorstep delivery' },
+            { icon: 'ShieldCheck', title: '100% Genuine', desc: 'Verified authorized stock' },
+            { icon: 'CreditCard', title: 'Flexible Payments', desc: 'UPI, Card & COD' },
+            { icon: 'Phone', title: 'Store Support', desc: 'Instant WhatsApp assistance' }
+          ]
+        }
+      },
+      {
+        id: 'sec-catalog',
+        type: 'PRODUCT_GRID',
+        enabled: true,
+        data: {
+          title: 'Featured Catalog',
+          subtitle: 'Browse all available products in real-time inventory',
+          showSearch: true,
+          showCategories: true,
+          showStockBadge: true
+        }
+      },
+      {
+        id: 'sec-testimonials',
+        type: 'TESTIMONIALS',
+        enabled: true,
+        data: {
+          title: 'What Our Customers Say',
+          subtitle: 'Verified reviews from direct buyers across India',
+          reviews: [
+            { id: 1, name: 'Priya Sharma', rating: 5, comment: 'Outstanding product quality and super fast delivery. The ordering experience was seamless!', role: 'Verified Buyer', location: 'Chennai' },
+            { id: 2, name: 'Rajesh Kumar', rating: 5, comment: '100% genuine stock. Direct WhatsApp updates made the whole checkout effortless.', role: 'Verified Customer', location: 'Bengaluru' },
+            { id: 3, name: 'Sneha Patel', rating: 5, comment: 'Great pricing and prompt customer assistance. We will definitely continue ordering!', role: 'Verified Buyer', location: 'Mumbai' }
+          ]
+        }
+      },
+      {
+        id: 'sec-contact',
+        type: 'CONTACT_MAP',
+        enabled: true,
+        data: {
+          title: 'Visit Our Store & Contact',
+          subtitle: 'Reach out directly for inquiries, custom orders, or customer support'
+        }
+      }
+    ],
+    contact: {
+      address: user?.address || 'Retail Center, Commercial Street',
+      phone: user?.phone || '',
+      email: user?.email || '',
+      hours: 'Mon - Sat: 9:00 AM - 9:00 PM',
+      whatsappNumber: user?.phone || ''
+    }
+  });
+
+  // Fetch initial config and normalize sections
+  const fetchConfig = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/tenants/store-config');
+      if (res?.data) {
+        setConfig((prev) => {
+          const loaded = res.data;
+          const loadedNav = loaded.navbar || {};
+          const mergedNavLinks = Array.isArray(loadedNav.navLinks) && loadedNav.navLinks.length > 0
+            ? loadedNav.navLinks
+            : DEFAULT_NAV_LINKS;
+
+          // Normalize sections array if stored as legacy object or missing
+          let normalizedSections = prev.sections;
+          if (Array.isArray(loaded.sections) && loaded.sections.length > 0) {
+            normalizedSections = loaded.sections;
+          } else if (loaded.hero || loaded.productsSection) {
+            normalizedSections = [
+              {
+                id: 'sec-hero',
+                type: 'HERO_BANNER',
+                enabled: loaded.hero?.enabled !== false,
+                data: loaded.hero || prev.sections[0].data
+              },
+              {
+                id: 'sec-trust',
+                type: 'TRUST_BADGES',
+                enabled: loaded.sections?.trustBadgesEnabled !== false,
+                data: { badges: loaded.trustBadges || prev.sections[1].data.badges }
+              },
+              {
+                id: 'sec-catalog',
+                type: 'PRODUCT_GRID',
+                enabled: true,
+                data: loaded.productsSection || prev.sections[2].data
+              },
+              {
+                id: 'sec-testimonials',
+                type: 'TESTIMONIALS',
+                enabled: loaded.testimonials?.enabled !== false,
+                data: loaded.testimonials || prev.sections[3].data
+              },
+              {
+                id: 'sec-contact',
+                type: 'CONTACT_MAP',
+                enabled: loaded.contact?.enabled !== false,
+                data: loaded.contact || prev.sections[4].data
+              }
+            ];
+          }
+
+          return {
+            ...prev,
+            ...loaded,
+            branding: { ...prev.branding, ...(loaded.branding || {}) },
+            announcement: { ...prev.announcement, ...(loaded.announcement || {}) },
+            navbar: {
+              ...prev.navbar,
+              ...loadedNav,
+              navLinks: mergedNavLinks
+            },
+            sections: normalizedSections,
+            contact: { ...prev.contact, ...(loaded.contact || {}) }
+          };
+        });
+      }
+    } catch (err) {
+      console.warn('Using default store config:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTenantProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const [prodRes, stockRes] = await Promise.allSettled([
+        api.get('/products?limit=200'),
+        api.get('/inventory')
+      ]);
+
+      const rawProds = prodRes.status === 'fulfilled' ? (prodRes.value?.data?.products || (Array.isArray(prodRes.value?.data) ? prodRes.value.data : [])) : [];
+      const rawStocks = stockRes.status === 'fulfilled' ? (stockRes.value?.data || []) : [];
+
+      const stockMap = {};
+      rawStocks.forEach((s) => {
+        stockMap[s.product_id] = (stockMap[s.product_id] || 0) + (Number(s.current_stock) || 0);
+      });
+
+      const catalogProducts = rawProds
+        .filter((p) => !p.status || p.status === 'ACTIVE')
+        .map((p) => {
+          const stock = stockMap[p.id] !== undefined ? stockMap[p.id] : 0;
+          return {
+            ...p,
+            currentStock: stock,
+            inStock: stock > 0
+          };
+        });
+
+      setTenantProducts(catalogProducts);
+    } catch (err) {
+      console.warn('Failed to load products for storefront builder:', err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig();
+    fetchTenantProducts();
+  }, []);
+
+  // Distinct categories from products
+  const catalogCategories = useMemo(() => {
+    const cats = new Set();
+    tenantProducts.forEach((p) => {
+      const cat = p.category?.name || p.category_name || (typeof p.category === 'string' ? p.category : null);
+      if (cat && cat.trim()) cats.add(cat.trim());
+    });
+    return Array.from(cats);
+  }, [tenantProducts]);
+
+  // Selected section object
+  const selectedSection = useMemo(() => {
+    if (!selectedSectionId) return config.sections[0] || null;
+    return config.sections.find((s) => s.id === selectedSectionId) || config.sections[0] || null;
+  }, [selectedSectionId, config.sections]);
+
+  // Save changes to backend
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await api.put('/tenants/store-config', config);
+      toast.success('Storefront published live successfully! All changes are now live.');
+    } catch (err) {
+      toast.error(err?.message || 'Failed to publish store configuration.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(liveStoreUrl);
+    setCopiedUrl(true);
+    toast.success('Live store URL copied to clipboard!');
+    setTimeout(() => setCopiedUrl(false), 2000);
+  };
+
+  // Drag and Drop Handlers
+  const handleDragStart = (e, index) => {
+    setDraggedSectionIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedSectionIndex === null || draggedSectionIndex === targetIndex) {
+      setDraggedSectionIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    const updated = [...config.sections];
+    const [moved] = updated.splice(draggedSectionIndex, 1);
+    updated.splice(targetIndex, 0, moved);
+    setConfig((prev) => ({ ...prev, sections: updated }));
+    setDraggedSectionIndex(null);
+    setDragOverIndex(null);
+    toast.success('Section reordered!');
+  };
+
+  const handleDragEnd = () => {
+    setDraggedSectionIndex(null);
+    setDragOverIndex(null);
+  };
+
+  // Up/Down Arrow Reordering
+  const moveSection = (index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= config.sections.length) return;
+    const updated = [...config.sections];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    setConfig((prev) => ({ ...prev, sections: updated }));
+  };
+
+  // Toggle Section visibility
+  const toggleSection = (index) => {
+    const updated = [...config.sections];
+    updated[index] = { ...updated[index], enabled: updated[index].enabled === false ? true : false };
+    setConfig((prev) => ({ ...prev, sections: updated }));
+  };
+
+  // Duplicate Section
+  const duplicateSection = (index) => {
+    const original = config.sections[index];
+    const clone = {
+      ...original,
+      id: `sec-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      data: JSON.parse(JSON.stringify(original.data || {}))
+    };
+    const updated = [...config.sections];
+    updated.splice(index + 1, 0, clone);
+    setConfig((prev) => ({ ...prev, sections: updated }));
+    setSelectedSectionId(clone.id);
+    setActiveTab('inspector');
+    toast.success(`Duplicated "${original.type}"!`);
+  };
+
+  // Delete Section
+  const deleteSection = (index) => {
+    if (config.sections.length <= 1) {
+      toast.warning('A store must have at least one section.');
+      return;
+    }
+    const target = config.sections[index];
+    const updated = config.sections.filter((_, i) => i !== index);
+    setConfig((prev) => ({ ...prev, sections: updated }));
+    if (selectedSectionId === target.id) {
+      setSelectedSectionId(updated[0]?.id || null);
+    }
+    toast.info('Section removed from page');
+  };
+
+  // Add block from library
+  const addBlockToPage = (blockType) => {
+    const def = AVAILABLE_BLOCK_TYPES.find((b) => b.type === blockType);
+    if (!def) return;
+    const newSec = {
+      id: `sec-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      type: blockType,
+      enabled: true,
+      data: JSON.parse(JSON.stringify(def.defaultData))
+    };
+    setConfig((prev) => ({
+      ...prev,
+      sections: [...(prev.sections || []), newSec]
+    }));
+    setSelectedSectionId(newSec.id);
+    setActiveTab('inspector');
+    toast.success(`Added ${def.name} to page!`);
+  };
+
+  // 1-Click Template Application
+  const handleApplyTemplate = (templateId) => {
+    const tmpl = INDUSTRY_TEMPLATES.find((t) => t.id === templateId);
+    if (!tmpl) return;
+    const preset = THEME_PRESETS.find((p) => p.id === tmpl.theme) || THEME_PRESETS[0];
+
+    const newSections = tmpl.sections.map((type, idx) => {
+      const def = AVAILABLE_BLOCK_TYPES.find((b) => b.type === type);
+      return {
+        id: `sec-${idx + 1}-${type.toLowerCase()}`,
+        type,
+        enabled: true,
+        data: JSON.parse(JSON.stringify(def?.defaultData || {}))
+      };
+    });
+
+    setConfig((prev) => ({
+      ...prev,
+      theme: preset.id,
+      branding: {
+        ...prev.branding,
+        primaryColor: preset.primary,
+        accentColor: preset.accent,
+        bgColor: preset.bg,
+        cardColor: preset.card,
+        textColor: preset.text
+      },
+      sections: newSections
+    }));
+    if (newSections.length > 0) {
+      setSelectedSectionId(newSections[0].id);
+    }
+    setIsTemplateModalOpen(false);
+    toast.success(`Applied "${tmpl.name}" layout & palette!`);
+  };
+
+  // Apply Theme Preset
+  const handleApplyPreset = (preset) => {
+    setConfig((prev) => ({
+      ...prev,
+      theme: preset.id,
+      branding: {
+        ...prev.branding,
+        primaryColor: preset.primary,
+        accentColor: preset.accent,
+        bgColor: preset.bg,
+        cardColor: preset.card,
+        textColor: preset.text
+      }
+    }));
+    toast.info(`Applied "${preset.name}" palette!`);
+  };
+
+  // Update Selected Section Data
+  const updateSelectedSectionData = (field, value) => {
+    if (!selectedSection) return;
+    setConfig((prev) => {
+      const updated = prev.sections.map((sec) => {
+        if (sec.id === selectedSection.id) {
+          return {
+            ...sec,
+            data: {
+              ...(sec.data || {}),
+              [field]: value
+            }
+          };
+        }
+        return sec;
+      });
+      return { ...prev, sections: updated };
+    });
+  };
+
+  // Product Inline Edit Modal Handlers
   const handleOpenEditProduct = (p) => {
     setEditingProduct(p);
     setProductEditForm({
@@ -211,11 +855,9 @@ export default function StorefrontBuilderPage() {
       };
 
       await api.put(`/products/${editingProduct.id}`, updatePayload);
-      toast.success(`Updated ${productEditForm.name} & image URL successfully!`);
+      toast.success(`Updated ${productEditForm.name} & image URL!`);
       setIsEditProductModalOpen(false);
       setEditingProduct(null);
-
-      // Re-fetch products so builder and preview immediately reflect new image & details
       await fetchTenantProducts();
     } catch (err) {
       toast.error(err?.response?.data?.message || err?.message || 'Failed to update product');
@@ -224,2230 +866,1618 @@ export default function StorefrontBuilderPage() {
     }
   };
 
-  // Dynamic categories from catalog products
-  const catalogCategories = useMemo(() => {
-    const cats = new Set();
-    tenantProducts.forEach((p) => {
-      const cat = p.category?.name || p.category_name || (typeof p.category === 'string' ? p.category : null);
-      if (cat && cat.trim()) cats.add(cat.trim());
-    });
-    return Array.from(cats);
-  }, [tenantProducts]);
-  const purchasedCategories = catalogCategories; // Backward compatibility alias
-
-  // Active Sidebar Mode: 'sections' | 'theme'
-  const [activeTab, setActiveTab] = useState('sections');
-
-  // Accordion open states
-  const [openAccordions, setOpenAccordions] = useState({
-    navbar: true,
-    announcement: false,
-    hero: false,
-    products: false,
-    testimonials: false,
-    contact: false
-  });
-
-  const toggleAccordion = (key) => {
-    setOpenAccordions((prev) => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
-  const [previewDevice, setPreviewDevice] = useState('desktop');
-  const [simTestimonialIndex, setSimTestimonialIndex] = useState(0);
-
-  const [config, setConfig] = useState({
-    template: 'CUSTOM',
-    theme: 'CLEAN_LIGHT',
-    branding: {
-      storeName: user?.companyName || 'My Online Store',
-      tagline: 'Quality Products Delivered Directly to Your Doorstep',
-      primaryColor: '#982A86',
-      accentColor: '#10b981',
-      bgColor: '#ffffff',
-      cardColor: '#ffffff',
-      textColor: '#0f172a',
-      logoUrl: '',
-      bannerUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
-    },
-    announcement: {
-      enabled: false,
-      text: 'Free express delivery on orders above ₹499 | 100% Genuine Quality Guaranteed'
-    },
-    navbar: {
-      enabled: true,
-      showPhone: true,
-      showAddress: true,
-      showWhatsApp: true,
-      showCart: true,
-      navLinks: DEFAULT_NAV_LINKS
-    },
-    hero: {
-      enabled: true,
-      badge: 'Official Online Store',
-      title: `Welcome to ${user?.companyName || 'Our Store'}`,
-      subtitle: 'Shop the freshest arrivals, exclusive store offers, and verified products delivered quickly.',
-      ctaText: 'Explore Catalog',
-      secondaryCtaText: 'Contact Store',
-      imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
-    },
-    productsSection: {
-      enabled: true,
-      title: 'Featured Catalog',
-      subtitle: 'Browse all available products in real-time inventory',
-      showSearch: true,
-      showCategories: true,
-      showStockBadge: true,
-      showOnlyInStock: false,
-      selectedProductIds: []
-    },
-    testimonials: {
-      enabled: true,
-      title: 'What Our Customers Say',
-      subtitle: 'Verified reviews from direct buyers across India',
-      reviews: [
-        {
-          id: 1,
-          name: 'Priya Sharma',
-          rating: 5,
-          comment: 'Outstanding product quality and super fast delivery. The ordering experience was seamless!',
-          role: 'Verified Buyer',
-          location: 'Chennai'
-        },
-        {
-          id: 2,
-          name: 'Rajesh Kumar',
-          rating: 5,
-          comment: '100% genuine stock. Direct WhatsApp updates made the whole checkout effortless.',
-          role: 'Verified Customer',
-          location: 'Bengaluru'
-        },
-        {
-          id: 3,
-          name: 'Sneha Patel',
-          rating: 5,
-          comment: 'Great pricing and prompt customer assistance. We will definitely continue ordering!',
-          role: 'Verified Buyer',
-          location: 'Mumbai'
-        }
-      ]
-    },
-    contact: {
-      enabled: true,
-      title: 'Visit Our Store & Contact',
-      subtitle: 'Reach out to our team directly for inquiries and bulk quotes',
-      address: user?.address || 'Retail Center, Main Commercial Street, Chennai',
-      phone: user?.phone || '8056685161',
-      email: user?.email || 'store@stockpilot.io',
-      hours: 'Mon - Sat: 9:00 AM - 9:00 PM',
-      whatsappNumber: user?.phone || '8056685161',
-      whatsappMessage: `Hello! I would like to inquire about products from ${user?.companyName || 'your store'}.`
-    },
-    sections: {
-      categoriesEnabled: true,
-      featuredProductsEnabled: true,
-      trustBadgesEnabled: true,
-      testimonialsEnabled: true,
-      contactFooterEnabled: true
-    },
-    trustBadges: [
-      { icon: 'Zap', title: 'Express Dispatch', desc: 'Fast doorstep delivery' },
-      { icon: 'ShieldCheck', title: '100% Genuine', desc: 'Verified authorized stock' },
-      { icon: 'CreditCard', title: 'Flexible Payments', desc: 'UPI, Card & COD' },
-      { icon: 'Phone', title: 'Store Support', desc: 'Instant WhatsApp assistance' }
-    ],
-    whatsapp: {
-      enabled: true,
-      phoneNumber: user?.phone || '',
-      defaultMessage: `Hello! I would like to inquire about products from ${user?.companyName || 'your store'}.`
-    }
-  });
-
-  const fetchConfig = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/tenants/store-config');
-      if (res?.data) {
-        setConfig((prev) => {
-          const loadedNav = res.data.navbar || {};
-          const mergedNavLinks = Array.isArray(loadedNav.navLinks) && loadedNav.navLinks.length > 0
-            ? loadedNav.navLinks
-            : DEFAULT_NAV_LINKS;
-
-          return {
-            ...prev,
-            ...res.data,
-            branding: { ...prev.branding, ...(res.data.branding || {}) },
-            announcement: { ...prev.announcement, ...(res.data.announcement || {}) },
-            navbar: {
-              ...prev.navbar,
-              ...loadedNav,
-              navLinks: mergedNavLinks
-            },
-            hero: { ...prev.hero, ...(res.data.hero || {}) },
-            productsSection: { ...prev.productsSection, ...(res.data.productsSection || {}) },
-            testimonials: {
-              ...prev.testimonials,
-              ...(res.data.testimonials || {}),
-              reviews: res.data.testimonials?.reviews || prev.testimonials.reviews
-            },
-            contact: { ...prev.contact, ...(res.data.contact || {}) },
-            sections: { ...prev.sections, ...(res.data.sections || {}) },
-            whatsapp: { ...prev.whatsapp, ...(res.data.whatsapp || {}) }
-          };
-        });
-      }
-    } catch (err) {
-      console.warn('Using default store config:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTenantProducts = async () => {
-    try {
-      setLoadingProducts(true);
-      const [prodRes, stockRes] = await Promise.allSettled([
-        api.get('/products?limit=200'),
-        api.get('/inventory')
-      ]);
-
-      const rawProds = prodRes.status === 'fulfilled' ? (prodRes.value?.data?.products || (Array.isArray(prodRes.value?.data) ? prodRes.value.data : [])) : [];
-      const rawStocks = stockRes.status === 'fulfilled' ? (stockRes.value?.data || []) : [];
-
-      const stockMap = {};
-      rawStocks.forEach((s) => {
-        stockMap[s.product_id] = (stockMap[s.product_id] || 0) + (Number(s.current_stock) || 0);
-      });
-
-      // Include all active tenant products with real-time stock
-      const catalogProducts = rawProds
-        .filter((p) => !p.status || p.status === 'ACTIVE')
-        .map((p) => {
-          const stock = stockMap[p.id] !== undefined ? stockMap[p.id] : 0;
-          return {
-            ...p,
-            currentStock: stock,
-            inStock: stock > 0
-          };
-        });
-
-      setTenantProducts(catalogProducts);
-    } catch (err) {
-      console.warn('Failed to load products for storefront builder:', err);
-    } finally {
-      setLoadingProducts(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchConfig();
-    fetchTenantProducts();
-  }, []);
-
-  const handleApplyPreset = (preset) => {
-    setConfig((prev) => ({
-      ...prev,
-      theme: preset.id,
-      branding: {
-        ...prev.branding,
-        primaryColor: preset.primary,
-        accentColor: preset.accent,
-        bgColor: preset.bg,
-        cardColor: preset.card,
-        textColor: preset.text
-      }
-    }));
-    toast.info(`Applied "${preset.name}" palette!`);
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      await api.put('/tenants/store-config', config);
-      toast.success('Storefront theme & navigation published live!');
-    } catch (err) {
-      toast.error(err?.message || 'Failed to save store configuration.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCopyUrl = () => {
-    navigator.clipboard.writeText(liveStoreUrl);
-    setCopiedUrl(true);
-    toast.success('Public store URL copied to clipboard!');
-    setTimeout(() => setCopiedUrl(false), 2000);
-  };
-
-  // Dynamic Navigation Links Helpers
-  const handleAddNavLink = () => {
-    const newLink = {
-      id: Date.now().toString(),
-      label: 'New Link',
-      url: '#products',
-      enabled: true
-    };
-    setConfig((prev) => ({
-      ...prev,
-      navbar: {
-        ...prev.navbar,
-        navLinks: [...(prev.navbar.navLinks || []), newLink]
-      }
-    }));
-  };
-
-  const handleRemoveNavLink = (id) => {
-    setConfig((prev) => ({
-      ...prev,
-      navbar: {
-        ...prev.navbar,
-        navLinks: (prev.navbar.navLinks || []).filter((item) => item.id !== id)
-      }
-    }));
-  };
-
-  const handleUpdateNavLink = (id, field, value) => {
-    setConfig((prev) => ({
-      ...prev,
-      navbar: {
-        ...prev.navbar,
-        navLinks: (prev.navbar.navLinks || []).map((item) =>
-          item.id === id ? { ...item, [field]: value } : item
-        )
-      }
-    }));
-  };
-
-  // Review Manager Helpers
-  const handleAddReview = () => {
-    const newRev = {
-      id: Date.now(),
-      name: 'Happy Customer',
-      rating: 5,
-      comment: 'Excellent quality and quick doorstep delivery!',
-      role: 'Verified Buyer',
-      location: 'Chennai'
-    };
-    setConfig((prev) => ({
-      ...prev,
-      testimonials: {
-        ...prev.testimonials,
-        reviews: [...prev.testimonials.reviews, newRev]
-      }
-    }));
-  };
-
-  const handleRemoveReview = (id) => {
-    setConfig((prev) => ({
-      ...prev,
-      testimonials: {
-        ...prev.testimonials,
-        reviews: prev.testimonials.reviews.filter((r) => r.id !== id)
-      }
-    }));
-  };
-
-  const handleUpdateReview = (id, field, value) => {
-    setConfig((prev) => ({
-      ...prev,
-      testimonials: {
-        ...prev.testimonials,
-        reviews: prev.testimonials.reviews.map((r) =>
-          r.id === id ? { ...r, [field]: value } : r
-        )
-      }
-    }));
-  };
-
-  const selectedPreset = THEME_PRESETS.find((p) => p.id === config.theme) || THEME_PRESETS[0];
-
-  const simReviews = config.testimonials?.reviews || [];
-  const maxSimIndex = Math.max(0, simReviews.length - 3);
-  const visibleSimReviews =
-    simReviews.length <= 3
-      ? simReviews
-      : simReviews.slice(simTestimonialIndex, simTestimonialIndex + 3);
-
-  const activeNavLinks = (config.navbar?.navLinks || DEFAULT_NAV_LINKS).filter(
-    (l) => l.enabled !== false
-  );
+  const primaryColor = config.branding?.primaryColor || '#982A86';
+  const accentColor = config.branding?.accentColor || '#10b981';
+  const bgColor = config.branding?.bgColor || '#ffffff';
+  const cardColor = config.branding?.cardColor || '#ffffff';
+  const textColor = config.branding?.textColor || '#0f172a';
 
   return (
-    <div className="shopify-builder-container">
-      {/* Header Bar */}
-      <header className="shopify-builder-header">
-        <div className="builder-header-left">
-          <div className="builder-store-badge">
-            <Store size={22} strokeWidth={2.2} />
-          </div>
-          <div>
-            <div className="builder-title-row">
-              <h2>{config.branding.storeName || 'Online Store'}</h2>
+    <div className="studio-builder-fullscreen">
+      {/* 1. TOP STUDIO CONTROL BAR */}
+      <header className="studio-topbar">
+        <div className="studio-topbar-left">
+          <Link to="/dashboard" className="studio-exit-btn" title="Back to Company Dashboard">
+            <ChevronLeft size={16} />
+            <span>Exit Studio</span>
+          </Link>
+          <div className="studio-divider" />
+          <div className="studio-brand-box">
+            <div className="studio-avatar" style={{ background: primaryColor }}>
+              <Store size={16} />
             </div>
-            <p className="builder-subtext">
-              Storefront Theme Customizer • Real-Time Dynamic Controls
-            </p>
+            <div>
+              <div className="studio-store-title-wrap">
+                <span className="studio-store-name">{config.branding?.storeName || 'My Online Store'}</span>
+                <span className="studio-live-pill">
+                  <span className="live-pulsing-dot" /> Live
+                </span>
+              </div>
+              <span className="studio-code-sub">Code: {companyCode}</span>
+            </div>
           </div>
         </div>
 
-        <div className="builder-header-actions">
+        {/* Device Viewport Toggle (Desktop, Tablet, Mobile) */}
+        <div className="studio-device-switcher">
+          <button
+            type="button"
+            className={`device-btn ${previewDevice === 'desktop' ? 'active' : ''}`}
+            onClick={() => setPreviewDevice('desktop')}
+            title="Desktop Full Screen Preview"
+          >
+            <Monitor size={15} />
+            <span>Desktop</span>
+          </button>
+          <button
+            type="button"
+            className={`device-btn ${previewDevice === 'tablet' ? 'active' : ''}`}
+            onClick={() => setPreviewDevice('tablet')}
+            title="Tablet Preview (768px)"
+          >
+            <Tablet size={15} />
+            <span>Tablet</span>
+          </button>
+          <button
+            type="button"
+            className={`device-btn ${previewDevice === 'mobile' ? 'active' : ''}`}
+            onClick={() => setPreviewDevice('mobile')}
+            title="Mobile iPhone Preview (390px)"
+          >
+            <Smartphone size={15} />
+            <span>Mobile</span>
+          </button>
+        </div>
+
+        {/* Actions: 1-Click Templates, Copy Link, Open Live, Publish */}
+        <div className="studio-topbar-right">
+          <button
+            type="button"
+            onClick={() => setIsTemplateModalOpen(true)}
+            className="btn-studio-ghost"
+            title="Choose from 5 industry-ready templates"
+          >
+            <Sparkles size={15} color="#982A86" />
+            <span>1-Click Templates</span>
+          </button>
+
           <button
             type="button"
             onClick={handleCopyUrl}
-            className="shopify-btn-outline"
+            className="btn-studio-ghost"
+            title="Copy Public Storefront URL"
           >
-            {copiedUrl ? <CheckCheck size={14} color="#059669" /> : <Copy size={14} />}
+            {copiedUrl ? <Check size={15} color="#10b981" /> : <Copy size={15} />}
             <span>{copiedUrl ? 'Copied!' : 'Copy Link'}</span>
           </button>
 
           <a
             href={liveStoreUrl}
             target="_blank"
-            rel="noopener noreferrer"
-            className="shopify-btn-outline"
+            rel="noreferrer"
+            className="btn-studio-ghost"
+            title="View Live Storefront in new tab"
           >
-            <ExternalLink size={14} />
-            <span>Visit Live Store</span>
+            <ExternalLink size={15} />
+            <span>View Live</span>
           </a>
 
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="shopify-btn-primary"
+            className="btn-studio-publish"
+            style={{ background: primaryColor }}
           >
-            <Save size={15} />
-            <span>{saving ? 'Publishing...' : 'Save & Publish'}</span>
+            {saving ? (
+              <>
+                <span className="studio-spinner" />
+                <span>Publishing...</span>
+              </>
+            ) : (
+              <>
+                <Zap size={15} />
+                <span>Publish Changes</span>
+              </>
+            )}
           </button>
         </div>
       </header>
 
-      {/* Main Builder Workspace */}
-      <div className="shopify-builder-layout">
-        {/* LEFT PANEL: Sections & Theme Settings */}
-        <aside className="shopify-sidebar-panel">
-          {/* Mode Switcher */}
-          <div className="sidebar-mode-switcher">
+      {/* 2. MAIN STUDIO WORKSPACE */}
+      <div className="studio-workspace">
+        {/* LEFT STUDIO SIDEBAR */}
+        <aside className="studio-sidebar">
+          {/* Studio Tab Navigation */}
+          <nav className="studio-tab-bar">
             <button
               type="button"
-              className={`mode-tab-btn ${activeTab === 'sections' ? 'active' : ''}`}
-              onClick={() => setActiveTab('sections')}
+              className={`studio-tab-item ${activeTab === 'layers' ? 'active' : ''}`}
+              onClick={() => setActiveTab('layers')}
             >
-              <Layout size={15} />
-              <span>Page Sections</span>
+              <Layers size={16} />
+              <span>Layers</span>
+              <span className="tab-count-pill">{config.sections.length}</span>
             </button>
             <button
               type="button"
-              className={`mode-tab-btn ${activeTab === 'theme' ? 'active' : ''}`}
+              className={`studio-tab-item ${activeTab === 'add' ? 'active' : ''}`}
+              onClick={() => setActiveTab('add')}
+            >
+              <Plus size={16} />
+              <span>Add Block</span>
+            </button>
+            <button
+              type="button"
+              className={`studio-tab-item ${activeTab === 'theme' ? 'active' : ''}`}
               onClick={() => setActiveTab('theme')}
             >
-              <Palette size={15} />
-              <span>Theme & Colors</span>
+              <Palette size={16} />
+              <span>Theme</span>
             </button>
-          </div>
+            <button
+              type="button"
+              className={`studio-tab-item ${activeTab === 'inspector' ? 'active' : ''}`}
+              onClick={() => setActiveTab('inspector')}
+            >
+              <Settings size={16} />
+              <span>Inspector</span>
+            </button>
+          </nav>
 
-          <div className="sidebar-content-scroll">
-            {/* TAB 1: THEME & BRANDING */}
-            {activeTab === 'theme' && (
-              <>
-                {/* Theme Color Palettes */}
-                <div className="form-group">
-                  <label>Curated Color Palettes</label>
-                  <div className="theme-presets-grid">
-                    {THEME_PRESETS.map((preset) => (
-                      <div
-                        key={preset.id}
-                        className={`theme-card ${config.theme === preset.id ? 'active' : ''}`}
-                        onClick={() => handleApplyPreset(preset)}
-                      >
-                        <div className="preset-colors-row">
-                          <span style={{ background: preset.bg }} />
-                          <span style={{ background: preset.primary }} />
-                          <span style={{ background: preset.accent }} />
-                          <span style={{ background: preset.card }} />
-                        </div>
-                        <div className="preset-info">
-                          <strong>{preset.name}</strong>
-                          <p>{preset.description}</p>
-                        </div>
-                        {config.theme === preset.id && (
-                          <div className="preset-check">
-                            <CheckCircle2 size={16} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+          {/* TAB 1: LAYERS & DRAG-AND-DROP REORDER */}
+          {activeTab === 'layers' && (
+            <div className="studio-sidebar-content">
+              <div className="sidebar-section-header">
+                <div>
+                  <h3 className="sidebar-heading">Page Structure & Order</h3>
+                  <p className="sidebar-subheading">Drag & drop or use arrows to reorder sections.</p>
                 </div>
-
-                {/* Brand Colors Customizer */}
-                <div
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    padding: '1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.85rem'
-                  }}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('add')}
+                  className="btn-mini-add"
+                  title="Add New Block"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Palette size={16} color="#982A86" />
-                    <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>
-                      Custom Color Palette
-                    </strong>
-                  </div>
+                  <Plus size={14} /> Add
+                </button>
+              </div>
 
-                  <div className="color-fields-row">
-                    <div className="form-group">
-                      <label>Primary Brand Color</label>
-                      <div className="color-input-wrap">
-                        <input
-                          type="color"
-                          value={config.branding.primaryColor}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              branding: { ...config.branding, primaryColor: e.target.value }
-                            })
-                          }
-                        />
-                        <input
-                          type="text"
-                          className="shopify-input-sm"
-                          value={config.branding.primaryColor}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              branding: { ...config.branding, primaryColor: e.target.value }
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
+              <div className="layers-list">
+                {config.sections.map((sec, idx) => {
+                  const def = AVAILABLE_BLOCK_TYPES.find((b) => b.type === sec.type) || {
+                    name: sec.type,
+                    icon: Package
+                  };
+                  const IconComp = def.icon;
+                  const isSelected = selectedSection?.id === sec.id;
+                  const isHidden = sec.enabled === false;
 
-                    <div className="form-group">
-                      <label>Accent & CTA Color</label>
-                      <div className="color-input-wrap">
-                        <input
-                          type="color"
-                          value={config.branding.accentColor}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              branding: { ...config.branding, accentColor: e.target.value }
-                            })
-                          }
-                        />
-                        <input
-                          type="text"
-                          className="shopify-input-sm"
-                          value={config.branding.accentColor}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              branding: { ...config.branding, accentColor: e.target.value }
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* TAB 2: PAGE SECTIONS ACCORDION LIST */}
-            {activeTab === 'sections' && (
-              <>
-                {/* 1. Header & Navigation (Dynamic Logo, Title & Nav Links) */}
-                <div className={`builder-accordion-card ${openAccordions.navbar ? 'expanded' : ''}`}>
-                  <div className="accordion-header" onClick={() => toggleAccordion('navbar')}>
-                    <div className="accordion-header-left">
-                      <div className="accordion-icon-wrap">
-                        <Store size={16} />
-                      </div>
-                      <div className="accordion-titles">
-                        <h4>Header & Navigation</h4>
-                        <span>Logo, title & dynamic nav menu</span>
-                      </div>
-                    </div>
-                    <div className="accordion-header-right">
-                      {openAccordions.navbar ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
-                    </div>
-                  </div>
-
-                  {openAccordions.navbar && (
-                    <div className="accordion-body">
-                      {/* Brand Title & Slogan */}
-                      <div className="form-group">
-                        <label>Store Brand Title</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.branding.storeName}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              branding: { ...config.branding, storeName: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. ZARA Flagship Store"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Tagline / Subtitle</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.branding.tagline}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              branding: { ...config.branding, tagline: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. Quality Products Delivered to Your Doorstep"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Custom Brand Logo URL (Optional)</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.branding.logoUrl || ''}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              branding: { ...config.branding, logoUrl: e.target.value }
-                            })
-                          }
-                          placeholder="https://yourdomain.com/logo.png"
-                        />
-                      </div>
-
-                      {/* Dynamic Navigation Links Manager */}
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <div className="reviews-list-header">
-                          <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>
-                            Navigation Menu Links ({config.navbar?.navLinks?.length || 0})
-                          </label>
-                          <button
-                            type="button"
-                            onClick={handleAddNavLink}
-                            className="shopify-btn-sm"
-                          >
-                            <Plus size={13} /> Add Link
-                          </button>
+                  return (
+                    <div
+                      key={sec.id || idx}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDrop={(e) => handleDrop(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => {
+                        setSelectedSectionId(sec.id);
+                        setActiveTab('inspector');
+                      }}
+                      className={`layer-item-card ${isSelected ? 'selected' : ''} ${isHidden ? 'hidden-layer' : ''} ${
+                        dragOverIndex === idx ? 'drag-over-target' : ''
+                      }`}
+                    >
+                      <div className="layer-item-left">
+                        <span className="drag-handle" title="Drag to reorder" onClick={(e) => e.stopPropagation()}>
+                          <GripVertical size={16} />
+                        </span>
+                        <div className="layer-icon-badge" style={{ background: `${primaryColor}18`, color: primaryColor }}>
+                          <IconComp size={15} />
                         </div>
-
-                        <div className="nav-links-manager-list">
-                          {(config.navbar?.navLinks || DEFAULT_NAV_LINKS).map((item) => (
-                            <div key={item.id} className="nav-link-editor-item">
-                              <input
-                                type="text"
-                                className="shopify-input-sm"
-                                style={{ width: '110px', fontWeight: 600 }}
-                                value={item.label}
-                                onChange={(e) =>
-                                  handleUpdateNavLink(item.id, 'label', e.target.value)
-                                }
-                                placeholder="Label"
-                              />
-
-                              <input
-                                type="text"
-                                className="shopify-input-sm"
-                                value={item.url}
-                                onChange={(e) =>
-                                  handleUpdateNavLink(item.id, 'url', e.target.value)
-                                }
-                                placeholder="#section or url"
-                              />
-
-                              <label className="shopify-switch" title="Toggle visibility">
-                                <input
-                                  type="checkbox"
-                                  checked={item.enabled !== false}
-                                  onChange={(e) =>
-                                    handleUpdateNavLink(item.id, 'enabled', e.target.checked)
-                                  }
-                                />
-                                <span className="switch-slider" />
-                              </label>
-
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveNavLink(item.id)}
-                                className="btn-trash-sm"
-                                title="Remove Link"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-                          ))}
+                        <div className="layer-info">
+                          <span className="layer-name">{def.name}</span>
+                          <span className="layer-type-tag">{sec.type}</span>
                         </div>
                       </div>
 
-                      <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                        <div className="toggle-item">
-                          <span>Show WhatsApp Quick Chat Button</span>
-                          <label className="shopify-switch">
-                            <input
-                              type="checkbox"
-                              checked={config.navbar?.showWhatsApp !== false}
-                              onChange={(e) =>
-                                setConfig({
-                                  ...config,
-                                  navbar: { ...config.navbar, showWhatsApp: e.target.checked }
-                                })
-                              }
-                            />
-                            <span className="switch-slider" />
-                          </label>
-                        </div>
-
-                        <div className="toggle-item">
-                          <span>Show Store Address & Contact Meta</span>
-                          <label className="shopify-switch">
-                            <input
-                              type="checkbox"
-                              checked={config.navbar?.showAddress !== false}
-                              onChange={(e) =>
-                                setConfig({
-                                  ...config,
-                                  navbar: { ...config.navbar, showAddress: e.target.checked }
-                                })
-                              }
-                            />
-                            <span className="switch-slider" />
-                          </label>
-                        </div>
-
-                        <div className="toggle-item">
-                          <span>Show Shopping Bag / Cart</span>
-                          <label className="shopify-switch">
-                            <input
-                              type="checkbox"
-                              checked={config.navbar?.showCart !== false}
-                              onChange={(e) =>
-                                setConfig({
-                                  ...config,
-                                  navbar: { ...config.navbar, showCart: e.target.checked }
-                                })
-                              }
-                            />
-                            <span className="switch-slider" />
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. Announcement Bar */}
-                <div className={`builder-accordion-card ${openAccordions.announcement ? 'expanded' : ''}`}>
-                  <div className="accordion-header" onClick={() => toggleAccordion('announcement')}>
-                    <div className="accordion-header-left">
-                      <div className="accordion-icon-wrap">
-                        <Megaphone size={16} />
-                      </div>
-                      <div className="accordion-titles">
-                        <h4>Announcement Bar</h4>
-                        <span>Top banner notice</span>
-                      </div>
-                    </div>
-                    <div className="accordion-header-right">
-                      <label className="shopify-switch" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={config.announcement?.enabled}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              announcement: { ...config.announcement, enabled: e.target.checked }
-                            })
-                          }
-                        />
-                        <span className="switch-slider" />
-                      </label>
-                      {openAccordions.announcement ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
-                    </div>
-                  </div>
-
-                  {openAccordions.announcement && (
-                    <div className="accordion-body">
-                      <div className="form-group">
-                        <label>Announcement Text</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.announcement?.text || ''}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              announcement: { ...config.announcement, text: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. Free express delivery on orders above ₹499"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Hero Showcase Banner */}
-                <div className={`builder-accordion-card ${openAccordions.hero ? 'expanded' : ''}`}>
-                  <div className="accordion-header" onClick={() => toggleAccordion('hero')}>
-                    <div className="accordion-header-left">
-                      <div className="accordion-icon-wrap">
-                        <ImageIcon size={16} />
-                      </div>
-                      <div className="accordion-titles">
-                        <h4>Hero Showcase Banner</h4>
-                        <span>Primary storefront showcase</span>
-                      </div>
-                    </div>
-                    <div className="accordion-header-right">
-                      <label className="shopify-switch" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={config.hero.enabled}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              hero: { ...config.hero, enabled: e.target.checked }
-                            })
-                          }
-                        />
-                        <span className="switch-slider" />
-                      </label>
-                      {openAccordions.hero ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
-                    </div>
-                  </div>
-
-                  {openAccordions.hero && (
-                    <div className="accordion-body">
-                      <div className="form-group">
-                        <label>Slogan Badge</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.hero.badge}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              hero: { ...config.hero, badge: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. Official Online Store"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Main Headline</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.hero.title}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              hero: { ...config.hero, title: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. Welcome to Our Store"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Subtitle / Description</label>
-                        <textarea
-                          rows={2}
-                          className="shopify-input"
-                          value={config.hero.subtitle}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              hero: { ...config.hero, subtitle: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. Shop the freshest arrivals and exclusive store offers..."
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Primary CTA Text</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.hero.ctaText}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              hero: { ...config.hero, ctaText: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. Explore Catalog"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Secondary CTA Text</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.hero.secondaryCtaText}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              hero: { ...config.hero, secondaryCtaText: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. Contact Store"
-                        />
-                      </div>
-
-                      {/* Image Presets */}
-                      <div className="form-group">
-                        <label>Background Presets</label>
-                        <div className="image-presets-row">
-                          {BANNER_IMAGE_PRESETS.map((p, idx) => (
-                            <div
-                              key={idx}
-                              className={`image-preset-thumb ${config.hero.imageUrl === p.url ? 'active' : ''}`}
-                              onClick={() =>
-                                setConfig({
-                                  ...config,
-                                  hero: { ...config.hero, imageUrl: p.url }
-                                })
-                              }
-                              title={p.title}
-                            >
-                              <img src={p.url} alt={p.title} />
-                              <span>{p.category}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="form-group">
-                        <label>Custom Hero Image URL</label>
-                        <input
-                          type="text"
-                          className="shopify-input-sm"
-                          value={config.hero.imageUrl}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              hero: { ...config.hero, imageUrl: e.target.value }
-                            })
-                          }
-                          placeholder="https://images.unsplash.com/..."
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 4. Products & Catalog */}
-                <div className={`builder-accordion-card ${openAccordions.products ? 'expanded' : ''}`}>
-                  <div className="accordion-header" onClick={() => toggleAccordion('products')}>
-                    <div className="accordion-header-left">
-                      <div className="accordion-icon-wrap">
-                        <ShoppingBag size={16} />
-                      </div>
-                      <div className="accordion-titles">
-                        <h4>Products & Catalog</h4>
-                        <span>Grid, search & category filters</span>
-                      </div>
-                    </div>
-                    <div className="accordion-header-right">
-                      <label className="shopify-switch" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={config.productsSection?.enabled !== false}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              productsSection: {
-                                ...config.productsSection,
-                                enabled: e.target.checked
-                              }
-                            })
-                          }
-                        />
-                        <span className="switch-slider" />
-                      </label>
-                      {openAccordions.products ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
-                    </div>
-                  </div>
-
-                  {openAccordions.products && (
-                    <div className="accordion-body">
-                      <div className="form-group">
-                        <label>Catalog Section Title</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.productsSection?.title || 'Featured Catalog'}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              productsSection: {
-                                ...config.productsSection,
-                                title: e.target.value
-                              }
-                            })
-                          }
-                        />
-                      </div>
-
-                      <div className="toggle-item">
-                        <span>Enable Live Search Bar</span>
-                        <label className="shopify-switch">
-                          <input
-                            type="checkbox"
-                            checked={config.productsSection?.showSearch !== false}
-                            onChange={(e) =>
-                              setConfig({
-                                ...config,
-                                productsSection: {
-                                  ...config.productsSection,
-                                  showSearch: e.target.checked
-                                }
-                              })
-                            }
-                          />
-                          <span className="switch-slider" />
-                        </label>
-                      </div>
-
-                      <div className="toggle-item">
-                        <span>Enable Category Filters</span>
-                        <label className="shopify-switch">
-                          <input
-                            type="checkbox"
-                            checked={config.sections.categoriesEnabled}
-                            onChange={(e) =>
-                              setConfig({
-                                ...config,
-                                sections: {
-                                  ...config.sections,
-                                  categoriesEnabled: e.target.checked
-                                }
-                              })
-                            }
-                          />
-                          <span className="switch-slider" />
-                        </label>
-                      </div>
-
-                      <div className="toggle-item">
-                        <span>Show Stock Availability Badges</span>
-                        <label className="shopify-switch">
-                          <input
-                            type="checkbox"
-                            checked={config.productsSection?.showStockBadge !== false}
-                            onChange={(e) =>
-                              setConfig({
-                                ...config,
-                                productsSection: {
-                                  ...config.productsSection,
-                                  showStockBadge: e.target.checked
-                                }
-                              })
-                            }
-                          />
-                          <span className="switch-slider" />
-                        </label>
-                      </div>
-
-                      <div className="toggle-item">
-                        <span>Only Show In-Stock Items</span>
-                        <label className="shopify-switch">
-                          <input
-                            type="checkbox"
-                            checked={Boolean(config.productsSection?.showOnlyInStock)}
-                            onChange={(e) =>
-                              setConfig({
-                                ...config,
-                                productsSection: {
-                                  ...config.productsSection,
-                                  showOnlyInStock: e.target.checked
-                                }
-                              })
-                            }
-                          />
-                          <span className="switch-slider" />
-                        </label>
-                      </div>
-
-                      {/* Real Tenant Products Selection & Management */}
-                      <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                          <div>
-                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>
-                              Store Catalog ({tenantProducts.length} Items)
-                            </span>
-                            <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '1px' }}>
-                              Select products to display on your storefront
-                            </p>
-                          </div>
-                          <div>
-                            <Link
-                              to="/products"
-                              target="_blank"
-                              style={{
-                                fontSize: '0.72rem',
-                                fontWeight: 600,
-                                color: '#982A86',
-                                textDecoration: 'none',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px'
-                              }}
-                              title="Go to Products Catalog"
-                            >
-                              + Manage Products <ExternalLink size={10} />
-                            </Link>
-                          </div>
-                        </div>
-
-                        {/* Search in builder */}
-                        <div style={{ marginBottom: '0.65rem' }}>
-                          <input
-                            type="text"
-                            placeholder="Search catalog items..."
-                            value={builderProductSearch}
-                            onChange={(e) => setBuilderProductSearch(e.target.value)}
-                            className="shopify-input"
-                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem' }}
-                          />
-                        </div>
-
-                        {/* Product Checkbox List */}
-                        <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.4rem' }}>
-                          {tenantProducts.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '1.25rem 0.5rem', color: '#64748b' }}>
-                              <ShoppingBag size={26} color="#94a3b8" style={{ marginBottom: '0.35rem' }} />
-                              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155' }}>
-                                No Products in Catalog Yet
-                              </div>
-                              <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: '0.25rem 0 0.65rem' }}>
-                                Add products in your Products section to display and sell them on your online storefront.
-                              </p>
-                              <Link
-                                to="/products"
-                                target="_blank"
-                                className="shopify-btn-primary"
-                                style={{ fontSize: '0.72rem', padding: '0.35rem 0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                              >
-                                Go to Products <ExternalLink size={11} />
-                              </Link>
-                            </div>
-                          ) : (
-                            tenantProducts
-                              .filter((p) => (p.name || '').toLowerCase().includes(builderProductSearch.toLowerCase()) || (p.product_code || '').toLowerCase().includes(builderProductSearch.toLowerCase()))
-                              .map((p) => {
-                                const isIncluded = !config.productsSection?.selectedProductIds || config.productsSection.selectedProductIds.length === 0 || config.productsSection.selectedProductIds.includes(p.id);
-                                return (
-                                  <label
-                                    key={p.id}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '0.55rem',
-                                      padding: '0.35rem 0.45rem',
-                                      borderRadius: '6px',
-                                      background: isIncluded ? '#fdf4fc' : '#ffffff',
-                                      cursor: 'pointer',
-                                      marginBottom: '2px',
-                                      fontSize: '0.78rem'
-                                    }}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={isIncluded}
-                                      onChange={(e) => {
-                                        const currentIds = config.productsSection?.selectedProductIds?.length > 0
-                                          ? [...config.productsSection.selectedProductIds]
-                                          : tenantProducts.map((tp) => tp.id);
-
-                                        let newIds;
-                                        if (e.target.checked) {
-                                          newIds = [...new Set([...currentIds, p.id])];
-                                        } else {
-                                          newIds = currentIds.filter((id) => id !== p.id);
-                                        }
-
-                                        setConfig({
-                                          ...config,
-                                          productsSection: {
-                                            ...config.productsSection,
-                                            selectedProductIds: newIds
-                                          }
-                                        });
-                                      }}
-                                    />
-                                    <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                      <span style={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {p.name}
-                                      </span>
-                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                        <span style={{ fontSize: '0.7rem', color: p.currentStock > 0 ? '#059669' : '#dc2626', fontWeight: 700 }}>
-                                          {p.currentStock > 0 ? `${p.currentStock} in stock` : 'Out of stock'}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleOpenEditProduct(p);
-                                          }}
-                                          style={{
-                                            padding: '2px 6px',
-                                            borderRadius: '4px',
-                                            border: '1px solid #e2e8f0',
-                                            background: '#ffffff',
-                                            color: '#982A86',
-                                            cursor: 'pointer',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '3px',
-                                            fontSize: '0.68rem',
-                                            fontWeight: 600,
-                                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-                                          }}
-                                          title="Configure Product Details & Image URL"
-                                        >
-                                          <Settings size={12} />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </label>
-                                );
-                              })
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 5. Customer Reviews Carousel */}
-                <div className={`builder-accordion-card ${openAccordions.testimonials ? 'expanded' : ''}`}>
-                  <div className="accordion-header" onClick={() => toggleAccordion('testimonials')}>
-                    <div className="accordion-header-left">
-                      <div className="accordion-icon-wrap">
-                        <Star size={16} />
-                      </div>
-                      <div className="accordion-titles">
-                        <h4>Customer Reviews</h4>
-                        <span>Testimonials carousel</span>
-                      </div>
-                    </div>
-                    <div className="accordion-header-right">
-                      <label className="shopify-switch" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={config.testimonials?.enabled !== false}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              testimonials: {
-                                ...config.testimonials,
-                                enabled: e.target.checked
-                              }
-                            })
-                          }
-                        />
-                        <span className="switch-slider" />
-                      </label>
-                      {openAccordions.testimonials ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
-                    </div>
-                  </div>
-
-                  {openAccordions.testimonials && (
-                    <div className="accordion-body">
-                      <div className="form-group">
-                        <label>Section Heading</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.testimonials?.title || 'What Our Customers Say'}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              testimonials: {
-                                ...config.testimonials,
-                                title: e.target.value
-                              }
-                            })
-                          }
-                        />
-                      </div>
-
-                      <div className="reviews-list-header">
-                        <h4>Customer Reviews ({config.testimonials?.reviews?.length || 0})</h4>
+                      <div className="layer-actions" onClick={(e) => e.stopPropagation()}>
+                        {/* Up Arrow */}
                         <button
                           type="button"
-                          onClick={handleAddReview}
-                          className="shopify-btn-sm"
+                          onClick={() => moveSection(idx, 'up')}
+                          disabled={idx === 0}
+                          className="btn-layer-action"
+                          title="Move Up"
                         >
-                          <Plus size={13} /> Add Review
+                          <ArrowUp size={13} />
                         </button>
-                      </div>
-
-                      {(config.testimonials?.reviews || []).map((rev, idx) => (
-                        <div key={rev.id || idx} className="review-editor-card">
-                          <div className="review-editor-top">
-                            <input
-                              type="text"
-                              className="shopify-input-sm"
-                              value={rev.name}
-                              onChange={(e) =>
-                                handleUpdateReview(rev.id, 'name', e.target.value)
-                              }
-                              placeholder="Name"
-                            />
-                            <input
-                              type="text"
-                              className="shopify-input-sm"
-                              value={rev.location}
-                              onChange={(e) =>
-                                handleUpdateReview(rev.id, 'location', e.target.value)
-                              }
-                              placeholder="City"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveReview(rev.id)}
-                              className="btn-trash-sm"
-                              title="Delete Review"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                          <textarea
-                            rows={2}
-                            className="shopify-input-sm"
-                            value={rev.comment}
-                            onChange={(e) =>
-                              handleUpdateReview(rev.id, 'comment', e.target.value)
-                            }
-                            placeholder="Feedback text..."
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* 6. Contact & Footer */}
-                <div className={`builder-accordion-card ${openAccordions.contact ? 'expanded' : ''}`}>
-                  <div className="accordion-header" onClick={() => toggleAccordion('contact')}>
-                    <div className="accordion-header-left">
-                      <div className="accordion-icon-wrap">
-                        <MapPin size={16} />
-                      </div>
-                      <div className="accordion-titles">
-                        <h4>Contact & Store Info</h4>
-                        <span>Location, phone & hours</span>
-                      </div>
-                    </div>
-                    <div className="accordion-header-right">
-                      <label className="shopify-switch" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={config.contact?.enabled !== false}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              contact: { ...config.contact, enabled: e.target.checked }
-                            })
-                          }
-                        />
-                        <span className="switch-slider" />
-                      </label>
-                      {openAccordions.contact ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
-                    </div>
-                  </div>
-
-                  {openAccordions.contact && (
-                    <div className="accordion-body">
-                      <div className="form-group">
-                        <label>Physical Address</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.contact?.address || ''}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              contact: { ...config.contact, address: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. 124 Grand Trunk Road, Chennai"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Support Phone</label>
-                        <input
-                          type="tel"
-                          className="shopify-input"
-                          value={config.contact?.phone || ''}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              contact: { ...config.contact, phone: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. +91 9876543210"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>WhatsApp Number</label>
-                        <input
-                          type="tel"
-                          className="shopify-input"
-                          value={config.whatsapp?.phoneNumber || ''}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              whatsapp: {
-                                ...config.whatsapp,
-                                phoneNumber: e.target.value
-                              },
-                              contact: {
-                                ...config.contact,
-                                whatsappNumber: e.target.value
-                              }
-                            })
-                          }
-                          placeholder="e.g. 8056685161"
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Operating Hours</label>
-                        <input
-                          type="text"
-                          className="shopify-input"
-                          value={config.contact?.hours || 'Mon - Sat: 9:00 AM - 9:00 PM'}
-                          onChange={(e) =>
-                            setConfig({
-                              ...config,
-                              contact: { ...config.contact, hours: e.target.value }
-                            })
-                          }
-                          placeholder="e.g. Mon - Sat: 9:00 AM - 9:00 PM"
-                        />
-                      </div>
-
-                      <div className="toggle-item">
-                        <span>Show Guarantee Trust Badges</span>
-                        <label className="shopify-switch">
-                          <input
-                            type="checkbox"
-                            checked={config.sections.trustBadgesEnabled}
-                            onChange={(e) =>
-                              setConfig({
-                                ...config,
-                                sections: {
-                                  ...config.sections,
-                                  trustBadgesEnabled: e.target.checked
-                                }
-                              })
-                            }
-                          />
-                          <span className="switch-slider" />
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </aside>
-
-        {/* RIGHT PANEL: Real-Time Live Preview Canvas */}
-        <main className="shopify-preview-panel">
-          {/* Top Browser Toolbar */}
-          <div className="preview-top-toolbar">
-            <div className="preview-browser-bar">
-              <div className="browser-dots">
-                <span className="dot-red" />
-                <span className="dot-yellow" />
-                <span className="dot-green" />
-              </div>
-              <div className="browser-url-pill">
-                <Lock size={12} color="#10b981" />
-                <span>stockpilot.io/store/</span>
-                <strong>{companyCode}</strong>
-              </div>
-            </div>
-
-            <div className="device-switcher">
-              <button
-                type="button"
-                className={`dev-btn ${previewDevice === 'desktop' ? 'active' : ''}`}
-                onClick={() => setPreviewDevice('desktop')}
-              >
-                <Monitor size={14} />
-                <span>Desktop</span>
-              </button>
-              <button
-                type="button"
-                className={`dev-btn ${previewDevice === 'mobile' ? 'active' : ''}`}
-                onClick={() => setPreviewDevice('mobile')}
-              >
-                <Smartphone size={14} />
-                <span>Mobile</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Viewport Container */}
-          <div className="preview-viewport-container">
-            <div
-              className={previewDevice === 'desktop' ? 'sim-frame-desktop' : 'sim-frame-mobile'}
-              style={{
-                backgroundColor: config.branding.bgColor || selectedPreset.bg,
-                color: config.branding.textColor || selectedPreset.text
-              }}
-            >
-              {/* 0. Optional Announcement Bar */}
-              {config.announcement?.enabled && config.announcement?.text && (
-                <div
-                  style={{
-                    background: config.branding.primaryColor,
-                    color: '#ffffff',
-                    padding: '0.4rem 0.8rem',
-                    textAlign: 'center',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.02em'
-                  }}
-                >
-                  {config.announcement.text}
-                </div>
-              )}
-
-              {/* 1. Header / Navbar with Dynamic Logo, Title & Navigation Links */}
-              {previewDevice === 'mobile' ? (
-                <div
-                  className="sim-mobile-header-wrap"
-                  style={{
-                    background: config.branding.cardColor || selectedPreset.card,
-                    borderColor: selectedPreset.border || '#e2e8f0',
-                    color: config.branding.textColor || selectedPreset.text
-                  }}
-                >
-                  {/* Mobile Top Row */}
-                  <div className="sim-mobile-top-bar">
-                    <div className="sim-brand-block">
-                      <div
-                        className="sim-brand-logo"
-                        style={{
-                          background: config.branding.logoUrl ? 'transparent' : config.branding.primaryColor,
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '6px'
-                        }}
-                      >
-                        {config.branding.logoUrl ? (
-                          <img
-                            src={config.branding.logoUrl}
-                            alt="Logo"
-                            style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '6px' }}
-                          />
-                        ) : (
-                          <Store size={14} />
-                        )}
-                      </div>
-                      <div>
-                        <h3
-                          className="sim-brand-name"
-                          style={{
-                            fontSize: '0.85rem',
-                            color: config.branding.textColor || selectedPreset.text
-                          }}
-                        >
-                          {config.branding.storeName}
-                        </h3>
-                      </div>
-                    </div>
-
-                    <div className="sim-nav-actions">
-                      {config.navbar?.showWhatsApp !== false && (
-                        <button className="sim-btn-whatsapp-icon" title="Chat on WhatsApp">
-                          <WhatsAppBrandIcon size={14} color="#25D366" />
-                        </button>
-                      )}
-                      {config.navbar?.showCart !== false && (
+                        {/* Down Arrow */}
                         <button
-                          className="sim-btn-cart-icon"
-                          style={{ background: config.branding.primaryColor }}
-                          title="Shopping Bag"
+                          type="button"
+                          onClick={() => moveSection(idx, 'down')}
+                          disabled={idx === config.sections.length - 1}
+                          className="btn-layer-action"
+                          title="Move Down"
                         >
-                          <ShoppingBag size={13} />
-                          <span className="sim-cart-count-badge">2</span>
+                          <ArrowDown size={13} />
                         </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Mobile Nav Links Row - Scrollable Horizontal Pills */}
-                  {activeNavLinks.length > 0 && (
-                    <div className="sim-mobile-nav-scroll">
-                      {activeNavLinks.map((l) => (
-                        <a
-                          key={l.id}
-                          href={l.url || '#'}
-                          className="sim-mobile-nav-pill"
-                          onClick={(e) => {
-                            if (l.url?.startsWith('#')) {
-                              e.preventDefault();
-                              const el = document.querySelector(l.url);
-                              if (el) el.scrollIntoView({ behavior: 'smooth' });
-                            }
-                          }}
+                        {/* Eye Visibility Toggle */}
+                        <button
+                          type="button"
+                          onClick={() => toggleSection(idx)}
+                          className="btn-layer-action"
+                          title={isHidden ? 'Show Section' : 'Hide Section'}
                         >
-                          {l.label}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <nav
-                  className="sim-navbar"
-                  style={{
-                    background: config.branding.cardColor || selectedPreset.card,
-                    borderColor: selectedPreset.border || '#e2e8f0',
-                    color: config.branding.textColor || selectedPreset.text
-                  }}
-                >
-                  <div className="sim-brand-block">
-                    <div
-                      className="sim-brand-logo"
-                      style={{ background: config.branding.logoUrl ? 'transparent' : config.branding.primaryColor }}
-                    >
-                      {config.branding.logoUrl ? (
-                        <img
-                          src={config.branding.logoUrl}
-                          alt="Logo"
-                          style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }}
-                        />
-                      ) : (
-                        <Store size={18} />
-                      )}
-                    </div>
-                    <div>
-                      <h3
-                        className="sim-brand-name"
-                        style={{ color: config.branding.textColor || selectedPreset.text }}
-                      >
-                        {config.branding.storeName}
-                      </h3>
-                      <span className="sim-brand-tagline">{config.branding.tagline}</span>
-                    </div>
-                  </div>
-
-                  {/* Dynamic Simulator Nav Links in Single Horizontal Row */}
-                  {activeNavLinks.length > 0 && (
-                    <div className="sim-nav-menu">
-                      {activeNavLinks.map((l) => (
-                        <a
-                          key={l.id}
-                          href={l.url || '#'}
-                          className="sim-nav-link"
-                          onClick={(e) => {
-                            if (l.url?.startsWith('#')) {
-                              e.preventDefault();
-                              const el = document.querySelector(l.url);
-                              if (el) el.scrollIntoView({ behavior: 'smooth' });
-                            }
-                          }}
+                          {isHidden ? <EyeOff size={14} color="#94a3b8" /> : <Eye size={14} color="#10b981" />}
+                        </button>
+                        {/* Duplicate */}
+                        <button
+                          type="button"
+                          onClick={() => duplicateSection(idx)}
+                          className="btn-layer-action"
+                          title="Duplicate Section"
                         >
-                          {l.label}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="sim-nav-actions">
-                    {config.navbar?.showWhatsApp !== false && (
-                      <button className="sim-btn-whatsapp">
-                        <WhatsAppBrandIcon size={14} color="#25D366" />
-                        <span>WhatsApp</span>
-                      </button>
-                    )}
-                    {config.navbar?.showCart !== false && (
-                      <button
-                        className="sim-btn-cart"
-                        style={{ background: config.branding.primaryColor }}
-                      >
-                        <ShoppingBag size={14} /> Bag (2)
-                      </button>
-                    )}
-                  </div>
-                </nav>
-              )}
-
-              {/* 2. Full-Screen Hero Showcase Banner */}
-              {config.hero.enabled && (
-                <section
-                  id="home"
-                  className="sim-hero-section-fullscreen"
-                  style={{
-                    backgroundImage: config.hero.imageUrl
-                      ? `linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.88)), url('${config.hero.imageUrl}')`
-                      : `linear-gradient(135deg, ${config.branding.primaryColor}22 0%, #0f172a 100%)`
-                  }}
-                >
-                  <div className="sim-hero-content">
-                    {config.hero.badge && (
-                      <div className="sim-hero-badge-pill" style={{ color: '#34d399' }}>
-                        <span className="badge-bullet" />
-                        {config.hero.badge}
+                          <CopyPlus size={14} />
+                        </button>
+                        {/* Delete */}
+                        <button
+                          type="button"
+                          onClick={() => deleteSection(idx)}
+                          className="btn-layer-action delete"
+                          title="Remove Section"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
-                    )}
-                    <h1 className="sim-hero-giant-title">{config.hero.title}</h1>
-                    <p className="sim-hero-desc">{config.hero.subtitle}</p>
-                    <div className="sim-hero-actions-row">
-                      <button
-                        className="sim-btn-hero-cta"
-                        style={{ background: config.branding.primaryColor }}
-                      >
-                        {config.hero.ctaText}
-                        <ArrowRight size={14} />
-                      </button>
-                      {config.hero.secondaryCtaText && (
-                        <button className="sim-btn-hero-whatsapp">
-                          <WhatsAppBrandIcon size={14} color="#25D366" />
-                          <span>{config.hero.secondaryCtaText}</span>
-                        </button>
-                      )}
                     </div>
-                  </div>
-                </section>
-              )}
+                  );
+                })}
+              </div>
 
-              {/* 3. Trust Badges Strip (About Section) */}
-              {config.sections.trustBadgesEnabled && (
-                <div
-                  id="about"
-                  className="sim-trust-strip"
-                  style={{
-                    background: config.branding.cardColor || selectedPreset.card,
-                    borderColor: selectedPreset.border || '#e2e8f0'
-                  }}
+              {/* Quick Append Button at Bottom */}
+              <div className="layers-footer">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('add')}
+                  className="btn-append-block"
                 >
-                  {config.trustBadges.map((badge, idx) => (
-                    <div key={idx} className="sim-trust-item">
-                      <ShieldCheck size={16} color={config.branding.accentColor} />
-                      <div>
-                        <strong>{badge.title}</strong>
-                        <span>{badge.desc}</span>
+                  <Plus size={15} />
+                  <span>Add New Section Block</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: ADD BLOCK LIBRARY (12 BLOCKS) */}
+          {activeTab === 'add' && (
+            <div className="studio-sidebar-content">
+              <div className="sidebar-section-header">
+                <div>
+                  <h3 className="sidebar-heading">Modular Block Library</h3>
+                  <p className="sidebar-subheading">Choose any enterprise block to add to your page.</p>
+                </div>
+              </div>
+
+              <div className="blocks-catalog-grid">
+                {AVAILABLE_BLOCK_TYPES.map((block) => {
+                  const IconComp = block.icon;
+                  const alreadyAdded = config.sections.some((s) => s.type === block.type);
+
+                  return (
+                    <div key={block.type} className="block-catalog-card">
+                      <div className="block-catalog-top">
+                        <div className="block-catalog-icon" style={{ background: `${primaryColor}15`, color: primaryColor }}>
+                          <IconComp size={20} />
+                        </div>
+                        <div className="block-catalog-meta">
+                          <span className="block-category-pill">{block.category}</span>
+                          <span className="block-badge-pill">{block.badgeText}</span>
+                        </div>
+                      </div>
+                      <h4 className="block-catalog-name">{block.name}</h4>
+                      <p className="block-catalog-desc">{block.description}</p>
+                      <button
+                        type="button"
+                        onClick={() => addBlockToPage(block.type)}
+                        className="btn-add-block-cta"
+                        style={{ borderColor: primaryColor, color: primaryColor }}
+                      >
+                        <Plus size={14} />
+                        <span>Add to Storefront</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: THEME, COLORS & BRANDING */}
+          {activeTab === 'theme' && (
+            <div className="studio-sidebar-content">
+              <div className="sidebar-section-header">
+                <div>
+                  <h3 className="sidebar-heading">Theme Styling & Branding</h3>
+                  <p className="sidebar-subheading">Curated palettes and customized store branding.</p>
+                </div>
+              </div>
+
+              {/* Theme Palettes Grid */}
+              <div className="studio-group">
+                <label className="studio-label">Curated Color Palettes</label>
+                <div className="presets-mini-grid">
+                  {THEME_PRESETS.map((preset) => (
+                    <div
+                      key={preset.id}
+                      onClick={() => handleApplyPreset(preset)}
+                      className={`preset-chip-card ${config.theme === preset.id ? 'active' : ''}`}
+                    >
+                      <div className="preset-swatches-strip">
+                        <span style={{ background: preset.primary }} />
+                        <span style={{ background: preset.accent }} />
+                        <span style={{ background: preset.bg }} />
+                        <span style={{ background: preset.text }} />
+                      </div>
+                      <div className="preset-chip-info">
+                        <strong>{preset.name}</strong>
+                        <span>{preset.description}</span>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
 
-              {/* 4. Products Catalog Section */}
-              {config.productsSection?.enabled !== false && (
-                <section id="products" className="sim-catalog-section">
-                  <div className="sim-catalog-header">
-                    <div>
-                      <h2 style={{ color: config.branding.textColor || selectedPreset.text }}>
-                        {config.productsSection?.title || 'Featured Catalog'}
-                      </h2>
-                      <p>Browse verified real-time items</p>
+              {/* Custom Color Pickers */}
+              <div className="studio-group">
+                <label className="studio-label">Custom Theme Tokens</label>
+                <div className="color-pickers-grid">
+                  <div className="color-field">
+                    <span>Primary Brand</span>
+                    <div className="color-input-wrap">
+                      <input
+                        type="color"
+                        value={primaryColor}
+                        onChange={(e) =>
+                          setConfig((prev) => ({
+                            ...prev,
+                            branding: { ...prev.branding, primaryColor: e.target.value }
+                          }))
+                        }
+                      />
+                      <code>{primaryColor}</code>
                     </div>
-
-                    {config.productsSection?.showSearch !== false && (
-                      <div className="sim-search-bar">
-                        <Search size={13} />
-                        <input type="text" placeholder="Search catalog..." readOnly />
-                      </div>
-                    )}
                   </div>
-
-                  {/* Category Chips - Dynamic from Real Purchased Products */}
-                  {config.sections.categoriesEnabled && purchasedCategories.length > 0 && (
-                    <div className="sim-category-chips">
-                      <span
-                        className={`sim-chip ${selectedSimCategory === 'ALL' ? 'active' : ''}`}
-                        style={selectedSimCategory === 'ALL' ? { background: config.branding.primaryColor } : {}}
-                        onClick={() => setSelectedSimCategory('ALL')}
-                      >
-                        All Items ({tenantProducts.length})
-                      </span>
-                      {purchasedCategories.map((catName) => (
-                        <span
-                          key={catName}
-                          className={`sim-chip ${selectedSimCategory === catName ? 'active' : ''}`}
-                          style={selectedSimCategory === catName ? { background: config.branding.primaryColor } : {}}
-                          onClick={() => setSelectedSimCategory(catName)}
-                        >
-                          {catName}
-                        </span>
-                      ))}
+                  <div className="color-field">
+                    <span>Accent Highlight</span>
+                    <div className="color-input-wrap">
+                      <input
+                        type="color"
+                        value={accentColor}
+                        onChange={(e) =>
+                          setConfig((prev) => ({
+                            ...prev,
+                            branding: { ...prev.branding, accentColor: e.target.value }
+                          }))
+                        }
+                      />
+                      <code>{accentColor}</code>
                     </div>
-                  )}
-
-                  <div className="sim-product-cards-grid">
-                    {tenantProducts.length === 0 ? (
-                      <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2.5rem 1rem', color: '#64748b' }}>
-                        <ShoppingBag size={34} color="#94a3b8" style={{ marginBottom: '0.65rem' }} />
-                        <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: config.branding.textColor || selectedPreset.text }}>
-                          No Products in Store Catalog Yet
-                        </h4>
-                        <p style={{ fontSize: '0.78rem', marginTop: '0.25rem', color: '#94a3b8', maxWidth: '380px', margin: '0.25rem auto 1rem' }}>
-                          Add products in the Products module to showcase them on your live customer storefront.
-                        </p>
-                        <Link
-                          to="/products"
-                          target="_blank"
-                          className="shopify-btn-primary"
-                          style={{ fontSize: '0.78rem', padding: '0.4rem 1rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          Manage Products <ExternalLink size={12} />
-                        </Link>
-                      </div>
-                    ) : (
-                      tenantProducts
-                        .filter((p) => {
-                          const isSelected = !config.productsSection?.selectedProductIds || config.productsSection.selectedProductIds.length === 0 || config.productsSection.selectedProductIds.includes(p.id);
-                          const inStockCheck = config.productsSection?.showOnlyInStock ? p.currentStock > 0 : true;
-                          const catName = p.category?.name || p.category_name || (typeof p.category === 'string' ? p.category : null);
-                          const catCheck = selectedSimCategory === 'ALL' || catName === selectedSimCategory;
-                          return isSelected && inStockCheck && catCheck;
-                        })
-                        .map((p, i) => (
-                          <div
-                            key={p.id || i}
-                            className="sim-product-card"
-                            style={{
-                              background: config.branding.cardColor || selectedPreset.card,
-                              borderColor: selectedPreset.border || '#e2e8f0'
-                            }}
-                          >
-                            <div className="sim-card-img" style={{ height: '140px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {p.image_url ? (
-                                <img src={p.image_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#94a3b8' }}>
-                                  <Package size={28} />
-                                  <span style={{ fontSize: '0.68rem', fontWeight: 600 }}>{p.category?.name || 'Item'}</span>
-                                </div>
-                              )}
-                              {p.category?.name && (
-                                <span className="sim-cat-pill">{p.category.name}</span>
-                              )}
-                            </div>
-                            <div className="sim-card-body">
-                              <h4 style={{ color: config.branding.textColor || selectedPreset.text }}>
-                                {p.name}
-                              </h4>
-                              <div className="sim-card-price-row">
-                                <span
-                                  className="sim-price"
-                                  style={{ color: config.branding.textColor || selectedPreset.text }}
-                                >
-                                  ₹{parseFloat(p.selling_price || p.purchase_price || 0).toLocaleString('en-IN')}
-                                </span>
-                                <button
-                                  className="sim-btn-add"
-                                  style={{
-                                    background: p.currentStock > 0 ? (config.branding.primaryColor || selectedPreset.primary) : '#94a3b8',
-                                    cursor: p.currentStock > 0 ? 'pointer' : 'not-allowed'
-                                  }}
-                                  disabled={p.currentStock <= 0}
-                                >
-                                  {p.currentStock > 0 ? '+ Add' : 'Out of Stock'}
-                                </button>
-                              </div>
-                              {config.productsSection?.showStockBadge !== false && (
-                                <div style={{ fontSize: '0.68rem', marginTop: '4px', fontWeight: 600, color: p.currentStock > 0 ? '#059669' : '#dc2626' }}>
-                                  {p.currentStock > 0 ? `In Stock (${p.currentStock})` : 'Out of Stock'}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                    )}
                   </div>
-                </section>
-              )}
+                  <div className="color-field">
+                    <span>Background</span>
+                    <div className="color-input-wrap">
+                      <input
+                        type="color"
+                        value={bgColor}
+                        onChange={(e) =>
+                          setConfig((prev) => ({
+                            ...prev,
+                            branding: { ...prev.branding, bgColor: e.target.value }
+                          }))
+                        }
+                      />
+                      <code>{bgColor}</code>
+                    </div>
+                  </div>
+                  <div className="color-field">
+                    <span>Text Main</span>
+                    <div className="color-input-wrap">
+                      <input
+                        type="color"
+                        value={textColor}
+                        onChange={(e) =>
+                          setConfig((prev) => ({
+                            ...prev,
+                            branding: { ...prev.branding, textColor: e.target.value }
+                          }))
+                        }
+                      />
+                      <code>{textColor}</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-              {/* 5. Testimonials 3-Card Carousel */}
-              {config.testimonials?.enabled !== false && (
-                <section
-                  id="testimonials"
-                  className="sim-testimonials-section"
-                  style={{
-                    background: '#f8fafc',
-                    borderColor: selectedPreset.border || '#e2e8f0'
-                  }}
+              {/* Store Identity */}
+              <div className="studio-group">
+                <label className="studio-label">Store Brand & Identity</label>
+                <div className="form-stack">
+                  <div>
+                    <span className="field-label">Store Name</span>
+                    <input
+                      type="text"
+                      className="studio-input"
+                      value={config.branding?.storeName || ''}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          branding: { ...prev.branding, storeName: e.target.value }
+                        }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <span className="field-label">Tagline</span>
+                    <input
+                      type="text"
+                      className="studio-input"
+                      value={config.branding?.tagline || ''}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          branding: { ...prev.branding, tagline: e.target.value }
+                        }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <span className="field-label">Logo Image URL (Optional)</span>
+                    <input
+                      type="url"
+                      className="studio-input"
+                      placeholder="https://.../logo.png"
+                      value={config.branding?.logoUrl || ''}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          branding: { ...prev.branding, logoUrl: e.target.value }
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Announcement Bar */}
+              <div className="studio-group">
+                <div className="toggle-row">
+                  <div>
+                    <label className="studio-label">Top Announcement Bar</label>
+                    <span className="field-hint">Sticky promotion bar across the top of the storefront</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={config.announcement?.enabled !== false}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        announcement: { ...prev.announcement, enabled: e.target.checked }
+                      }))
+                    }
+                  />
+                </div>
+                {config.announcement?.enabled !== false && (
+                  <input
+                    type="text"
+                    className="studio-input"
+                    value={config.announcement?.text || ''}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        announcement: { ...prev.announcement, text: e.target.value }
+                      }))
+                    }
+                    placeholder="Announcement banner text..."
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: SECTION INSPECTOR (SETTINGS FOR SELECTED SECTION) */}
+          {activeTab === 'inspector' && selectedSection && (
+            <div className="studio-sidebar-content">
+              <div className="sidebar-section-header">
+                <div>
+                  <span className="inspector-pill">{selectedSection.type}</span>
+                  <h3 className="sidebar-heading">Section Configuration</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('layers')}
+                  className="btn-mini-back"
+                  title="Back to Layers"
                 >
-                  <div className="sim-section-header-carousel">
-                    <div>
-                      <h2 style={{ color: '#0f172a' }}>
-                        {config.testimonials?.title || 'What Our Customers Say'}
-                      </h2>
-                      <p>{config.testimonials?.subtitle || 'Verified reviews from buyers'}</p>
-                    </div>
+                  &larr; Layers
+                </button>
+              </div>
 
-                    {simReviews.length > 3 && (
-                      <div className="sim-carousel-arrows">
-                        <button
-                          onClick={() =>
-                            setSimTestimonialIndex((prev) =>
-                              prev > 0 ? prev - 1 : maxSimIndex
-                            )
-                          }
-                          className="sim-btn-arrow"
-                        >
-                          <ChevronLeft size={14} />
-                        </button>
-                        <button
-                          onClick={() =>
-                            setSimTestimonialIndex((prev) =>
-                              prev < maxSimIndex ? prev + 1 : 0
-                            )
-                          }
-                          className="sim-btn-arrow"
-                        >
-                          <ChevronRight size={14} />
-                        </button>
+              {/* Inspector Content based on Block Type */}
+              <div className="inspector-form-stack">
+                {selectedSection.type === 'HERO_BANNER' && (
+                  <>
+                    <div>
+                      <span className="field-label">Badge Text</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.badge || ''}
+                        onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Main Title</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Subtitle Description</span>
+                      <textarea
+                        className="studio-textarea"
+                        rows={3}
+                        value={selectedSection.data?.subtitle || ''}
+                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">CTA Button Label</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.ctaText || ''}
+                        onChange={(e) => updateSelectedSectionData('ctaText', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Hero Background Image URL</span>
+                      <input
+                        type="url"
+                        className="studio-input"
+                        value={selectedSection.data?.imageUrl || ''}
+                        onChange={(e) => updateSelectedSectionData('imageUrl', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'FLASH_SALE' && (
+                  <>
+                    <div>
+                      <span className="field-label">Sale Urgency Badge</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.badge || ''}
+                        onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Ends In Label</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.endsIn || ''}
+                        onChange={(e) => updateSelectedSectionData('endsIn', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Sale Title</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Sale Subtitle</span>
+                      <textarea
+                        className="studio-textarea"
+                        rows={2}
+                        value={selectedSection.data?.subtitle || ''}
+                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Discount Pill Text</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.discountText || ''}
+                        onChange={(e) => updateSelectedSectionData('discountText', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">CTA Button Text</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.ctaText || ''}
+                        onChange={(e) => updateSelectedSectionData('ctaText', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'PRODUCT_GRID' && (
+                  <>
+                    <div>
+                      <span className="field-label">Catalog Title</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Catalog Subtitle</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.subtitle || ''}
+                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                      />
+                    </div>
+                    <div className="toggle-row">
+                      <span>Enable Live Search Bar</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedSection.data?.showSearch !== false}
+                        onChange={(e) => updateSelectedSectionData('showSearch', e.target.checked)}
+                      />
+                    </div>
+                    <div className="toggle-row">
+                      <span>Show Category Navigation Chips</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedSection.data?.showCategories !== false}
+                        onChange={(e) => updateSelectedSectionData('showCategories', e.target.checked)}
+                      />
+                    </div>
+                    <div className="toggle-row">
+                      <span>Show Real-Time Stock Badge</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedSection.data?.showStockBadge !== false}
+                        onChange={(e) => updateSelectedSectionData('showStockBadge', e.target.checked)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'PRODUCT_CAROUSEL' && (
+                  <>
+                    <div>
+                      <span className="field-label">Carousel Headline</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Carousel Subtitle</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.subtitle || ''}
+                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'CATEGORY_TILES' && (
+                  <>
+                    <div>
+                      <span className="field-label">Section Title</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Section Subtitle</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.subtitle || ''}
+                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'BRAND_STORY' && (
+                  <>
+                    <div>
+                      <span className="field-label">Badge Tag</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.badge || ''}
+                        onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Story Headline</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Brand Narrative</span>
+                      <textarea
+                        className="studio-textarea"
+                        rows={4}
+                        value={selectedSection.data?.narrative || ''}
+                        onChange={(e) => updateSelectedSectionData('narrative', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Story Image URL</span>
+                      <input
+                        type="url"
+                        className="studio-input"
+                        value={selectedSection.data?.imageUrl || ''}
+                        onChange={(e) => updateSelectedSectionData('imageUrl', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'IMAGE_LOOKBOOK' && (
+                  <>
+                    <div>
+                      <span className="field-label">Lookbook Title</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Subtitle</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.subtitle || ''}
+                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'NEWSLETTER_BAR' && (
+                  <>
+                    <div>
+                      <span className="field-label">Coupon Code</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.couponCode || ''}
+                        onChange={(e) => updateSelectedSectionData('couponCode', e.target.value.toUpperCase())}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Headline</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Offer Terms / Subtitle</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.subtitle || ''}
+                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'CONTACT_MAP' && (
+                  <>
+                    <div>
+                      <span className="field-label">Title</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Subtitle</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.subtitle || ''}
+                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'FAQ_ACCORDION' && (
+                  <>
+                    <div>
+                      <span className="field-label">Title</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Subtitle</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.subtitle || ''}
+                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'TESTIMONIALS' && (
+                  <>
+                    <div>
+                      <span className="field-label">Title</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.title || ''}
+                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="field-label">Subtitle</span>
+                      <input
+                        type="text"
+                        className="studio-input"
+                        value={selectedSection.data?.subtitle || ''}
+                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedSection.type === 'TRUST_BADGES' && (
+                  <div className="inspector-hint-box">
+                    <ShieldCheck size={16} color={accentColor} />
+                    <span>The trust badges strip presents 4 verified guarantees on your storefront.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* CENTER STUDIO CANVAS (INTERACTIVE LIVE PREVIEW) */}
+        <main className="studio-canvas-area">
+          <div className={`canvas-viewport-frame device-${previewDevice}`}>
+            {/* Tablet/Mobile Device Frame Embellishments */}
+            {previewDevice === 'mobile' && (
+              <div className="phone-notch-bar">
+                <span className="dynamic-island" />
+              </div>
+            )}
+
+            {/* LIVE STORE EMBEDDED RENDERER */}
+            <div
+              className="clean-storefront-wrapper canvas-store-wrapper"
+              style={{
+                '--store-primary': primaryColor,
+                '--store-accent': accentColor,
+                '--store-bg': bgColor,
+                '--store-card': cardColor,
+                '--store-text-main': textColor
+              }}
+            >
+              {/* Announcement Bar */}
+              {config.announcement?.enabled !== false && config.announcement?.text && (
+                <div className="clean-announcement-strip" style={{ background: primaryColor }}>
+                  <Sparkles size={13} />
+                  <span>{config.announcement.text}</span>
+                </div>
+              )}
+
+              {/* Storefront Header */}
+              <header className="clean-store-header">
+                <div className="clean-header-container">
+                  <div className="clean-brand-section">
+                    <div className="clean-brand-avatar" style={{ background: config.branding?.logoUrl ? 'transparent' : primaryColor }}>
+                      {config.branding?.logoUrl ? (
+                        <img src={config.branding.logoUrl} alt="Store" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '12px' }} />
+                      ) : (
+                        <Store size={22} />
+                      )}
+                    </div>
+                    <div>
+                      <h1 className="clean-store-title">{config.branding?.storeName || 'My Online Store'}</h1>
+                      <div className="clean-store-meta">
+                        <span><MapPin size={12} /> {config.contact?.address || 'Retail Center, Commercial St'}</span>
+                        <span><Phone size={12} /> {config.contact?.phone || 'Direct Support'}</span>
                       </div>
-                    )}
+                    </div>
                   </div>
 
-                  <div className="sim-reviews-grid-3">
-                    {visibleSimReviews.map((rev, idx) => (
-                      <div
-                        key={idx}
-                        className="sim-review-card"
-                        style={{
-                          background: '#ffffff',
-                          borderColor: '#e2e8f0'
-                        }}
-                      >
-                        <div className="sim-review-stars">
-                          {[...Array(5)].map((_, s) => (
-                            <Star key={s} size={11} fill="#f59e0b" color="#f59e0b" />
-                          ))}
-                        </div>
-                        <p className="sim-review-comment" style={{ color: '#334155' }}>
-                          "{rev.comment}"
-                        </p>
-                        <div className="sim-reviewer-info">
-                          <div
-                            className="sim-reviewer-avatar"
-                            style={{ background: config.branding.primaryColor }}
-                          >
-                            {rev.name ? rev.name.charAt(0).toUpperCase() : 'U'}
-                          </div>
-                          <div>
-                            <strong style={{ color: '#0f172a' }}>{rev.name}</strong>
-                            <span>{rev.location || 'Verified Buyer'}</span>
-                          </div>
-                        </div>
-                      </div>
+                  <nav className="clean-nav-menu">
+                    {(config.navbar?.navLinks || DEFAULT_NAV_LINKS).filter((l) => l.enabled !== false).map((l) => (
+                      <span key={l.id || l.label} className="clean-nav-link">{l.label}</span>
                     ))}
-                  </div>
-                </section>
-              )}
+                  </nav>
 
-              {/* 6. Contact & Footer */}
-              {config.contact?.enabled !== false && (
-                <footer
-                  id="contact"
-                  className="sim-store-footer"
-                  style={{
-                    background: '#ffffff',
-                    borderColor: selectedPreset.border || '#e2e8f0',
-                    color: '#0f172a'
-                  }}
-                >
-                  <div className="sim-footer-grid">
-                    <div>
-                      <div className="sim-brand-block" style={{ marginBottom: '0.6rem' }}>
-                        <div
-                          className="sim-brand-logo"
+                  <div className="clean-header-actions">
+                    <button type="button" className="btn-clean-cart">
+                      <ShoppingBag size={18} />
+                      <span>Bag</span>
+                      <span className="clean-cart-pill">0</span>
+                    </button>
+                  </div>
+                </div>
+              </header>
+
+              {/* DYNAMIC MODULAR SECTIONS ON CANVAS */}
+              <div className="canvas-sections-container">
+                {config.sections.map((sec, idx) => {
+                  const sData = sec.data || {};
+                  const isSelected = selectedSection?.id === sec.id;
+                  const isHidden = sec.enabled === false;
+
+                  return (
+                    <div
+                      key={sec.id || idx}
+                      onClick={() => {
+                        setSelectedSectionId(sec.id);
+                        setActiveTab('inspector');
+                      }}
+                      className={`canvas-section-wrapper ${isSelected ? 'selected-on-canvas' : ''} ${isHidden ? 'hidden-on-canvas' : ''}`}
+                    >
+                      {/* Floating Studio Section Toolbar */}
+                      <div className="studio-canvas-floating-toolbar" onClick={(e) => e.stopPropagation()}>
+                        <div className="floating-badge">
+                          <GripVertical size={13} className="floating-drag-icon" />
+                          <span>{sec.type}</span>
+                        </div>
+                        <div className="floating-actions">
+                          <button
+                            type="button"
+                            onClick={() => moveSection(idx, 'up')}
+                            disabled={idx === 0}
+                            title="Move Section Up"
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveSection(idx, 'down')}
+                            disabled={idx === config.sections.length - 1}
+                            title="Move Section Down"
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedSectionId(sec.id);
+                              setActiveTab('inspector');
+                            }}
+                            title="Configure Settings"
+                          >
+                            <Settings size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => duplicateSection(idx)}
+                            title="Clone Section"
+                          >
+                            <CopyPlus size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteSection(idx)}
+                            className="btn-del"
+                            title="Delete Section"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* RENDER DYNAMIC SECTION BODY ON CANVAS */}
+                      {sec.type === 'HERO_BANNER' && (
+                        <section
+                          className="clean-hero-fullscreen"
                           style={{
-                            width: '28px',
-                            height: '28px',
-                            background: config.branding.primaryColor
+                            backgroundImage: sData.imageUrl
+                              ? `linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.88)), url('${sData.imageUrl}')`
+                              : `linear-gradient(135deg, ${primaryColor}22 0%, #0f172a 100%)`
                           }}
                         >
-                          <Store size={15} />
-                        </div>
-                        <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#0f172a' }}>
-                          {config.branding.storeName}
-                        </h4>
-                      </div>
-                      <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>
-                        {config.branding.tagline}
-                      </p>
-                    </div>
+                          <div className="clean-hero-content-wrapper">
+                            {sData.badge && (
+                              <div className="clean-hero-badge-pill" style={{ color: '#34d399' }}>
+                                <span className="badge-bullet" />
+                                {sData.badge}
+                              </div>
+                            )}
+                            <h2 className="clean-hero-giant-title">{sData.title || 'Welcome to Our Store'}</h2>
+                            <p className="clean-hero-description">{sData.subtitle || 'Fresh catalog items verified in stock'}</p>
+                            <div className="clean-hero-actions-row">
+                              <button type="button" className="btn-hero-primary" style={{ background: primaryColor }}>
+                                {sData.ctaText || 'Explore Catalog'} <ArrowRight size={17} />
+                              </button>
+                            </div>
+                          </div>
+                        </section>
+                      )}
 
-                    <div className="sim-footer-contact-items">
-                      {config.contact?.address && (
-                        <div className="sim-contact-item">
-                          <MapPin size={13} color={config.branding.accentColor} />
-                          <span>{config.contact.address}</span>
-                        </div>
+                      {sec.type === 'FLASH_SALE' && (
+                        <section className="clean-flashsale-banner" style={{ borderLeft: `4px solid ${primaryColor}` }}>
+                          <div className="clean-flashsale-content">
+                            <div className="clean-flashsale-info">
+                              <div className="clean-urgency-pill">
+                                <Flame size={14} color="#ef4444" />
+                                <span>{sData.badge || 'FLASH DEAL'}</span>
+                                <span className="dot-divider">•</span>
+                                <span>{sData.endsIn || 'Ends Soon'}</span>
+                              </div>
+                              <h3>{sData.title || 'Special Weekend Flash Sale'}</h3>
+                              <p>{sData.subtitle || 'Grab exclusive direct discounts on catalog products'}</p>
+                              {sData.discountText && (
+                                <div className="clean-flashsale-tag">
+                                  <Tag size={13} /> {sData.discountText}
+                                </div>
+                              )}
+                            </div>
+                            <div className="clean-flashsale-action-box">
+                              <div className="clean-countdown-display">
+                                <div className="countdown-unit">
+                                  <span className="countdown-num">02</span>
+                                  <span className="countdown-lbl">Days</span>
+                                </div>
+                                <span className="countdown-colon">:</span>
+                                <div className="countdown-unit">
+                                  <span className="countdown-num">14</span>
+                                  <span className="countdown-lbl">Hours</span>
+                                </div>
+                                <span className="countdown-colon">:</span>
+                                <div className="countdown-unit">
+                                  <span className="countdown-num">35</span>
+                                  <span className="countdown-lbl">Mins</span>
+                                </div>
+                                <span className="countdown-colon">:</span>
+                                <div className="countdown-unit">
+                                  <span className="countdown-num">48</span>
+                                  <span className="countdown-lbl">Secs</span>
+                                </div>
+                              </div>
+                              <button type="button" className="btn-flashsale-cta" style={{ background: primaryColor }}>
+                                <Zap size={15} /> <span>{sData.ctaText || 'Shop Deals Now'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </section>
                       )}
-                      {config.contact?.phone && (
-                        <div className="sim-contact-item">
-                          <Phone size={13} color={config.branding.accentColor} />
-                          <span>{config.contact.phone}</span>
-                        </div>
+
+                      {sec.type === 'TRUST_BADGES' && (
+                        <section className="clean-trust-strip-section" style={{ background: cardColor }}>
+                          <div className="clean-trust-strip-container">
+                            {(sData.badges || [
+                              { title: 'Express Dispatch', desc: 'Fast doorstep delivery' },
+                              { title: '100% Genuine', desc: 'Verified authorized stock' },
+                              { title: 'Flexible Payments', desc: 'UPI, Card & COD' },
+                              { title: 'Store Support', desc: 'Instant WhatsApp assistance' }
+                            ]).map((badge, bIdx) => (
+                              <div key={bIdx} className="clean-trust-item">
+                                <ShieldCheck size={20} color={accentColor} />
+                                <div>
+                                  <strong>{badge.title}</strong>
+                                  <span>{badge.desc}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
                       )}
-                      {config.contact?.hours && (
-                        <div className="sim-contact-item">
-                          <Clock size={13} color={config.branding.accentColor} />
-                          <span>{config.contact.hours}</span>
-                        </div>
+
+                      {sec.type === 'PRODUCT_GRID' && (
+                        <main className="clean-store-main">
+                          <div className="clean-section-header-row">
+                            <div>
+                              <h2 className="clean-section-title">{sData.title || 'Featured Catalog'}</h2>
+                              <p className="clean-section-subtitle">{sData.subtitle || 'Browse real-time store inventory'}</p>
+                            </div>
+                            <div className="clean-sort-wrapper">
+                              <span className="clean-sort-label">Sort:</span>
+                              <div className="custom-dropdown-container">
+                                <button type="button" className="custom-sort-trigger">
+                                  <SlidersHorizontal size={14} className="sort-icon-prefix" />
+                                  <span className="sort-trigger-text">Featured</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="clean-controls-bar">
+                            {sData.showSearch !== false && (
+                              <div className="clean-search-input-wrap">
+                                <Search size={16} className="clean-search-icon" />
+                                <input
+                                  type="text"
+                                  placeholder="Search live store products..."
+                                  value={builderProductSearch}
+                                  onChange={(e) => setBuilderProductSearch(e.target.value)}
+                                />
+                              </div>
+                            )}
+                            {sData.showCategories !== false && (
+                              <div className="clean-category-chips">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedSimCategory('ALL')}
+                                  className={`clean-chip ${selectedSimCategory === 'ALL' ? 'active' : ''}`}
+                                  style={selectedSimCategory === 'ALL' ? { background: primaryColor } : {}}
+                                >
+                                  All Items ({tenantProducts.length})
+                                </button>
+                                {catalogCategories.map((c) => (
+                                  <button
+                                    key={c}
+                                    type="button"
+                                    onClick={() => setSelectedSimCategory(c)}
+                                    className={`clean-chip ${selectedSimCategory === c ? 'active' : ''}`}
+                                    style={selectedSimCategory === c ? { background: primaryColor } : {}}
+                                  >
+                                    {c}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Grid items */}
+                          <div className="clean-product-grid">
+                            {(tenantProducts.length > 0 ? tenantProducts : [
+                              { id: 1, name: 'Sample Premium Product', selling_price: '499', inStock: true },
+                              { id: 2, name: 'Sample Classic Item', selling_price: '899', inStock: true },
+                              { id: 3, name: 'Sample Special Edition', selling_price: '1299', inStock: true }
+                            ])
+                              .filter((p) => {
+                                const matchSearch = !builderProductSearch || p.name.toLowerCase().includes(builderProductSearch.toLowerCase());
+                                const matchCat = selectedSimCategory === 'ALL' || (p.category?.name === selectedSimCategory);
+                                return matchSearch && matchCat;
+                              })
+                              .slice(0, 6)
+                              .map((prod) => (
+                                <div key={prod.id} className="clean-product-card">
+                                  <div className="clean-card-image-wrap">
+                                    {prod.image_url ? (
+                                      <img src={prod.image_url} alt={prod.name} className="clean-product-img" />
+                                    ) : (
+                                      <div className="clean-no-image">
+                                        <Package size={36} />
+                                      </div>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenEditProduct(prod);
+                                      }}
+                                      className="btn-card-quick-edit"
+                                      title="Edit Product Image & Price"
+                                    >
+                                      <Settings size={12} /> Edit Photo
+                                    </button>
+                                  </div>
+                                  <div className="clean-card-body">
+                                    <div className="clean-card-info">
+                                      <span className="clean-sku">{prod.product_code || `PRD-${prod.id}`}</span>
+                                      <h3 className="clean-product-name">{prod.name}</h3>
+                                    </div>
+                                    <div className="clean-card-footer">
+                                      <div className="clean-price-box">
+                                        <span className="clean-price">₹{parseFloat(prod.selling_price || 0).toLocaleString('en-IN')}</span>
+                                        <span className="clean-tax-hint">incl. GST</span>
+                                      </div>
+                                      <button type="button" className="clean-btn-add" style={{ background: primaryColor }}>
+                                        <Plus size={14} /> Add
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </main>
+                      )}
+
+                      {sec.type === 'PRODUCT_CAROUSEL' && (
+                        <section className="clean-carousel-section">
+                          <div className="clean-carousel-container">
+                            <div className="clean-carousel-header-row">
+                              <div>
+                                <div className="clean-pill-tag" style={{ color: accentColor }}>
+                                  <Sparkles size={13} /> Curated Picks
+                                </div>
+                                <h2 className="clean-section-title">{sData.title || 'Trending Highlights'}</h2>
+                                <p className="clean-section-subtitle">{sData.subtitle || 'Top-selling picks delivered directly'}</p>
+                              </div>
+                              <div className="clean-carousel-controls">
+                                <button type="button" className="btn-carousel-nav"><ChevronLeft size={18} /></button>
+                                <button type="button" className="btn-carousel-nav"><ChevronRight size={18} /></button>
+                              </div>
+                            </div>
+                            <div className="clean-carousel-track-container">
+                              <div className="clean-carousel-track">
+                                {(tenantProducts.length > 0 ? tenantProducts.slice(0, 4) : [
+                                  { id: 1, name: 'Curated Highlight A', selling_price: '599' },
+                                  { id: 2, name: 'Curated Highlight B', selling_price: '899' },
+                                  { id: 3, name: 'Curated Highlight C', selling_price: '1199' }
+                                ]).map((prod) => (
+                                  <div key={prod.id} className="clean-carousel-card">
+                                    <div className="clean-card-image-wrap">
+                                      {prod.image_url ? (
+                                        <img src={prod.image_url} alt={prod.name} className="clean-product-img" />
+                                      ) : (
+                                        <div className="clean-no-image"><Package size={32} /></div>
+                                      )}
+                                    </div>
+                                    <div className="clean-card-body">
+                                      <h4 className="clean-product-name">{prod.name}</h4>
+                                      <div className="clean-card-footer" style={{ marginTop: '0.5rem' }}>
+                                        <span className="clean-price">₹{parseFloat(prod.selling_price || 0).toLocaleString('en-IN')}</span>
+                                        <button type="button" className="clean-btn-add" style={{ background: primaryColor }}>
+                                          <Plus size={13} /> Add
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+                      )}
+
+                      {sec.type === 'CATEGORY_TILES' && (
+                        <section className="clean-categories-tiles-section">
+                          <div className="clean-categories-tiles-container">
+                            <div className="clean-categories-header">
+                              <h2 className="clean-section-title">{sData.title || 'Explore by Category'}</h2>
+                              <p className="clean-section-subtitle">{sData.subtitle || 'Find what you need with quick category filters'}</p>
+                            </div>
+                            <div className="clean-category-tiles-grid">
+                              {(catalogCategories.length > 0 ? catalogCategories : ['Fashion', 'Electronics', 'Kitchen', 'Wellness']).map((c, cIdx) => (
+                                <div key={cIdx} className="clean-category-tile-card">
+                                  <div className="category-tile-icon" style={{ background: `${primaryColor}15`, color: primaryColor }}>
+                                    <Layers size={22} />
+                                  </div>
+                                  <h4>{c}</h4>
+                                  <span className="category-tile-badge">View Collection &rarr;</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </section>
+                      )}
+
+                      {sec.type === 'BRAND_STORY' && (
+                        <section className="clean-story-section">
+                          <div className="clean-story-container">
+                            <div className="clean-story-grid">
+                              <div className="clean-story-media-wrap">
+                                <img src={sData.imageUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80'} alt="Story" />
+                                <div className="clean-story-badge-floating" style={{ background: primaryColor }}>
+                                  <span>100% Verified Origin</span>
+                                </div>
+                              </div>
+                              <div className="clean-story-content">
+                                <div className="clean-pill-tag" style={{ color: primaryColor }}>{sData.badge || 'OUR HERITAGE'}</div>
+                                <h2>{sData.title || 'Crafted with Passion & Precision'}</h2>
+                                <p className="clean-story-body-text">{sData.narrative || 'Authenticated products direct to your doorstep.'}</p>
+                                <div className="clean-story-points">
+                                  <div className="clean-story-point-item">
+                                    <CheckCircle2 size={18} color={accentColor} />
+                                    <div><strong>Direct Sourcing</strong><span>Zero intermediaries</span></div>
+                                  </div>
+                                  <div className="clean-story-point-item">
+                                    <CheckCircle2 size={18} color={accentColor} />
+                                    <div><strong>Rapid Dispatch</strong><span>Same-day tracking updates</span></div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+                      )}
+
+                      {sec.type === 'IMAGE_LOOKBOOK' && (
+                        <section className="clean-lookbook-section">
+                          <div className="clean-lookbook-container">
+                            <div className="clean-lookbook-header">
+                              <h2 className="clean-section-title">{sData.title || 'Visual Lookbook'}</h2>
+                              <p className="clean-section-subtitle">{sData.subtitle || 'Step inside our store atmosphere'}</p>
+                            </div>
+                            <div className="clean-lookbook-grid">
+                              {(sData.items || [
+                                { imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=600&q=80', caption: 'Flagship Store' },
+                                { imageUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=600&q=80', caption: 'Handcrafted Quality' },
+                                { imageUrl: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&w=600&q=80', caption: 'Latest Arrivals' }
+                              ]).map((item, lIdx) => (
+                                <div key={lIdx} className="clean-lookbook-item">
+                                  <img src={item.imageUrl} alt={item.caption || `Look ${lIdx + 1}`} />
+                                  <div className="clean-lookbook-overlay"><span>{item.caption}</span></div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </section>
+                      )}
+
+                      {sec.type === 'TESTIMONIALS' && (
+                        <section className="clean-testimonials-section">
+                          <div className="clean-testimonials-container">
+                            <div className="clean-section-header-carousel">
+                              <div>
+                                <div className="clean-pill-tag" style={{ color: accentColor }}>Verified Buyer Feedback</div>
+                                <h2 className="clean-section-title">{sData.title || 'Customer Reviews'}</h2>
+                                <p className="clean-section-subtitle">{sData.subtitle || 'Real feedback from direct buyers'}</p>
+                              </div>
+                            </div>
+                            <div className="clean-reviews-grid-3">
+                              {(sData.reviews || [
+                                { name: 'Priya Sharma', comment: 'Outstanding quality and fast delivery!', rating: 5, location: 'Chennai' },
+                                { name: 'Rajesh Kumar', comment: 'Authentic items, prompt WhatsApp updates.', rating: 5, location: 'Bengaluru' },
+                                { name: 'Sneha Patel', comment: 'Great pricing and prompt support!', rating: 5, location: 'Mumbai' }
+                              ]).slice(0, 3).map((rev, rIdx) => (
+                                <div key={rIdx} className="clean-review-card">
+                                  <div className="clean-review-stars">
+                                    {[...Array(rev.rating || 5)].map((_, s) => (
+                                      <Star key={s} size={15} fill="#f59e0b" color="#f59e0b" />
+                                    ))}
+                                  </div>
+                                  <p className="clean-review-comment">"{rev.comment}"</p>
+                                  <div className="clean-reviewer-meta">
+                                    <div className="clean-reviewer-avatar" style={{ background: primaryColor }}>
+                                      {rev.name ? rev.name.charAt(0) : 'U'}
+                                    </div>
+                                    <div>
+                                      <strong>{rev.name}</strong>
+                                      <span>{rev.location || 'Verified Buyer'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </section>
+                      )}
+
+                      {sec.type === 'FAQ_ACCORDION' && (
+                        <section className="clean-faq-section">
+                          <div className="clean-faq-container">
+                            <div className="clean-faq-header">
+                              <div className="clean-pill-tag" style={{ color: primaryColor }}><HelpCircle size={13} /> Q&A</div>
+                              <h2 className="clean-section-title">{sData.title || 'Frequently Asked Questions'}</h2>
+                              <p className="clean-section-subtitle">{sData.subtitle || 'Everything you need to know'}</p>
+                            </div>
+                            <div className="clean-faq-list">
+                              {(sData.faqs || [
+                                { q: 'How long does delivery take?', a: 'Standard deliveries are dispatched within 24 hours.' },
+                                { q: 'What payment methods do you accept?', a: 'UPI, Credit/Debit cards & Cash on Delivery.' }
+                              ]).map((item, qIdx) => (
+                                <div key={qIdx} className="clean-faq-item active">
+                                  <button type="button" className="clean-faq-question-btn">
+                                    <span>{item.q}</span>
+                                    <ChevronUp size={18} />
+                                  </button>
+                                  <div className="clean-faq-answer"><p>{item.a}</p></div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </section>
+                      )}
+
+                      {sec.type === 'NEWSLETTER_BAR' && (
+                        <section className="clean-newsletter-bar-section">
+                          <div className="clean-newsletter-card" style={{ borderLeft: `4px solid ${primaryColor}` }}>
+                            <div className="clean-newsletter-info">
+                              <div className="clean-pill-tag" style={{ color: accentColor }}><Sparkles size={13} /> Exclusive Offer</div>
+                              <h3>{sData.title || 'Unlock 10% Off Your Next Purchase'}</h3>
+                              <p>{sData.subtitle || 'Use this special code during checkout'}</p>
+                            </div>
+                            <div className="clean-coupon-pill-wrap">
+                              <div className="clean-coupon-pill">
+                                <Tag size={15} />
+                                <span>{sData.couponCode || 'FIRST10'}</span>
+                                <span className="copy-label">Code</span>
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+                      )}
+
+                      {sec.type === 'CONTACT_MAP' && (
+                        <section className="clean-contact-map-section" style={{ background: cardColor }}>
+                          <div className="clean-contact-card-container">
+                            <div className="clean-contact-header">
+                              <h2 className="clean-section-title">{sData.title || 'Visit Our Store & Contact'}</h2>
+                              <p className="clean-section-subtitle">{sData.subtitle || 'Reach out directly for inquiries or orders'}</p>
+                            </div>
+                            <div className="clean-contact-grid-modern">
+                              <div className="clean-contact-info-card">
+                                <div className="clean-contact-icon-box" style={{ background: `${primaryColor}15`, color: primaryColor }}><MapPin size={20} /></div>
+                                <div><h4>Store Address</h4><p>{config.contact?.address || 'Commercial Center, Main St'}</p></div>
+                              </div>
+                              <div className="clean-contact-info-card">
+                                <div className="clean-contact-icon-box" style={{ background: `${primaryColor}15`, color: primaryColor }}><Clock size={20} /></div>
+                                <div><h4>Operating Hours</h4><p>{config.contact?.hours || 'Mon - Sat: 9:00 AM - 9:00 PM'}</p></div>
+                              </div>
+                              <div className="clean-contact-info-card">
+                                <div className="clean-contact-icon-box" style={{ background: `${primaryColor}15`, color: primaryColor }}><Phone size={20} /></div>
+                                <div><h4>Direct Line</h4><p>{config.contact?.phone || 'Direct Support'}</p></div>
+                              </div>
+                            </div>
+                          </div>
+                        </section>
                       )}
                     </div>
-                  </div>
+                  );
+                })}
+              </div>
 
-                  <div className="sim-footer-bottom">
-                    <span>
-                      © {new Date().getFullYear()} {config.branding.storeName}. All rights reserved.
-                    </span>
-                    <span>Powered by StockPilot IMS</span>
+              {/* Store Footer */}
+              <footer className="clean-store-footer-section">
+                <div className="clean-footer-container">
+                  <div className="clean-footer-bottom-bar">
+                    <p>© {new Date().getFullYear()} {config.branding?.storeName || 'Store'}. All rights reserved.</p>
+                    <p className="clean-powered-tag">Powered by <strong>StockPilot IMS</strong></p>
                   </div>
-                </footer>
-              )}
+                </div>
+              </footer>
             </div>
+
+            {/* Mobile Home Bar Embellishment */}
+            {previewDevice === 'mobile' && (
+              <div className="phone-home-indicator-bar">
+                <span className="home-line" />
+              </div>
+            )}
           </div>
         </main>
       </div>
 
-      {/* PRODUCT SETTINGS & IMAGE URL CONFIGURATION MODAL */}
-      {isEditProductModalOpen && editingProduct && (
+      {/* 3. 1-CLICK INDUSTRY TEMPLATES MODAL */}
+      {isTemplateModalOpen && (
+        <Modal
+          isOpen={isTemplateModalOpen}
+          onClose={() => setIsTemplateModalOpen(false)}
+          title="Choose a 1-Click Storefront Template"
+        >
+          <div className="templates-modal-content">
+            <p className="templates-modal-subtitle">
+              Select an industry template to automatically apply tailored layouts, color themes, and modular blocks.
+            </p>
+            <div className="templates-selection-grid">
+              {INDUSTRY_TEMPLATES.map((tmpl) => {
+                const IconComp = tmpl.icon;
+                return (
+                  <div key={tmpl.id} className="template-card-choice" onClick={() => handleApplyTemplate(tmpl.id)}>
+                    <div className="template-card-top">
+                      <div className="template-icon-circle">
+                        <IconComp size={22} color="#982A86" />
+                      </div>
+                      <span className="template-pill-badge">{tmpl.sections.length} Blocks</span>
+                    </div>
+                    <h4>{tmpl.name}</h4>
+                    <p>{tmpl.tagline}</p>
+                    <div className="template-blocks-chips">
+                      {tmpl.sections.slice(0, 4).map((s) => (
+                        <span key={s} className="mini-block-chip">{s.replace('_', ' ')}</span>
+                      ))}
+                      {tmpl.sections.length > 4 && <span className="mini-block-chip">+{tmpl.sections.length - 4} more</span>}
+                    </div>
+                    <button type="button" className="btn-apply-template">
+                      Apply This Template &rarr;
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 4. PRODUCT QUICK-EDIT MODAL (IMAGE & PRICING) */}
+      {isEditProductModalOpen && (
         <Modal
           isOpen={isEditProductModalOpen}
-          onClose={() => {
-            if (!isSavingProduct) {
-              setIsEditProductModalOpen(false);
-              setEditingProduct(null);
-            }
-          }}
-          title={`Product Settings — ${editingProduct.name}`}
-          maxWidth="680px"
+          onClose={() => setIsEditProductModalOpen(false)}
+          title={`Edit Product: ${editingProduct?.name || ''}`}
         >
-          <form onSubmit={handleSaveProductEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-            {/* Live Image Preview & URL Section */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '10px',
-              padding: '1rem',
-              display: 'flex',
-              gap: '1.2rem',
-              alignItems: 'center'
-            }}>
-              <div style={{
-                width: '110px',
-                height: '110px',
-                borderRadius: '8px',
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                position: 'relative'
-              }}>
-                {productEditForm.imageUrl ? (
-                  <img
-                    src={productEditForm.imageUrl}
-                    alt={productEditForm.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div style={{ textAlign: 'center', color: '#94a3b8', padding: '0.5rem' }}>
-                    <Package size={30} />
-                    <span style={{ fontSize: '0.65rem', display: 'block', marginTop: '4px' }}>No Image</span>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>
-                    Product Image URL
-                  </label>
-                  {productEditForm.imageUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setProductEditForm({ ...productEditForm, imageUrl: '' })}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#dc2626',
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Clear Image
-                    </button>
-                  )}
-                </div>
-                <input
-                  type="url"
-                  placeholder="https://example.com/images/macbook-pro.jpg"
-                  value={productEditForm.imageUrl}
-                  onChange={(e) => setProductEditForm({ ...productEditForm, imageUrl: e.target.value })}
-                  className="shopify-input"
-                  style={{ width: '100%', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}
-                />
-                <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', marginBottom: '0' }}>
-                  Paste direct image link (PNG, JPG, WebP). It will display on your online storefront and inventory catalog.
-                </p>
-              </div>
-            </div>
-
-            {/* Product Details Form */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.85rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
-                  Product Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={productEditForm.name}
-                  onChange={(e) => setProductEditForm({ ...productEditForm, name: e.target.value })}
-                  className="shopify-input"
-                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
-                  Product Code / SKU
-                </label>
-                <input
-                  type="text"
-                  value={productEditForm.productCode}
-                  onChange={(e) => setProductEditForm({ ...productEditForm, productCode: e.target.value })}
-                  className="shopify-input"
-                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
-                  Selling Price (₹) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  min="0"
-                  value={productEditForm.sellingPrice}
-                  onChange={(e) => setProductEditForm({ ...productEditForm, sellingPrice: e.target.value })}
-                  className="shopify-input"
-                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
-                  Cost / Purchase Price (₹)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={productEditForm.purchasePrice}
-                  onChange={(e) => setProductEditForm({ ...productEditForm, purchasePrice: e.target.value })}
-                  className="shopify-input"
-                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
-                  Tax Rate / GST (%)
-                </label>
-                <select
-                  value={productEditForm.taxRate}
-                  onChange={(e) => setProductEditForm({ ...productEditForm, taxRate: e.target.value })}
-                  className="shopify-input"
-                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
-                >
-                  <option value="0">0% (Exempt)</option>
-                  <option value="5">5% (Essential Goods / Hardware)</option>
-                  <option value="12">12% (Standard Concessional)</option>
-                  <option value="18">18% (Standard GST)</option>
-                  <option value="28">28% (Luxury / High Slab)</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
-                  Current Inventory Stock
-                </label>
-                <div style={{
-                  padding: '0.45rem 0.65rem',
-                  borderRadius: '6px',
-                  background: '#f1f5f9',
-                  color: editingProduct.currentStock > 0 ? '#059669' : '#dc2626',
-                  fontWeight: 700,
-                  fontSize: '0.85rem'
-                }}>
-                  {editingProduct.currentStock > 0 ? `${editingProduct.currentStock} Units in stock` : 'Out of stock'}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
-                Online Description / Highlights
-              </label>
-              <textarea
-                rows={3}
-                placeholder="Product highlights, specifications, key features..."
-                value={productEditForm.description}
-                onChange={(e) => setProductEditForm({ ...productEditForm, description: e.target.value })}
-                className="shopify-input"
-                style={{ width: '100%', padding: '0.5rem 0.65rem', fontSize: '0.82rem', resize: 'vertical' }}
+          <form onSubmit={handleSaveProductEdit} className="product-quick-edit-form">
+            <div className="form-group">
+              <label>Product Name</label>
+              <input
+                type="text"
+                required
+                className="form-control"
+                value={productEditForm.name}
+                onChange={(e) => setProductEditForm({ ...productEditForm, name: e.target.value })}
               />
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '0.85rem', borderTop: '1px solid #f1f5f9' }}>
+            <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="form-group">
+                <label>Selling Price (₹)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  className="form-control"
+                  value={productEditForm.sellingPrice}
+                  onChange={(e) => setProductEditForm({ ...productEditForm, sellingPrice: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>GST Rate (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="form-control"
+                  value={productEditForm.taxRate}
+                  onChange={(e) => setProductEditForm({ ...productEditForm, taxRate: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Direct Image URL</label>
+              <input
+                type="url"
+                className="form-control"
+                placeholder="https://images.unsplash.com/photo-..."
+                value={productEditForm.imageUrl}
+                onChange={(e) => setProductEditForm({ ...productEditForm, imageUrl: e.target.value })}
+              />
+              <span className="field-hint">Paste an image URL from Unsplash or your CDN to display on the storefront.</span>
+            </div>
+            <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
               <button
                 type="button"
-                onClick={() => {
-                  setIsEditProductModalOpen(false);
-                  setEditingProduct(null);
-                }}
-                disabled={isSavingProduct}
+                onClick={() => setIsEditProductModalOpen(false)}
                 className="btn btn-secondary"
               >
                 Cancel
@@ -2455,17 +2485,10 @@ export default function StorefrontBuilderPage() {
               <button
                 type="submit"
                 disabled={isSavingProduct}
-                className="shopify-btn-primary"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  padding: '0.5rem 1.25rem',
-                  fontWeight: 700,
-                  fontSize: '0.85rem'
-                }}
+                className="btn btn-primary"
+                style={{ background: '#982A86', borderColor: '#982A86' }}
               >
-                {isSavingProduct ? 'Saving...' : 'Save Changes'}
+                {isSavingProduct ? 'Saving...' : 'Save Product'}
               </button>
             </div>
           </form>

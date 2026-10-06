@@ -31,6 +31,7 @@ import {
   Zap,
   ShieldCheck,
   ChevronDown,
+  ChevronUp,
   CheckCheck,
   ChevronLeft,
   ChevronRight,
@@ -38,7 +39,12 @@ import {
   Truck,
   User,
   ArrowUpDown,
-  ShoppingBasket
+  ShoppingBasket,
+  Sparkles,
+  HelpCircle,
+  Tag,
+  Percent,
+  Flame
 } from 'lucide-react';
 import './PublicStorePage.css';
 
@@ -419,6 +425,45 @@ export default function PublicStorePage() {
     setTestimonialIndex((prev) => (prev < maxTestimonialIndex ? prev + 1 : 0));
   };
 
+  // 1-Second Countdown Timer for Flash Sale Blocks
+  const [countdown, setCountdown] = useState({ days: 2, hours: 14, minutes: 35, seconds: 48 });
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59 };
+        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        if (prev.days > 0) return { ...prev, days: prev.days - 1, hours: 23, minutes: 59, seconds: 59 };
+        return prev;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Accordion open/close state for FAQ blocks
+  const [openFaqKeys, setOpenFaqKeys] = useState({ 0: true });
+  const toggleFaq = (key) => setOpenFaqKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  // One-click coupon code copy state
+  const [copiedPromoCode, setCopiedPromoCode] = useState(false);
+  const handleCopyCode = (code) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(code);
+    }
+    setCopiedPromoCode(true);
+    toast.success(`Coupon code "${code}" copied to clipboard!`, { autoClose: 1500 });
+    setTimeout(() => setCopiedPromoCode(false), 2500);
+  };
+
+  // Horizontal scroll controller for Product Carousel blocks
+  const carouselTrackRef = useRef(null);
+  const scrollCarousel = (direction) => {
+    if (carouselTrackRef.current) {
+      const scrollAmount = direction === 'left' ? -340 : 340;
+      carouselTrackRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   // Dynamic Navigation Links
   const defaultNavLinks = [
     { id: '1', label: 'Home', url: '#home', enabled: true },
@@ -430,6 +475,780 @@ export default function PublicStorePage() {
   const navLinks = Array.isArray(navbarConfig.navLinks) ? navbarConfig.navLinks : defaultNavLinks;
 
   const activeSortOption = SORT_OPTIONS.find((opt) => opt.value === sortBy) || SORT_OPTIONS[0];
+
+  // Dynamic Modular Sections Normalization (Backward compatibility for legacy stores)
+  const dynamicSections = useMemo(() => {
+    if (Array.isArray(storeConfig.sections) && storeConfig.sections.length > 0) {
+      return storeConfig.sections.filter((s) => s.enabled !== false);
+    }
+    // Backward compatibility fallback for existing stores
+    const legacy = [];
+    if (heroConfig.enabled !== false) {
+      legacy.push({ id: 'sec-hero', type: 'HERO_BANNER', enabled: true, data: heroConfig });
+    }
+    if (sectionsConfig.trustBadgesEnabled !== false) {
+      legacy.push({ id: 'sec-trust', type: 'TRUST_BADGES', enabled: true, data: { badges: storeConfig.trustBadges } });
+    }
+    legacy.push({ id: 'sec-catalog', type: 'PRODUCT_GRID', enabled: true, data: productsSection });
+    if (testimonials.enabled !== false && allReviews.length > 0) {
+      legacy.push({ id: 'sec-testimonials', type: 'TESTIMONIALS', enabled: true, data: testimonials });
+    }
+    if (contactConfig.enabled !== false) {
+      legacy.push({ id: 'sec-contact', type: 'CONTACT_MAP', enabled: true, data: contactConfig });
+    }
+    return legacy;
+  }, [storeConfig, heroConfig, sectionsConfig, productsSection, testimonials, contactConfig, allReviews]);
+
+  // Enterprise Storefront Section Renderer for all 12 Modular Blocks
+  const renderDynamicStorefrontSection = (sec) => {
+    if (!sec || sec.enabled === false) return null;
+    const sData = sec.data || {};
+
+    switch (sec.type) {
+      case 'HERO_BANNER': {
+        const heroTitle = sData.title || `Welcome to ${storeTitle}`;
+        const heroSubtitle = sData.subtitle || tagline;
+        const heroBadge = sData.badge || 'Official Online Store';
+        const heroCta = sData.ctaText || 'Explore Catalog';
+        const heroImg = sData.imageUrl || heroConfig.imageUrl;
+        return (
+          <section
+            key={sec.id}
+            id="home"
+            className="clean-hero-fullscreen"
+            style={{
+              backgroundImage: heroImg
+                ? `linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.88)), url('${heroImg}')`
+                : `linear-gradient(135deg, ${primaryColor}22 0%, #0f172a 100%)`
+            }}
+          >
+            <div className="clean-hero-content-wrapper">
+              {heroBadge && (
+                <div className="clean-hero-badge-pill" style={{ color: '#34d399' }}>
+                  <span className="badge-bullet" />
+                  {heroBadge}
+                </div>
+              )}
+              <h2 className="clean-hero-giant-title">{heroTitle}</h2>
+              <p className="clean-hero-description">{heroSubtitle}</p>
+              <div className="clean-hero-actions-row">
+                <button
+                  onClick={scrollToCatalog}
+                  className="btn-hero-primary"
+                  style={{ background: primaryColor }}
+                >
+                  {heroCta}
+                  <ArrowRight size={17} />
+                </button>
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-hero-whatsapp"
+                  >
+                    <WhatsAppBrandIcon size={18} color="#25D366" />
+                    <span>Contact Store</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'TRUST_BADGES': {
+        const badgesList = sData.badges || storeConfig.trustBadges || [
+          { icon: 'Zap', title: 'Express Dispatch', desc: 'Fast doorstep delivery' },
+          { icon: 'ShieldCheck', title: '100% Genuine', desc: 'Verified from authorized stock' },
+          { icon: 'CreditCard', title: 'Flexible Payments', desc: 'UPI, Card & Cash on Delivery' },
+          { icon: 'Phone', title: 'Direct Store Support', desc: 'Instant WhatsApp & Call help' }
+        ];
+        return (
+          <section key={sec.id} id="about" className="clean-trust-strip-section" style={{ background: cardColor }}>
+            <div className="clean-trust-strip-container">
+              {badgesList.map((badge, idx) => (
+                <div key={idx} className="clean-trust-item">
+                  <ShieldCheck size={20} color={accentColor} />
+                  <div>
+                    <strong>{badge.title}</strong>
+                    <span>{badge.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      }
+
+      case 'FLASH_SALE': {
+        const endsInText = sData.endsIn || 'Limited Time Promo';
+        const saleBadge = sData.badge || 'FLASH DEAL';
+        const saleTitle = sData.title || 'Super Saver Weekend Deals';
+        const saleSubtitle = sData.subtitle || 'Exclusive direct discounts on handpicked catalog products. Don’t miss out!';
+        const discountText = sData.discountText || 'UP TO 40% OFF';
+        return (
+          <section key={sec.id} className="clean-flashsale-banner" style={{ borderLeft: `4px solid ${primaryColor}` }}>
+            <div className="clean-flashsale-content">
+              <div className="clean-flashsale-info">
+                <div className="clean-urgency-pill">
+                  <Flame size={14} color="#ef4444" />
+                  <span>{saleBadge}</span>
+                  <span className="dot-divider">•</span>
+                  <span>{endsInText}</span>
+                </div>
+                <h3>{saleTitle}</h3>
+                <p>{saleSubtitle}</p>
+                {discountText && (
+                  <div className="clean-flashsale-tag">
+                    <Tag size={13} /> {discountText}
+                  </div>
+                )}
+              </div>
+              <div className="clean-flashsale-action-box">
+                <div className="clean-countdown-display">
+                  <div className="countdown-unit">
+                    <span className="countdown-num">{String(countdown.days).padStart(2, '0')}</span>
+                    <span className="countdown-lbl">Days</span>
+                  </div>
+                  <span className="countdown-colon">:</span>
+                  <div className="countdown-unit">
+                    <span className="countdown-num">{String(countdown.hours).padStart(2, '0')}</span>
+                    <span className="countdown-lbl">Hours</span>
+                  </div>
+                  <span className="countdown-colon">:</span>
+                  <div className="countdown-unit">
+                    <span className="countdown-num">{String(countdown.minutes).padStart(2, '0')}</span>
+                    <span className="countdown-lbl">Mins</span>
+                  </div>
+                  <span className="countdown-colon">:</span>
+                  <div className="countdown-unit">
+                    <span className="countdown-num">{String(countdown.seconds).padStart(2, '0')}</span>
+                    <span className="countdown-lbl">Secs</span>
+                  </div>
+                </div>
+                <button
+                  onClick={scrollToCatalog}
+                  className="btn-flashsale-cta"
+                  style={{ background: primaryColor }}
+                >
+                  <Zap size={15} />
+                  <span>{sData.ctaText || 'Shop Deals Now'}</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'PRODUCT_GRID': {
+        return (
+          <main key={sec.id} id="products" ref={catalogRef} className="clean-store-main">
+            <div className="clean-section-header-row">
+              <div>
+                <h2 className="clean-section-title">
+                  {sData.title || productsSection.title || 'Featured Catalog'}
+                </h2>
+                <p className="clean-section-subtitle">
+                  {sData.subtitle || productsSection.subtitle || 'Browse all available products in real-time inventory'}
+                </p>
+              </div>
+
+              <div className="clean-sort-wrapper" ref={sortDropdownRef}>
+                <span className="clean-sort-label">Sort:</span>
+                <div className="custom-dropdown-container">
+                  <button
+                    type="button"
+                    className={`custom-sort-trigger ${isSortOpen ? 'active' : ''}`}
+                    onClick={() => setIsSortOpen(!isSortOpen)}
+                    aria-haspopup="listbox"
+                    aria-expanded={isSortOpen}
+                  >
+                    <SlidersHorizontal size={14} className="sort-icon-prefix" />
+                    <span className="sort-trigger-text">{activeSortOption.label}</span>
+                    <ChevronDown size={15} className={`sort-chevron ${isSortOpen ? 'rotated' : ''}`} />
+                  </button>
+
+                  {isSortOpen && (
+                    <div className="custom-sort-menu animate-popover" role="listbox">
+                      {SORT_OPTIONS.map((option) => {
+                        const isSelected = option.value === sortBy;
+                        return (
+                          <div
+                            key={option.value}
+                            role="option"
+                            aria-selected={isSelected}
+                            className={`custom-sort-item ${isSelected ? 'selected' : ''}`}
+                            onClick={() => {
+                              setSortBy(option.value);
+                              setIsSortOpen(false);
+                            }}
+                          >
+                            <span>{option.label}</span>
+                            {isSelected && <Check size={15} className="sort-check-icon" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Controls: Search & Category Navigation */}
+            <div className="clean-controls-bar">
+              {sData.showSearch !== false && productsSection.showSearch !== false && (
+                <div className="clean-search-input-wrap">
+                  <Search size={16} className="clean-search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search products, descriptions, codes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="clean-btn-clear">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {sData.showCategories !== false && sectionsConfig.categoriesEnabled !== false && (
+                <div className="clean-category-chips">
+                  <button
+                    onClick={() => setSelectedCategory('ALL')}
+                    className={`clean-chip ${selectedCategory === 'ALL' ? 'active' : ''}`}
+                    style={selectedCategory === 'ALL' ? { background: primaryColor } : {}}
+                  >
+                    All Items ({products.length})
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.name)}
+                      className={`clean-chip ${selectedCategory === cat.name ? 'active' : ''}`}
+                      style={selectedCategory === cat.name ? { background: primaryColor } : {}}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Product Grid / Clean Empty State */}
+            {filteredProducts.length === 0 ? (
+              <div className="clean-empty-state">
+                <Package size={44} className="text-muted" />
+                <h3>No products found</h3>
+                <p>
+                  {searchQuery
+                    ? `No items matching "${searchQuery}".`
+                    : 'This store currently has no active products listed in the catalog.'}
+                </p>
+              </div>
+            ) : (
+              <div className="clean-product-grid">
+                {filteredProducts.map((prod) => {
+                  const cartItem = cart.find((item) => item.id === prod.id);
+                  const inStock = prod.inStock !== false && (prod.availableStock === undefined || prod.availableStock > 0);
+                  const price = parseFloat(prod.selling_price || 0);
+
+                  return (
+                    <div key={prod.id} className="clean-product-card">
+                      <div
+                        className="clean-card-image-wrap"
+                        onClick={() => setQuickViewProduct(prod)}
+                      >
+                        {prod.image_url ? (
+                          <img src={prod.image_url} alt={prod.name} className="clean-product-img" />
+                        ) : (
+                          <div className="clean-no-image">
+                            <Package size={36} />
+                          </div>
+                        )}
+                        {prod.category?.name && (
+                          <span className="clean-category-tag">{prod.category.name}</span>
+                        )}
+                        {(sData.showStockBadge !== false && productsSection.showStockBadge !== false) && (
+                          <span className={`clean-stock-tag ${inStock ? 'in-stock' : 'out-stock'}`}>
+                            {inStock ? 'In Stock' : 'Out of Stock'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="clean-card-body">
+                        <div className="clean-card-info">
+                          <span className="clean-sku">{prod.product_code || `PRD-${prod.id}`}</span>
+                          <h3
+                            className="clean-product-name"
+                            onClick={() => setQuickViewProduct(prod)}
+                          >
+                            {prod.name}
+                          </h3>
+                          {prod.description && (
+                            <p className="clean-product-desc">{prod.description}</p>
+                          )}
+                        </div>
+
+                        <div className="clean-card-footer">
+                          <div className="clean-price-box">
+                            <span className="clean-price">₹{price.toLocaleString('en-IN')}</span>
+                            <span className="clean-tax-hint">incl. GST</span>
+                          </div>
+
+                          {cartItem ? (
+                            <div className="clean-stepper">
+                              <button
+                                onClick={() => updateQuantity(prod.id, -1)}
+                                className="clean-btn-step"
+                                aria-label="Decrease"
+                              >
+                                <Minus size={13} />
+                              </button>
+                              <span className="clean-step-val">{cartItem.quantity}</span>
+                              <button
+                                onClick={() => updateQuantity(prod.id, 1)}
+                                className="clean-btn-step"
+                                aria-label="Increase"
+                              >
+                                <Plus size={13} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => addToCart(prod)}
+                              disabled={!inStock}
+                              className="clean-btn-add"
+                              style={{ background: primaryColor }}
+                            >
+                              <Plus size={14} /> Add
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </main>
+        );
+      }
+
+      case 'PRODUCT_CAROUSEL': {
+        const carouselTitle = sData.title || 'Trending Highlights';
+        const carouselSubtitle = sData.subtitle || 'Top-selling picks delivered directly from our central inventory';
+        const carouselProducts = products.slice(0, 10);
+        return (
+          <section key={sec.id} className="clean-carousel-section">
+            <div className="clean-carousel-container">
+              <div className="clean-carousel-header-row">
+                <div>
+                  <div className="clean-pill-tag" style={{ color: accentColor }}>
+                    <Sparkles size={13} /> Curated Picks
+                  </div>
+                  <h2 className="clean-section-title">{carouselTitle}</h2>
+                  <p className="clean-section-subtitle">{carouselSubtitle}</p>
+                </div>
+                <div className="clean-carousel-controls">
+                  <button
+                    onClick={() => scrollCarousel('left')}
+                    className="btn-carousel-nav"
+                    aria-label="Previous Products"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    onClick={() => scrollCarousel('right')}
+                    className="btn-carousel-nav"
+                    aria-label="Next Products"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="clean-carousel-track-container" ref={carouselTrackRef}>
+                <div className="clean-carousel-track">
+                  {carouselProducts.map((prod) => {
+                    const cartItem = cart.find((item) => item.id === prod.id);
+                    const inStock = prod.inStock !== false && (prod.availableStock === undefined || prod.availableStock > 0);
+                    const price = parseFloat(prod.selling_price || 0);
+
+                    return (
+                      <div key={prod.id} className="clean-carousel-card">
+                        <div
+                          className="clean-card-image-wrap"
+                          onClick={() => setQuickViewProduct(prod)}
+                        >
+                          {prod.image_url ? (
+                            <img src={prod.image_url} alt={prod.name} className="clean-product-img" />
+                          ) : (
+                            <div className="clean-no-image">
+                              <Package size={36} />
+                            </div>
+                          )}
+                          {prod.category?.name && (
+                            <span className="clean-category-tag">{prod.category.name}</span>
+                          )}
+                        </div>
+                        <div className="clean-card-body">
+                          <h4 onClick={() => setQuickViewProduct(prod)} className="clean-product-name">
+                            {prod.name}
+                          </h4>
+                          <div className="clean-card-footer" style={{ marginTop: '0.6rem' }}>
+                            <span className="clean-price">₹{price.toLocaleString('en-IN')}</span>
+                            {cartItem ? (
+                              <div className="clean-stepper">
+                                <button onClick={() => updateQuantity(prod.id, -1)} className="clean-btn-step">
+                                  <Minus size={12} />
+                                </button>
+                                <span className="clean-step-val">{cartItem.quantity}</span>
+                                <button onClick={() => updateQuantity(prod.id, 1)} className="clean-btn-step">
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => addToCart(prod)}
+                                disabled={!inStock}
+                                className="clean-btn-add"
+                                style={{ background: primaryColor }}
+                              >
+                                <Plus size={13} /> Add
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'CATEGORY_TILES': {
+        const catTiles = categories.length > 0 ? categories : [
+          { id: '1', name: 'Apparel & Fashion' },
+          { id: '2', name: 'Electronics & Audio' },
+          { id: '3', name: 'Home & Kitchen' },
+          { id: '4', name: 'Personal Care' }
+        ];
+        return (
+          <section key={sec.id} className="clean-categories-tiles-section">
+            <div className="clean-categories-tiles-container">
+              <div className="clean-categories-header">
+                <h2 className="clean-section-title">{sData.title || 'Explore by Category'}</h2>
+                <p className="clean-section-subtitle">{sData.subtitle || 'Find exactly what you need with quick category filters'}</p>
+              </div>
+              <div className="clean-category-tiles-grid">
+                {catTiles.map((cat, idx) => (
+                  <div
+                    key={cat.id || idx}
+                    className="clean-category-tile-card"
+                    onClick={() => {
+                      setSelectedCategory(cat.name);
+                      scrollToCatalog();
+                    }}
+                  >
+                    <div className="category-tile-icon" style={{ background: `${primaryColor}15`, color: primaryColor }}>
+                      <Layers size={22} />
+                    </div>
+                    <h4>{cat.name}</h4>
+                    <span className="category-tile-badge">View Collection &rarr;</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'BRAND_STORY': {
+        const storyTitle = sData.title || 'Crafted with Passion & Precision';
+        const storyTag = sData.badge || 'OUR HERITAGE';
+        const storyText = sData.narrative || 'Founded with a clear vision: to bring authenticated, premium-grade products directly to our community. Every single item in our inventory is inspected, certified, and dispatched from verified facilities to guarantee genuine quality.';
+        const storyImg = sData.imageUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80';
+        return (
+          <section key={sec.id} id="story" className="clean-story-section">
+            <div className="clean-story-container">
+              <div className="clean-story-grid">
+                <div className="clean-story-media-wrap">
+                  <img src={storyImg} alt={storyTitle} />
+                  <div className="clean-story-badge-floating" style={{ background: primaryColor }}>
+                    <span>100% Verified Origin</span>
+                  </div>
+                </div>
+                <div className="clean-story-content">
+                  <div className="clean-pill-tag" style={{ color: primaryColor }}>{storyTag}</div>
+                  <h2>{storyTitle}</h2>
+                  <p className="clean-story-body-text">{storyText}</p>
+                  <div className="clean-story-points">
+                    <div className="clean-story-point-item">
+                      <CheckCircle2 size={18} color={accentColor} />
+                      <div>
+                        <strong>Direct Sourcing</strong>
+                        <span>Zero intermediaries, authentic inventory</span>
+                      </div>
+                    </div>
+                    <div className="clean-story-point-item">
+                      <CheckCircle2 size={18} color={accentColor} />
+                      <div>
+                        <strong>Rapid Dispatch</strong>
+                        <span>Same-day verification and tracking updates</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'IMAGE_LOOKBOOK': {
+        const lookbookTitle = sData.title || 'Store Showcase & Visual Lookbook';
+        const lookbookSub = sData.subtitle || 'Step inside our store atmosphere and curated collections';
+        const items = sData.items || [
+          {
+            imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80',
+            caption: 'Flagship Store Experience'
+          },
+          {
+            imageUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=800&q=80',
+            caption: 'Handcrafted Quality'
+          },
+          {
+            imageUrl: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&w=800&q=80',
+            caption: 'Latest Season Arrivals'
+          }
+        ];
+        return (
+          <section key={sec.id} className="clean-lookbook-section">
+            <div className="clean-lookbook-container">
+              <div className="clean-lookbook-header">
+                <h2 className="clean-section-title">{lookbookTitle}</h2>
+                <p className="clean-section-subtitle">{lookbookSub}</p>
+              </div>
+              <div className="clean-lookbook-grid">
+                {items.map((item, idx) => (
+                  <div key={idx} className="clean-lookbook-item">
+                    <img src={item.imageUrl} alt={item.caption || `Lookbook ${idx + 1}`} />
+                    {item.caption && (
+                      <div className="clean-lookbook-overlay">
+                        <span>{item.caption}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'TESTIMONIALS': {
+        const reviewList = sData.reviews || testimonials.reviews || [];
+        if (reviewList.length === 0) return null;
+        const visibleRev = reviewList.length <= 3 ? reviewList : reviewList.slice(testimonialIndex, testimonialIndex + 3);
+
+        return (
+          <section key={sec.id} id="testimonials" className="clean-testimonials-section">
+            <div className="clean-testimonials-container">
+              <div className="clean-section-header-carousel">
+                <div>
+                  <div className="clean-pill-tag" style={{ color: accentColor }}>
+                    Verified Buyer Feedback
+                  </div>
+                  <h2 className="clean-section-title">
+                    {sData.title || testimonials.title || 'What Our Customers Say'}
+                  </h2>
+                  <p className="clean-section-subtitle">
+                    {sData.subtitle || testimonials.subtitle || 'Real feedback from verified buyers across India'}
+                  </p>
+                </div>
+
+                {reviewList.length > 3 && (
+                  <div className="clean-carousel-controls">
+                    <button onClick={handlePrevTestimonials} className="btn-carousel-nav" aria-label="Previous Testimonials">
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button onClick={handleNextTestimonials} className="btn-carousel-nav" aria-label="Next Testimonials">
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="clean-reviews-grid-3">
+                {visibleRev.map((rev, idx) => (
+                  <div key={rev.id || idx} className="clean-review-card">
+                    <div className="clean-review-stars">
+                      {[...Array(rev.rating || 5)].map((_, s) => (
+                        <Star key={s} size={15} fill="#f59e0b" color="#f59e0b" />
+                      ))}
+                    </div>
+                    <p className="clean-review-comment">"{rev.comment}"</p>
+                    <div className="clean-reviewer-meta">
+                      <div className="clean-reviewer-avatar" style={{ background: primaryColor }}>
+                        {rev.name ? rev.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div>
+                        <strong>{rev.name}</strong>
+                        <span>{rev.location || 'Verified Buyer'} • {rev.role || 'Direct Customer'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'FAQ_ACCORDION': {
+        const faqList = sData.faqs || [
+          { q: 'How long does delivery take?', a: 'Standard deliveries are dispatched within 24 hours and typically reach your address within 2-4 business days.' },
+          { q: 'What payment methods do you accept?', a: 'We accept instant UPI (Google Pay, PhonePe, Paytm), Credit & Debit Cards, Netbanking via Razorpay, and Cash on Delivery.' },
+          { q: 'Are all products 100% genuine?', a: 'Yes! All inventory in our catalog is backed by verified direct stock, checked before dispatch, and covered with GST invoices.' },
+          { q: 'Can I track my order on WhatsApp?', a: 'Absolutely. Immediately after placing your order, you can confirm via WhatsApp to receive tracking updates directly on your chat.' }
+        ];
+        return (
+          <section key={sec.id} id="faq" className="clean-faq-section">
+            <div className="clean-faq-container">
+              <div className="clean-faq-header">
+                <div className="clean-pill-tag" style={{ color: primaryColor }}>
+                  <HelpCircle size={13} /> Questions & Answers
+                </div>
+                <h2 className="clean-section-title">{sData.title || 'Frequently Asked Questions'}</h2>
+                <p className="clean-section-subtitle">{sData.subtitle || 'Everything you need to know about purchasing, shipping, and returns'}</p>
+              </div>
+              <div className="clean-faq-list">
+                {faqList.map((item, idx) => {
+                  const isOpen = !!openFaqKeys[idx];
+                  return (
+                    <div key={idx} className={`clean-faq-item ${isOpen ? 'active' : ''}`}>
+                      <button
+                        type="button"
+                        onClick={() => toggleFaq(idx)}
+                        className="clean-faq-question-btn"
+                        aria-expanded={isOpen}
+                      >
+                        <span>{item.q}</span>
+                        {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                      </button>
+                      {isOpen && (
+                        <div className="clean-faq-answer">
+                          <p>{item.a}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'NEWSLETTER_BAR': {
+        const couponCode = sData.couponCode || 'FIRST10';
+        return (
+          <section key={sec.id} className="clean-newsletter-bar-section">
+            <div className="clean-newsletter-card" style={{ borderLeft: `4px solid ${primaryColor}` }}>
+              <div className="clean-newsletter-info">
+                <div className="clean-pill-tag" style={{ color: accentColor }}>
+                  <Sparkles size={13} /> Exclusive Customer Offer
+                </div>
+                <h3>{sData.title || 'Unlock 10% Off Your Next Purchase'}</h3>
+                <p>{sData.subtitle || 'Use this special coupon code during checkout to enjoy an instant discount on all orders.'}</p>
+              </div>
+              <div className="clean-coupon-pill-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleCopyCode(couponCode)}
+                  className="clean-coupon-pill"
+                >
+                  <Tag size={15} />
+                  <span>{couponCode}</span>
+                  <span className="copy-label">{copiedPromoCode ? 'Copied!' : 'Click to Copy'}</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      case 'CONTACT_MAP': {
+        return (
+          <section key={sec.id} id="contact" className="clean-contact-map-section" style={{ background: cardColor }}>
+            <div className="clean-contact-card-container">
+              <div className="clean-contact-header">
+                <h2 className="clean-section-title">{sData.title || contactConfig.title || 'Visit Our Store & Contact'}</h2>
+                <p className="clean-section-subtitle">{sData.subtitle || contactConfig.subtitle || 'Reach out directly for inquiries, custom orders, or customer support'}</p>
+              </div>
+              <div className="clean-contact-grid-modern">
+                <div className="clean-contact-info-card">
+                  <div className="clean-contact-icon-box" style={{ background: `${primaryColor}15`, color: primaryColor }}>
+                    <MapPin size={22} />
+                  </div>
+                  <div>
+                    <h4>Store Address</h4>
+                    <p>{sData.address || contactConfig.address || tenant?.address || 'Retail Center, Commercial Street'}</p>
+                  </div>
+                </div>
+
+                <div className="clean-contact-info-card">
+                  <div className="clean-contact-icon-box" style={{ background: `${primaryColor}15`, color: primaryColor }}>
+                    <Clock size={22} />
+                  </div>
+                  <div>
+                    <h4>Operating Hours</h4>
+                    <p>{sData.hours || contactConfig.hours || 'Mon - Sat: 9:00 AM - 9:00 PM'}</p>
+                  </div>
+                </div>
+
+                <div className="clean-contact-info-card">
+                  <div className="clean-contact-icon-box" style={{ background: `${primaryColor}15`, color: primaryColor }}>
+                    <Phone size={22} />
+                  </div>
+                  <div>
+                    <h4>Direct Contact</h4>
+                    <p>{sData.phone || contactConfig.phone || tenant?.phone || 'Direct Line Available'}</p>
+                    <p style={{ fontSize: '0.8rem', color: '#64748b' }}>{sData.email || contactConfig.email || tenant?.email || ''}</p>
+                  </div>
+                </div>
+
+                {whatsappUrl && (
+                  <div className="clean-contact-info-card whatsapp-special">
+                    <div className="clean-contact-icon-box" style={{ background: '#25D36622' }}>
+                      <WhatsAppBrandIcon size={24} color="#25D366" />
+                    </div>
+                    <div>
+                      <h4>Instant WhatsApp Chat</h4>
+                      <p>Chat directly with store operators for fast assistance.</p>
+                      <a href={whatsappUrl} target="_blank" rel="noreferrer" className="btn-clean-whatsapp" style={{ marginTop: '0.5rem' }}>
+                        <WhatsAppBrandIcon size={16} color="#25D366" />
+                        <span>Chat Now</span>
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        );
+      }
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <div
@@ -535,338 +1354,12 @@ export default function PublicStorePage() {
         </div>
       </header>
 
-      {/* 2. Full-Screen Majestic Hero Showcase Section */}
-      {heroConfig.enabled !== false && (
-        <section
-          id="home"
-          className="clean-hero-fullscreen"
-          style={{
-            backgroundImage: heroConfig.imageUrl
-              ? `linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.88)), url('${heroConfig.imageUrl}')`
-              : `linear-gradient(135deg, ${primaryColor}22 0%, #0f172a 100%)`
-          }}
-        >
-          <div className="clean-hero-content-wrapper">
-            {heroConfig.badge && (
-              <div className="clean-hero-badge-pill" style={{ color: '#34d399' }}>
-                <span className="badge-bullet" />
-                {heroConfig.badge}
-              </div>
-            )}
-            <h2 className="clean-hero-giant-title">
-              {heroConfig.title || `Welcome to ${storeTitle}`}
-            </h2>
-            <p className="clean-hero-description">
-              {heroConfig.subtitle || tagline}
-            </p>
-            <div className="clean-hero-actions-row">
-              <button
-                onClick={scrollToCatalog}
-                className="btn-hero-primary"
-                style={{ background: primaryColor }}
-              >
-                {heroConfig.ctaText || 'Explore Catalog'}
-                <ArrowRight size={17} />
-              </button>
-              {whatsappUrl && (
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-hero-whatsapp"
-                >
-                  <WhatsAppBrandIcon size={18} color="#25D366" />
-                  <span>Contact Store</span>
-                </a>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* 2.5 Trust Badges & Store Overview (About Anchor) */}
-      {sectionsConfig.trustBadgesEnabled !== false && (
-        <section id="about" className="clean-trust-strip-section" style={{ background: cardColor }}>
-          <div className="clean-trust-strip-container">
-            {(storeConfig.trustBadges || [
-              { icon: 'Zap', title: 'Express Dispatch', desc: 'Fast doorstep delivery' },
-              { icon: 'ShieldCheck', title: '100% Genuine', desc: 'Verified from authorized stock' },
-              { icon: 'CreditCard', title: 'Flexible Payments', desc: 'UPI, Card & Cash on Delivery' },
-              { icon: 'Phone', title: 'Direct Store Support', desc: 'Instant WhatsApp & Call help' }
-            ]).map((badge, idx) => (
-              <div key={idx} className="clean-trust-item">
-                <ShieldCheck size={20} color={accentColor} />
-                <div>
-                  <strong>{badge.title}</strong>
-                  <span>{badge.desc}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 3. Featured Catalog Section (Products Anchor) */}
-      <main id="products" ref={catalogRef} className="clean-store-main">
-        <div className="clean-section-header-row">
-          <div>
-            <h2 className="clean-section-title">
-              {productsSection.title || 'Featured Catalog'}
-            </h2>
-            <p className="clean-section-subtitle">
-              {productsSection.subtitle || 'Browse all available products in real-time inventory'}
-            </p>
-          </div>
-
-          {/* Sleek Custom Sort Dropdown */}
-          <div className="clean-sort-wrapper" ref={sortDropdownRef}>
-            <span className="clean-sort-label">Sort:</span>
-            <div className="custom-dropdown-container">
-              <button
-                type="button"
-                className={`custom-sort-trigger ${isSortOpen ? 'active' : ''}`}
-                onClick={() => setIsSortOpen(!isSortOpen)}
-                aria-haspopup="listbox"
-                aria-expanded={isSortOpen}
-              >
-                <SlidersHorizontal size={14} className="sort-icon-prefix" />
-                <span className="sort-trigger-text">{activeSortOption.label}</span>
-                <ChevronDown
-                  size={15}
-                  className={`sort-chevron ${isSortOpen ? 'rotated' : ''}`}
-                />
-              </button>
-
-              {isSortOpen && (
-                <div className="custom-sort-menu animate-popover" role="listbox">
-                  {SORT_OPTIONS.map((option) => {
-                    const isSelected = option.value === sortBy;
-                    return (
-                      <div
-                        key={option.value}
-                        role="option"
-                        aria-selected={isSelected}
-                        className={`custom-sort-item ${isSelected ? 'selected' : ''}`}
-                        onClick={() => {
-                          setSortBy(option.value);
-                          setIsSortOpen(false);
-                        }}
-                      >
-                        <span>{option.label}</span>
-                        {isSelected && <Check size={15} className="sort-check-icon" />}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Controls: Search & Category Navigation */}
-        <div className="clean-controls-bar">
-          {productsSection.showSearch !== false && (
-            <div className="clean-search-input-wrap">
-              <Search size={16} className="clean-search-icon" />
-              <input
-                type="text"
-                placeholder="Search products, descriptions, codes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="clean-btn-clear">
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          )}
-
-          {sectionsConfig.categoriesEnabled !== false && (
-            <div className="clean-category-chips">
-              <button
-                onClick={() => setSelectedCategory('ALL')}
-                className={`clean-chip ${selectedCategory === 'ALL' ? 'active' : ''}`}
-                style={selectedCategory === 'ALL' ? { background: primaryColor } : {}}
-              >
-                All Items ({products.length})
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.name)}
-                  className={`clean-chip ${selectedCategory === cat.name ? 'active' : ''}`}
-                  style={selectedCategory === cat.name ? { background: primaryColor } : {}}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Product Grid / Clean Empty State */}
-        {filteredProducts.length === 0 ? (
-          <div className="clean-empty-state">
-            <Package size={44} className="text-muted" />
-            <h3>No products found</h3>
-            <p>
-              {searchQuery
-                ? `No items matching "${searchQuery}".`
-                : 'This store currently has no active products listed in the catalog.'}
-            </p>
-          </div>
-        ) : (
-          <div className="clean-product-grid">
-            {filteredProducts.map((prod) => {
-              const cartItem = cart.find((item) => item.id === prod.id);
-              const inStock = prod.inStock !== false && (prod.availableStock === undefined || prod.availableStock > 0);
-              const price = parseFloat(prod.selling_price || 0);
-
-              return (
-                <div key={prod.id} className="clean-product-card">
-                  {/* Image Container */}
-                  <div
-                    className="clean-card-image-wrap"
-                    onClick={() => setQuickViewProduct(prod)}
-                  >
-                    {prod.image_url ? (
-                      <img src={prod.image_url} alt={prod.name} className="clean-product-img" />
-                    ) : (
-                      <div className="clean-no-image">
-                        <Package size={36} />
-                      </div>
-                    )}
-                    {prod.category?.name && (
-                      <span className="clean-category-tag">{prod.category.name}</span>
-                    )}
-                    {productsSection.showStockBadge !== false && (
-                      <span className={`clean-stock-tag ${inStock ? 'in-stock' : 'out-stock'}`}>
-                        {inStock ? 'In Stock' : 'Out of Stock'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Body */}
-                  <div className="clean-card-body">
-                    <div className="clean-card-info">
-                      <span className="clean-sku">{prod.product_code || `PRD-${prod.id}`}</span>
-                      <h3
-                        className="clean-product-name"
-                        onClick={() => setQuickViewProduct(prod)}
-                      >
-                        {prod.name}
-                      </h3>
-                      {prod.description && (
-                        <p className="clean-product-desc">{prod.description}</p>
-                      )}
-                    </div>
-
-                    {/* Price & Action */}
-                    <div className="clean-card-footer">
-                      <div className="clean-price-box">
-                        <span className="clean-price">₹{price.toLocaleString('en-IN')}</span>
-                        <span className="clean-tax-hint">incl. GST</span>
-                      </div>
-
-                      {cartItem ? (
-                        <div className="clean-stepper">
-                          <button
-                            onClick={() => updateQuantity(prod.id, -1)}
-                            className="clean-btn-step"
-                            aria-label="Decrease"
-                          >
-                            <Minus size={13} />
-                          </button>
-                          <span className="clean-step-val">{cartItem.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(prod.id, 1)}
-                            className="clean-btn-step"
-                            aria-label="Increase"
-                          >
-                            <Plus size={13} />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => addToCart(prod)}
-                          disabled={!inStock}
-                          className="clean-btn-add"
-                          style={{ background: primaryColor }}
-                        >
-                          <Plus size={14} /> Add
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
-
-      {/* 4. Testimonials & Customer Reviews Section (3 Cards with Carousel Arrows) */}
-      {testimonials.enabled !== false && allReviews.length > 0 && (
-        <section id="testimonials" className="clean-testimonials-section">
-          <div className="clean-testimonials-container">
-            <div className="clean-section-header-carousel">
-              <div>
-                <div className="clean-pill-tag" style={{ color: accentColor }}>
-                  Verified Buyer Feedback
-                </div>
-                <h2 className="clean-section-title">
-                  {testimonials.title || 'What Our Customers Say'}
-                </h2>
-                <p className="clean-section-subtitle">
-                  {testimonials.subtitle || 'Real feedback from verified buyers across India'}
-                </p>
-              </div>
-
-              {allReviews.length > 3 && (
-                <div className="clean-carousel-controls">
-                  <button
-                    onClick={handlePrevTestimonials}
-                    className="btn-carousel-nav"
-                    aria-label="Previous Testimonials"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button
-                    onClick={handleNextTestimonials}
-                    className="btn-carousel-nav"
-                    aria-label="Next Testimonials"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="clean-reviews-grid-3">
-              {visibleReviews.map((rev, idx) => (
-                <div key={rev.id || idx} className="clean-review-card">
-                  <div className="clean-review-stars">
-                    {[...Array(rev.rating || 5)].map((_, s) => (
-                      <Star key={s} size={15} fill="#f59e0b" color="#f59e0b" />
-                    ))}
-                  </div>
-                  <p className="clean-review-comment">"{rev.comment}"</p>
-                  <div className="clean-reviewer-meta">
-                    <div className="clean-reviewer-avatar" style={{ background: primaryColor }}>
-                      {rev.name ? rev.name.charAt(0).toUpperCase() : 'U'}
-                    </div>
-                    <div>
-                      <strong>{rev.name}</strong>
-                      <span>{rev.location || 'Verified Buyer'} • {rev.role || 'Direct Customer'}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Dynamic Modular Storefront Sections (Ordered by Drag & Drop) */}
+      {dynamicSections.map((sec, idx) => (
+        <React.Fragment key={sec.id || `${sec.type}-${idx}`}>
+          {renderDynamicStorefrontSection(sec)}
+        </React.Fragment>
+      ))}
 
       {/* 5. Contact & Store Footer Section */}
       {contactConfig.enabled !== false && (

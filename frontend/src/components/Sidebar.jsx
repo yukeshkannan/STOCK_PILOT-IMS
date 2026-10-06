@@ -50,6 +50,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
 
   const [isTenantsOpen, setIsTenantsOpen] = useState(true);
   const [tenants, setTenants] = useState([]);
+  const [superAdminTicketCount, setSuperAdminTicketCount] = useState(0);
   const [badgeCounts, setBadgeCounts] = useState({
     purchases: 0,
     notifications: 0,
@@ -69,6 +70,20 @@ export default function Sidebar({ isOpen = false, onClose }) {
         .catch(() => {
           setTenants([]);
         });
+    }
+  };
+
+  const syncSuperAdminTicketCount = async () => {
+    if (!isSuper) return;
+    try {
+      const res = await api.get('/admin/tickets/stats');
+      const statsData = res?.data || res;
+      if (statsData && typeof statsData === 'object') {
+        const count = Number(statsData.open) || 0;
+        setSuperAdminTicketCount(count);
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -108,9 +123,51 @@ export default function Sidebar({ isOpen = false, onClose }) {
     syncBadgeCounts();
     const interval = setInterval(syncBadgeCounts, 20000);
     window.addEventListener('stockpilot_tenants_changed', loadSidebarTenants);
+
+    let ticketInterval = null;
+    let bc = null;
+    const handleTicketSync = () => syncSuperAdminTicketCount();
+    const handleStorage = (e) => {
+      if (e.key === 'stockpilot_helpdesk_ping') {
+        syncSuperAdminTicketCount();
+      }
+    };
+
+    if (isSuper) {
+      syncSuperAdminTicketCount();
+      ticketInterval = setInterval(syncSuperAdminTicketCount, 5000);
+      window.addEventListener('stockpilot_ticket_created', handleTicketSync);
+      window.addEventListener('stockpilot_ticket_updated', handleTicketSync);
+      window.addEventListener('stockpilot_tickets_changed', handleTicketSync);
+      window.addEventListener('storage', handleStorage);
+
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          bc = new BroadcastChannel('stockpilot_helpdesk_channel');
+          bc.onmessage = () => {
+            syncSuperAdminTicketCount();
+          };
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     return () => {
       clearInterval(interval);
+      if (ticketInterval) clearInterval(ticketInterval);
       window.removeEventListener('stockpilot_tenants_changed', loadSidebarTenants);
+      window.removeEventListener('stockpilot_ticket_created', handleTicketSync);
+      window.removeEventListener('stockpilot_ticket_updated', handleTicketSync);
+      window.removeEventListener('stockpilot_tickets_changed', handleTicketSync);
+      window.removeEventListener('storage', handleStorage);
+      if (bc) {
+        try {
+          bc.close();
+        } catch {
+          // ignore
+        }
+      }
     };
   }, [isSuper, location.pathname]);
 
@@ -437,7 +494,17 @@ export default function Sidebar({ isOpen = false, onClose }) {
               className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
             >
               <LifeBuoy size={18} />
-              <span>Support Helpdesk</span>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}>
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Support Helpdesk</span>
+                {superAdminTicketCount > 0 && (
+                  <span
+                    className="sidebar-whatsapp-badge"
+                    title={`${superAdminTicketCount} open support tickets`}
+                  >
+                    {superAdminTicketCount > 99 ? '99+' : superAdminTicketCount}
+                  </span>
+                )}
+              </span>
             </NavLink>
 
             {/* Link 6: Dev & Support Team */}

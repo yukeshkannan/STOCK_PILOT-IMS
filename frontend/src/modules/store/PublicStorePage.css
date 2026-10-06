@@ -1708,3 +1708,471 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* ==========================================================================
+   DYNAMIC MODULAR E-COMMERCE BLOCKS (WIX & WOOCOMMERCE GRADE)
+   ========================================================================== */
+
+/* 1. Horizontal Product Carousel */
+.clean-carousel-section {
+  padding: 3.5rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.clean-carousel-container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.clean-carousel-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 1.75rem;
+}
+
+.clean-carousel-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.clean-carousel-nav-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--store-border);
+  background: var(--store-card);
+  color: var(--store-text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.clean-carousel-nav-btn:hover:not(:disabled) {
+  background: var(--store-primary);
+  color: #ffffff;
+  border-color: var(--store-primary);
+  transform: scale(1.05);
+}
+
+.clean-carousel-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.clean-carousel-track {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding-bottom: 1rem;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.clean-carousel-track::-webkit-scrollbar {
+  height: 6px;
+}
+
+.clean-carousel-track::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.clean-carousel-track::-webkit-scrollbar-thumb {
+  background: rgba(152, 42, 134, 0.25);
+  border-radius: 4px;
+}
+
+.clean-carousel-item {
+  flex: 0 0 260px;
+  min-width: 260px;
+}
+
+/* 2. Visual Category Tiles Grid */
+.clean-category-tiles-section {
+  padding: 3.5rem 1.5rem;
+}
+
+.clean-category-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+.clean-category-tile-card {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  height: 180px;
+  cursor: pointer;
+  border: 1px solid var(--store-border);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.25rem;
+  text-decoration: none;
+  background-size: cover;
+  background-position: center;
+}
+
+.clean-category-tile-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%);
+  transition: opacity 0.25s ease;
+}
+
+.clean-category-tile-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px -4px rgba(152, 42, 134, 0.25);
+}
+
+.clean-category-tile-card:hover::before {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%);
+}
+
+.clean-category-tile-content {
+  position: relative;
+  z-index: 2;
+  color: #ffffff;
+}
+
+.clean-category-tile-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0 0 0.2rem 0;
+  letter-spacing: -0.01em;
+}
+
+.clean-category-tile-count {
+  font-size: 0.76rem;
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+/* 3. Flash Sale & Promotional Countdown */
+.clean-flash-sale-section {
+  padding: 3rem 1.5rem;
+  background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+.clean-flash-sale-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2rem;
+  position: relative;
+  z-index: 2;
+}
+
+.clean-flash-sale-info {
+  max-width: 600px;
+}
+
+.clean-flash-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #f43f5e;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 2px 10px rgba(244, 63, 94, 0.4);
+}
+
+.clean-flash-title {
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.2;
+}
+
+.clean-flash-sub {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.clean-countdown-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.clean-countdown-boxes {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.clean-countdown-box {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  min-width: 65px;
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+}
+
+.clean-countdown-digit {
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+}
+
+.clean-countdown-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.25rem;
+}
+
+/* 4. Lookbook & Photo Gallery */
+.clean-lookbook-section {
+  padding: 3.5rem 1.5rem;
+}
+
+.clean-lookbook-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+.clean-lookbook-card {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  height: 320px;
+  border: 1px solid var(--store-border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.clean-lookbook-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clean-lookbook-card:hover .clean-lookbook-img {
+  transform: scale(1.06);
+}
+
+.clean-lookbook-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(15, 23, 42, 0.85) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.25rem;
+  color: #ffffff;
+}
+
+.clean-lookbook-overlay h4 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin: 0 0 0.25rem 0;
+}
+
+.clean-lookbook-overlay p {
+  font-size: 0.8rem;
+  margin: 0;
+  opacity: 0.85;
+}
+
+/* 5. Brand Story & About Narrative */
+.clean-brand-story-section {
+  padding: 4.5rem 1.5rem;
+  background: var(--store-card);
+  border-top: 1px solid var(--store-border);
+  border-bottom: 1px solid var(--store-border);
+}
+
+.clean-story-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3.5rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .clean-story-container {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+.clean-story-img-wrapper {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px -8px rgba(15, 23, 42, 0.15);
+  border: 1px solid var(--store-border);
+}
+
+.clean-story-img-wrapper img {
+  width: 100%;
+  height: 380px;
+  object-fit: cover;
+  display: block;
+}
+
+.clean-story-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.clean-story-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--store-primary);
+  letter-spacing: 0.08em;
+}
+
+.clean-story-title {
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--store-text-main);
+  line-height: 1.25;
+}
+
+.clean-story-body {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--store-text-sub);
+  margin: 0;
+}
+
+/* 6. FAQ Accordion Block */
+.clean-faq-section {
+  padding: 3.5rem 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.clean-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
+.clean-faq-item {
+  background: var(--store-card);
+  border: 1px solid var(--store-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.clean-faq-item.open {
+  border-color: var(--store-primary);
+  box-shadow: 0 4px 16px -2px rgba(152, 42, 134, 0.08);
+}
+
+.clean-faq-question {
+  width: 100%;
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: transparent;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--store-text-main);
+  text-align: left;
+  cursor: pointer;
+}
+
+.clean-faq-answer {
+  padding: 0 1.25rem 1.15rem 1.25rem;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--store-text-sub);
+  border-top: 1px dashed var(--store-border);
+  padding-top: 0.85rem;
+}
+
+/* 7. Newsletter / Promo Bar */
+.clean-newsletter-section {
+  padding: 3rem 1.5rem;
+}
+
+.clean-newsletter-card {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, rgba(152, 42, 134, 0.08) 0%, rgba(16, 185, 129, 0.06) 100%);
+  border: 1px solid rgba(152, 42, 134, 0.2);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.clean-newsletter-content h3 {
+  font-size: 1.45rem;
+  font-weight: 900;
+  margin: 0 0 0.35rem 0;
+  color: var(--store-text-main);
+}
+
+.clean-newsletter-content p {
+  font-size: 0.88rem;
+  color: var(--store-text-sub);
+  margin: 0;
+}
+
+.clean-newsletter-coupon-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--store-card);
+  border: 1.5px dashed var(--store-primary);
+  padding: 0.55rem 1.15rem;
+  border-radius: 10px;
+  color: var(--store-primary);
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+}

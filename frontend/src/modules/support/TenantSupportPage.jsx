@@ -173,6 +173,19 @@ export default function TenantSupportPage() {
         description: ''
       });
 
+      // Broadcast live event for instantaneous sidebar badge updates
+      window.dispatchEvent(new CustomEvent('stockpilot_ticket_created', { detail: created }));
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const bc = new BroadcastChannel('stockpilot_helpdesk_channel');
+          bc.postMessage({ type: 'NEW_TICKET', ticket: created });
+          setTimeout(() => bc.close(), 1000);
+        }
+      } catch {}
+      try {
+        localStorage.setItem('stockpilot_helpdesk_ping', Date.now().toString());
+      } catch {}
+
       // Refresh list and select the newly created ticket
       await fetchTickets();
       if (created && (created.ticket_id || created.id)) {
@@ -234,6 +247,19 @@ export default function TenantSupportPage() {
       setDeletingTicket(true);
       await api.delete(`/tenants/tickets/${ticketIdentifier}`);
       toast.success(`Ticket #${ticketIdentifier} deleted successfully`);
+
+      window.dispatchEvent(new CustomEvent('stockpilot_ticket_updated', { detail: { id: ticketIdentifier } }));
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const bc = new BroadcastChannel('stockpilot_helpdesk_channel');
+          bc.postMessage({ type: 'TICKET_UPDATED', id: ticketIdentifier });
+          setTimeout(() => bc.close(), 1000);
+        }
+      } catch {}
+      try {
+        localStorage.setItem('stockpilot_helpdesk_ping', Date.now().toString());
+      } catch {}
+
       if (
         selectedTicket?.ticket_id === ticketIdentifier ||
         selectedTicket?.id === ticketIdentifier ||
