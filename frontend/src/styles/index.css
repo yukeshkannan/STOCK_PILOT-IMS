@@ -125,6 +125,7 @@ a {
   font-weight: 500;
   text-decoration: none;
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .sidebar-link:hover {
@@ -139,6 +140,157 @@ a {
   font-weight: 700 !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16) !important;
   transform: none;
+}
+
+.sidebar-group-label {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Sidebar Toggle Buttons */
+.sidebar-collapse-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-collapse-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.sidebar-rail-expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  position: relative;
+}
+
+.sidebar-rail-expand-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: scale(1.06);
+}
+
+/* Collapsed Sidebar Rail Behavior */
+.sidebar.is-collapsed {
+  width: 72px !important;
+}
+
+body.sidebar-is-collapsed .sidebar {
+  width: 72px !important;
+}
+
+.sidebar.is-collapsed .sidebar-link {
+  justify-content: center !important;
+  padding: 0.65rem 0 !important;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+  border-radius: 10px;
+}
+
+.sidebar.is-collapsed .sidebar-link:hover {
+  transform: none;
+}
+
+.sidebar.is-collapsed .sidebar-nav-scroll {
+  padding: 0.85rem 0.35rem !important;
+  align-items: center;
+}
+
+.sidebar.is-collapsed .sidebar-group-label {
+  display: none !important;
+}
+
+/* Floating Hover Tooltip for Icon Rail */
+.sidebar-tooltip-flyout {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-6px);
+  background: #0f172a;
+  color: #ffffff;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -4px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  z-index: 99999;
+  min-width: 190px;
+  max-width: 260px;
+  text-align: left;
+}
+
+.sidebar-tooltip-flyout::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 6px 6px 0;
+  border-style: solid;
+  border-color: transparent #0f172a transparent transparent;
+}
+
+/* Show Tooltip only when collapsed (or on specific icon buttons) */
+.sidebar.is-collapsed .sidebar-link:hover .sidebar-tooltip-flyout,
+.sidebar.is-collapsed .sidebar-collapsed-brand-box:hover .sidebar-tooltip-flyout,
+.sidebar.is-collapsed .sidebar-rail-expand-btn:hover .sidebar-tooltip-flyout,
+.sidebar.is-collapsed .sidebar-install-pwa-btn:hover .sidebar-tooltip-flyout,
+.sidebar.is-collapsed .sidebar-logout-btn:hover .sidebar-tooltip-flyout {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
+}
+
+.sidebar-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sidebar-tooltip-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.sidebar-tooltip-desc {
+  font-size: 0.71rem;
+  color: #cbd5e1;
+  font-weight: 400;
+  margin-top: 0.2rem;
+  line-height: 1.35;
+  white-space: normal;
 }
 
 .sidebar-submenu-link {
@@ -228,6 +380,7 @@ a {
   flex-direction: column;
   overflow: hidden;
   z-index: 50;
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .main-content {
@@ -247,6 +400,18 @@ a {
   max-width: 1720px;
   margin: 0 auto;
   width: 100%;
+}
+
+/* Storefront Builder Full-Bleed Viewport */
+.is-store-builder-route .page-body {
+  padding: 0.65rem 1rem !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.is-store-builder-route .main-content {
+  overflow-x: hidden;
 }
 
 /* Header & Typography */

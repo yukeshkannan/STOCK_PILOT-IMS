@@ -51,6 +51,7 @@ import {
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { WhatsAppBrandIcon } from './PublicStorePage';
+import './PublicStorePage.css';
 import './StorefrontBuilderPage.css';
 
 // 6 Curated Theme Palettes matching StockPilot Platform
@@ -372,6 +373,7 @@ export default function StorefrontBuilderPage() {
   // Drag and Drop State
   const [draggedSectionIndex, setDraggedSectionIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [insertAtIndex, setInsertAtIndex] = useState(null);
 
   // Real Tenant Products & Stocks State
   const [tenantProducts, setTenantProducts] = useState([]);
@@ -735,7 +737,7 @@ export default function StorefrontBuilderPage() {
     toast.info('Section removed from page');
   };
 
-  // Add block from library
+  // Add block from library (with support for between-section insertion)
   const addBlockToPage = (blockType) => {
     const def = AVAILABLE_BLOCK_TYPES.find((b) => b.type === blockType);
     if (!def) return;
@@ -745,10 +747,19 @@ export default function StorefrontBuilderPage() {
       enabled: true,
       data: JSON.parse(JSON.stringify(def.defaultData))
     };
-    setConfig((prev) => ({
-      ...prev,
-      sections: [...(prev.sections || []), newSec]
-    }));
+    setConfig((prev) => {
+      const updated = [...(prev.sections || [])];
+      if (insertAtIndex !== null && insertAtIndex >= 0 && insertAtIndex <= updated.length) {
+        updated.splice(insertAtIndex, 0, newSec);
+      } else {
+        updated.push(newSec);
+      }
+      return {
+        ...prev,
+        sections: updated
+      };
+    });
+    setInsertAtIndex(null);
     setSelectedSectionId(newSec.id);
     setActiveTab('inspector');
     toast.success(`Added ${def.name} to page!`);
@@ -1125,8 +1136,22 @@ export default function StorefrontBuilderPage() {
               <div className="content-intro-strip">
                 <div>
                   <h4 className="content-title">Modular Blocks Catalog</h4>
-                  <p className="content-subtitle">Click any block to insert it into your storefront.</p>
+                  <p className="content-subtitle">
+                    {insertAtIndex !== null
+                      ? `Click any block below to insert at position #${insertAtIndex + 1}`
+                      : 'Click any block to insert it into your storefront.'}
+                  </p>
                 </div>
+                {insertAtIndex !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setInsertAtIndex(null)}
+                    className="btn btn-secondary btn-xs"
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    Clear Position
+                  </button>
+                )}
               </div>
 
               <div className="block-library-catalog">
@@ -1782,7 +1807,7 @@ export default function StorefrontBuilderPage() {
                   '--store-text-main': textColor
                 }}
               >
-                {/* Announcement Bar */}
+                {/* Store Announcement Bar */}
                 {config.announcement?.enabled !== false && config.announcement?.text && (
                   <div className="clean-announcement-strip" style={{ background: primaryColor }}>
                     <Sparkles size={13} />
@@ -1790,7 +1815,22 @@ export default function StorefrontBuilderPage() {
                   </div>
                 )}
 
-                {/* Store Header */}
+                {/* Top Contact Utility Strip (if contact info present) */}
+                {(config.contact?.address || config.contact?.phone) && (
+                  <div className="clean-top-utility-strip">
+                    <div className="utility-strip-inner">
+                      <div className="utility-left">
+                        {config.contact?.address && <span><MapPin size={11} /> {config.contact.address}</span>}
+                        {config.contact?.phone && <span><Phone size={11} /> {config.contact.phone}</span>}
+                      </div>
+                      <div className="utility-right">
+                        <span>⚡ Verified Official Online Store</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Store Header */}
                 <header className="clean-store-header">
                   <div className="clean-header-container">
                     <div className="clean-brand-section">
@@ -1801,12 +1841,8 @@ export default function StorefrontBuilderPage() {
                           <Store size={22} />
                         )}
                       </div>
-                      <div>
+                      <div className="clean-brand-text">
                         <h1 className="clean-store-title">{config.branding?.storeName || 'My Online Store'}</h1>
-                        <div className="clean-store-meta">
-                          <span><MapPin size={12} /> {config.contact?.address || 'Retail Center, Commercial St'}</span>
-                          <span><Phone size={12} /> {config.contact?.phone || 'Direct Support'}</span>
-                        </div>
                       </div>
                     </div>
 
@@ -1818,7 +1854,7 @@ export default function StorefrontBuilderPage() {
 
                     <div className="clean-header-actions">
                       <button type="button" className="btn-clean-cart">
-                        <ShoppingBag size={18} />
+                        <ShoppingBag size={17} />
                         <span>Bag</span>
                         <span className="clean-cart-pill">0</span>
                       </button>
@@ -1832,66 +1868,83 @@ export default function StorefrontBuilderPage() {
                     const sData = sec.data || {};
                     const isSelected = selectedSection?.id === sec.id;
                     const isHidden = sec.enabled === false;
+                    const blockDef = AVAILABLE_BLOCK_TYPES.find((b) => b.type === sec.type);
+                    const blockDisplayName = blockDef?.name || sec.type;
 
                     return (
-                      <div
-                        key={sec.id || idx}
-                        onClick={() => {
-                          setSelectedSectionId(sec.id);
-                          setActiveTab('inspector');
-                        }}
-                        className={`modular-canvas-block ${isSelected ? 'is-selected' : ''} ${isHidden ? 'is-hidden' : ''}`}
-                      >
-                        {/* Hover / Selected Floating Toolbar */}
-                        <div className="canvas-block-floating-bar" onClick={(e) => e.stopPropagation()}>
-                          <div className="floating-tag" style={{ color: primaryColor }}>
-                            <GripVertical size={13} />
-                            <span>{sec.type}</span>
-                          </div>
-                          <div className="floating-btns-group">
-                            <button
-                              type="button"
-                              onClick={() => moveSection(idx, 'up')}
-                              disabled={idx === 0}
-                              title="Move Up"
-                            >
-                              <ArrowUp size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => moveSection(idx, 'down')}
-                              disabled={idx === config.sections.length - 1}
-                              title="Move Down"
-                            >
-                              <ArrowDown size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedSectionId(sec.id);
-                                setActiveTab('inspector');
-                              }}
-                              title="Configure in Inspector"
-                            >
-                              <Settings size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => duplicateSection(idx)}
-                              title="Duplicate"
-                            >
-                              <CopyPlus size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deleteSection(idx)}
-                              className="del-btn"
-                              title="Delete"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
+                      <React.Fragment key={sec.id || idx}>
+                        {/* Elementor-style Between-Block Add Divider */}
+                        <div
+                          className="canvas-between-dropzone"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInsertAtIndex(idx);
+                            setActiveTab('add');
+                          }}
+                        >
+                          <button type="button" className="btn-between-add-block" title="Add Section Here">
+                            <Plus size={12} />
+                            <span>Add Section Here</span>
+                          </button>
                         </div>
+
+                        <div
+                          onClick={() => {
+                            setSelectedSectionId(sec.id);
+                            setActiveTab('inspector');
+                          }}
+                          className={`modular-canvas-block ${isSelected ? 'is-selected' : ''} ${isHidden ? 'is-hidden' : ''}`}
+                        >
+                          {/* Elementor-style Floating Action Toolbar */}
+                          <div className="canvas-block-floating-bar" onClick={(e) => e.stopPropagation()}>
+                            <div className="floating-tag" style={{ color: primaryColor }}>
+                              <GripVertical size={13} />
+                              <span>{blockDisplayName}</span>
+                            </div>
+                            <div className="floating-btns-group">
+                              <button
+                                type="button"
+                                onClick={() => moveSection(idx, 'up')}
+                                disabled={idx === 0}
+                                title="Move Up (↑)"
+                              >
+                                <ArrowUp size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveSection(idx, 'down')}
+                                disabled={idx === config.sections.length - 1}
+                                title="Move Down (↓)"
+                              >
+                                <ArrowDown size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedSectionId(sec.id);
+                                  setActiveTab('inspector');
+                                }}
+                                title="Configure in Inspector (⚙)"
+                              >
+                                <Settings size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => duplicateSection(idx)}
+                                title="Duplicate Section"
+                              >
+                                <CopyPlus size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteSection(idx)}
+                                className="del-btn"
+                                title="Delete Section"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
 
                         {/* SECTION BODY */}
                         {sec.type === 'HERO_BANNER' && (
@@ -2332,9 +2385,24 @@ export default function StorefrontBuilderPage() {
                           </section>
                         )}
                       </div>
-                    );
-                  })}
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* Elementor-style Bottom Add Zone */}
+                <div
+                  className="canvas-bottom-add-zone"
+                  onClick={() => {
+                    setInsertAtIndex(config.sections.length);
+                    setActiveTab('add');
+                  }}
+                >
+                  <button type="button" className="btn-bottom-add-block">
+                    <Plus size={15} />
+                    <span>Add New Modular Block to Page</span>
+                  </button>
                 </div>
+              </div>
 
                 {/* Store Footer */}
                 <footer className="clean-store-footer-section">
