@@ -630,6 +630,13 @@ export default function StorefrontBuilderPage() {
 
   // Selected section object
   const selectedSection = useMemo(() => {
+    if (selectedSectionId === 'HEADER_NAVBAR') {
+      return {
+        id: 'HEADER_NAVBAR',
+        type: 'HEADER_NAVBAR',
+        name: 'Store Header & Navigation'
+      };
+    }
     if (!selectedSectionId) return config.sections[0] || null;
     return config.sections.find((s) => s.id === selectedSectionId) || config.sections[0] || null;
   }, [selectedSectionId, config.sections]);
@@ -838,6 +845,91 @@ export default function StorefrontBuilderPage() {
     });
   };
 
+  // Helper dispatchers for Store Header, Branding, Announcement, Contact & Nav Links
+  const updateBranding = (field, value) => {
+    setConfig((prev) => ({
+      ...prev,
+      branding: {
+        ...(prev.branding || {}),
+        [field]: value
+      }
+    }));
+  };
+
+  const updateAnnouncement = (field, value) => {
+    setConfig((prev) => ({
+      ...prev,
+      announcement: {
+        ...(prev.announcement || {}),
+        [field]: value
+      }
+    }));
+  };
+
+  const updateContact = (field, value) => {
+    setConfig((prev) => ({
+      ...prev,
+      contact: {
+        ...(prev.contact || {}),
+        [field]: value
+      }
+    }));
+  };
+
+  const updateNavbarLink = (id, field, value) => {
+    setConfig((prev) => {
+      const currentLinks = prev.navbar?.navLinks || DEFAULT_NAV_LINKS;
+      const updated = currentLinks.map((item) => {
+        if (item.id === id) {
+          return { ...item, [field]: value };
+        }
+        return item;
+      });
+      return {
+        ...prev,
+        navbar: {
+          ...(prev.navbar || {}),
+          navLinks: updated
+        }
+      };
+    });
+  };
+
+  const addNavbarLink = () => {
+    setConfig((prev) => {
+      const currentLinks = prev.navbar?.navLinks || DEFAULT_NAV_LINKS;
+      const newId = `nav-${Date.now()}`;
+      const newLink = {
+        id: newId,
+        label: 'New Link',
+        url: '#',
+        enabled: true
+      };
+      return {
+        ...prev,
+        navbar: {
+          ...(prev.navbar || {}),
+          navLinks: [...currentLinks, newLink]
+        }
+      };
+    });
+    toast.success('Added new navigation menu link');
+  };
+
+  const deleteNavbarLink = (id) => {
+    setConfig((prev) => {
+      const currentLinks = prev.navbar?.navLinks || DEFAULT_NAV_LINKS;
+      return {
+        ...prev,
+        navbar: {
+          ...(prev.navbar || {}),
+          navLinks: currentLinks.filter((item) => item.id !== id)
+        }
+      };
+    });
+    toast.info('Removed menu link');
+  };
+
   // Product Inline Edit Modal Handlers
   const handleOpenEditProduct = (p) => {
     setEditingProduct(p);
@@ -990,7 +1082,7 @@ export default function StorefrontBuilderPage() {
               className={`studio-tab-btn ${activeTab === 'layers' ? 'active' : ''}`}
               onClick={() => setActiveTab('layers')}
             >
-              <Layers size={15} /> <span>Layers ({config.sections.length})</span>
+              <Layers size={15} /> <span>Layers ({config.sections.length + 1})</span>
             </button>
             <button
               type="button"
@@ -1033,6 +1125,50 @@ export default function StorefrontBuilderPage() {
               </div>
 
               <div className="layers-reorder-stack">
+                {/* MASTER PINNED LAYER: STORE HEADER & NAVIGATION */}
+                <div
+                  onClick={() => {
+                    setSelectedSectionId('HEADER_NAVBAR');
+                    setActiveTab('inspector');
+                  }}
+                  className={`layer-row-card master-header-card ${selectedSectionId === 'HEADER_NAVBAR' ? 'selected' : ''}`}
+                >
+                  <div className="layer-row-left">
+                    <span className="master-header-pin-badge" title="Master Global Layer (Always Pinned at Top)">
+                      <SlidersHorizontal size={13} />
+                    </span>
+                    <div className="layer-block-icon master-icon-glow" style={{ background: `${primaryColor}18`, color: primaryColor }}>
+                      <Store size={15} />
+                    </div>
+                    <div className="layer-text-wrap">
+                      <div className="layer-title-badge-row">
+                        <span className="layer-title">Store Header & Navigation</span>
+                        <span className="master-layer-pill">Master Layer</span>
+                      </div>
+                      <span className="layer-type">Branding, Logo, Announcement Bar & Nav Links</span>
+                    </div>
+                  </div>
+
+                  <div className="layer-row-actions" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSectionId('HEADER_NAVBAR');
+                        setActiveTab('inspector');
+                      }}
+                      className="btn-icon-action"
+                      title="Configure Store Header & Navigation"
+                    >
+                      <Settings size={14} color={primaryColor} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Section Separator */}
+                <div className="layers-body-divider">
+                  <span>Page Body Blocks ({config.sections.length})</span>
+                </div>
+
                 {config.sections.map((sec, idx) => {
                   const def = AVAILABLE_BLOCK_TYPES.find((b) => b.type === sec.type) || {
                     name: sec.type,
@@ -1381,394 +1517,866 @@ export default function StorefrontBuilderPage() {
           {/* TAB 4: SECTION INSPECTOR (SETTINGS FOR SELECTED SECTION) */}
           {activeTab === 'inspector' && selectedSection && (
             <div className="studio-tab-content">
-              <div className="content-intro-strip">
+              <div className="content-intro-strip inspector-header-strip">
                 <div>
-                  <span className="badge badge-primary">{selectedSection.type}</span>
-                  <h4 className="content-title" style={{ marginTop: '0.2rem' }}>Configure Section</h4>
+                  <div className="inspector-badge-row">
+                    <span className="badge badge-primary inspector-type-badge">
+                      {selectedSection.type === 'HEADER_NAVBAR' ? 'GLOBAL MASTER' : selectedSection.type}
+                    </span>
+                    {selectedSection.type !== 'HEADER_NAVBAR' && (
+                      <span className="badge badge-secondary inspector-seq-badge">
+                        Section #{config.sections.findIndex((s) => s.id === selectedSection.id) + 1}
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="content-title" style={{ marginTop: '0.2rem' }}>
+                    {selectedSection.type === 'HEADER_NAVBAR'
+                      ? 'Store Header & Navigation'
+                      : (AVAILABLE_BLOCK_TYPES.find((b) => b.type === selectedSection.type)?.name || 'Configure Section')}
+                  </h4>
                 </div>
                 <button
                   type="button"
                   onClick={() => setActiveTab('layers')}
-                  className="btn btn-secondary btn-xs"
+                  className="btn btn-secondary btn-xs btn-back-layers"
                 >
-                  &larr; Back to Layers
+                  <ChevronLeft size={13} /> <span>Layers</span>
                 </button>
               </div>
 
               <div className="inspector-form-body">
+                {/* 0. GLOBAL MASTER: STORE HEADER & NAVBAR */}
+                {selectedSection.type === 'HEADER_NAVBAR' && (
+                  <div className="inspector-fields-stack">
+                    {/* Brand Identity & Logo Card */}
+                    <div className="builder-field-card">
+                      <div className="builder-card-header">
+                        <Store size={15} color={primaryColor} />
+                        <span className="builder-card-title">Brand Identity & Logo</span>
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Storefront Name</span>
+                          <span className="builder-field-hint">Displays on header</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={config.branding?.storeName || ''}
+                          onChange={(e) => updateBranding('storeName', e.target.value)}
+                          placeholder="My Store Name"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Tagline</span>
+                          <span className="builder-field-hint">Brand motto</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={config.branding?.tagline || ''}
+                          onChange={(e) => updateBranding('tagline', e.target.value)}
+                          placeholder="Quality products delivered to your door"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Logo Image URL</span>
+                          <span className="builder-field-hint">PNG / SVG / WebP</span>
+                        </label>
+                        <input
+                          type="url"
+                          className="builder-input"
+                          value={config.branding?.logoUrl || ''}
+                          onChange={(e) => updateBranding('logoUrl', e.target.value)}
+                          placeholder="https://example.com/logo.png"
+                        />
+                      </div>
+
+                      {config.branding?.logoUrl ? (
+                        <div className="builder-logo-preview-box">
+                          <img
+                            src={config.branding.logoUrl}
+                            alt="Logo"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                          <span className="logo-preview-badge">Active Logo</span>
+                        </div>
+                      ) : (
+                        <div className="builder-logo-empty-box">
+                          <Store size={20} color="#94a3b8" />
+                          <span>Using default store icon</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Announcement Notification Bar Card */}
+                    <div className="builder-field-card">
+                      <div className="builder-toggle-row">
+                        <div className="toggle-info-col">
+                          <span className="builder-card-title">Top Announcement Bar</span>
+                          <span className="builder-field-hint">Sticky top notification strip</span>
+                        </div>
+                        <label className="builder-switch-wrapper">
+                          <input
+                            type="checkbox"
+                            checked={config.announcement?.enabled !== false}
+                            onChange={(e) => updateAnnouncement('enabled', e.target.checked)}
+                          />
+                          <span className="builder-switch-slider" />
+                        </label>
+                      </div>
+
+                      {config.announcement?.enabled !== false && (
+                        <div className="builder-input-group" style={{ marginTop: '0.4rem' }}>
+                          <label className="builder-field-label">
+                            <span>Announcement Message</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="builder-input"
+                            value={config.announcement?.text || ''}
+                            onChange={(e) => updateAnnouncement('text', e.target.value)}
+                            placeholder="E.g. Free express delivery on orders above ₹499"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Navigation Menu Links Manager */}
+                    <div className="builder-field-card">
+                      <div className="builder-card-header" style={{ justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Layers size={15} color={primaryColor} />
+                          <span className="builder-card-title">Navigation Menu Links</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={addNavbarLink}
+                          className="btn btn-secondary btn-xs btn-add-link"
+                        >
+                          <Plus size={12} /> <span>Add Link</span>
+                        </button>
+                      </div>
+                      <p className="builder-field-hint" style={{ margin: '0 0 0.5rem 0' }}>
+                        Links displayed on top navigation bar that customers click to navigate.
+                      </p>
+
+                      <div className="nav-links-editor-stack">
+                        {(config.navbar?.navLinks || DEFAULT_NAV_LINKS).map((link, lIdx) => (
+                          <div key={link.id || lIdx} className={`nav-link-row-item ${link.enabled === false ? 'is-disabled' : ''}`}>
+                            <div className="nav-link-inputs">
+                              <input
+                                type="text"
+                                className="builder-input input-sm"
+                                value={link.label || ''}
+                                onChange={(e) => updateNavbarLink(link.id, 'label', e.target.value)}
+                                placeholder="Link Label"
+                              />
+                              <input
+                                type="text"
+                                className="builder-input input-sm url-field"
+                                value={link.url || ''}
+                                onChange={(e) => updateNavbarLink(link.id, 'url', e.target.value)}
+                                placeholder="Anchor (#products)"
+                              />
+                            </div>
+                            <div className="nav-link-actions">
+                              <button
+                                type="button"
+                                onClick={() => updateNavbarLink(link.id, 'enabled', link.enabled === false ? true : false)}
+                                className="btn-icon-action"
+                                title={link.enabled === false ? 'Show Link' : 'Hide Link'}
+                              >
+                                {link.enabled === false ? <EyeOff size={14} color="#94a3b8" /> : <Eye size={14} color="#10b981" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteNavbarLink(link.id)}
+                                className="btn-icon-action delete"
+                                title="Remove Link"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Store Contact & Utility Strip */}
+                    <div className="builder-field-card">
+                      <div className="builder-card-header">
+                        <Phone size={15} color={primaryColor} />
+                        <span className="builder-card-title">Contact & Utility Bar</span>
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Physical Address</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={config.contact?.address || ''}
+                          onChange={(e) => updateContact('address', e.target.value)}
+                          placeholder="Retail Center, Commercial Street"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Support Phone Number</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={config.contact?.phone || ''}
+                          onChange={(e) => updateContact('phone', e.target.value)}
+                          placeholder="+91 98765 43210"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>WhatsApp Support Number</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={config.contact?.whatsappNumber || ''}
+                          onChange={(e) => updateContact('whatsappNumber', e.target.value)}
+                          placeholder="+91 98765 43210"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Business Hours</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={config.contact?.hours || ''}
+                          onChange={(e) => updateContact('hours', e.target.value)}
+                          placeholder="Mon - Sat: 9:00 AM - 9:00 PM"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 1. HERO_BANNER */}
                 {selectedSection.type === 'HERO_BANNER' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Badge Label</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.badge || ''}
-                        onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Badge Label</span>
+                          <span className="builder-field-hint">Top pill badge</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.badge || ''}
+                          onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
+                          placeholder="Official Online Store"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Hero Headline</span>
+                          <span className="builder-field-hint">Main hero title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="Welcome to Our Store"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Subtitle Description</span>
+                          <span className="builder-field-hint">Story & promo description</span>
+                        </label>
+                        <textarea
+                          className="builder-textarea"
+                          rows={3}
+                          value={selectedSection.data?.subtitle || ''}
+                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                          placeholder="Shop the freshest arrivals and verified products..."
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>CTA Button Text</span>
+                          <span className="builder-field-hint">Call to action</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.ctaText || ''}
+                          onChange={(e) => updateSelectedSectionData('ctaText', e.target.value)}
+                          placeholder="Explore Catalog"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Hero Background Image URL</span>
+                          <span className="builder-field-hint">High resolution wallpaper</span>
+                        </label>
+                        <input
+                          type="url"
+                          className="builder-input"
+                          value={selectedSection.data?.imageUrl || ''}
+                          onChange={(e) => updateSelectedSectionData('imageUrl', e.target.value)}
+                          placeholder="https://images.unsplash.com/..."
+                        />
+                      </div>
+
+                      {selectedSection.data?.imageUrl && (
+                        <div className="builder-img-preview-box">
+                          <img
+                            src={selectedSection.data.imageUrl}
+                            alt="Hero Preview"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                          <div className="img-preview-overlay">
+                            <span>Live Hero Preview</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Hero Headline</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Subtitle Description</label>
-                      <textarea
-                        className="form-control"
-                        rows={3}
-                        value={selectedSection.data?.subtitle || ''}
-                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">CTA Button Text</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.ctaText || ''}
-                        onChange={(e) => updateSelectedSectionData('ctaText', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Hero Background Image URL</label>
-                      <input
-                        type="url"
-                        className="form-control"
-                        value={selectedSection.data?.imageUrl || ''}
-                        onChange={(e) => updateSelectedSectionData('imageUrl', e.target.value)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 2. FLASH_SALE */}
                 {selectedSection.type === 'FLASH_SALE' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Urgency Badge</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.badge || ''}
-                        onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Urgency Badge</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.badge || ''}
+                          onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
+                          placeholder="FLASH DEAL"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Ends In Label</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.endsIn || ''}
+                          onChange={(e) => updateSelectedSectionData('endsIn', e.target.value)}
+                          placeholder="Limited Weekend Promo"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Flash Sale Headline</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="Super Saver Weekend Deals"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Promo Subtitle</span>
+                        </label>
+                        <textarea
+                          className="builder-textarea"
+                          rows={2}
+                          value={selectedSection.data?.subtitle || ''}
+                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                          placeholder="Exclusive direct discounts on handpicked catalog items..."
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Discount Pill Tag</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.discountText || ''}
+                          onChange={(e) => updateSelectedSectionData('discountText', e.target.value)}
+                          placeholder="UP TO 40% OFF"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>CTA Button Label</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.ctaText || ''}
+                          onChange={(e) => updateSelectedSectionData('ctaText', e.target.value)}
+                          placeholder="Shop Deals Now"
+                        />
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Ends In Label</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.endsIn || ''}
-                        onChange={(e) => updateSelectedSectionData('endsIn', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Flash Sale Headline</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Promo Subtitle</label>
-                      <textarea
-                        className="form-control"
-                        rows={2}
-                        value={selectedSection.data?.subtitle || ''}
-                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Discount Pill Tag</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.discountText || ''}
-                        onChange={(e) => updateSelectedSectionData('discountText', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">CTA Button Label</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.ctaText || ''}
-                        onChange={(e) => updateSelectedSectionData('ctaText', e.target.value)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 3. PRODUCT_GRID */}
                 {selectedSection.type === 'PRODUCT_GRID' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Catalog Section Title</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Catalog Section Title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="Featured Catalog"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Catalog Subtitle</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.subtitle || ''}
+                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                          placeholder="Browse all available items in real-time inventory"
+                        />
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Catalog Subtitle</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.subtitle || ''}
-                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                      />
+
+                    <div className="builder-field-card">
+                      <div className="builder-card-header">
+                        <SlidersHorizontal size={15} color={primaryColor} />
+                        <span className="builder-card-title">Display & Interactive Features</span>
+                      </div>
+
+                      <div className="builder-toggle-row">
+                        <div className="toggle-info-col">
+                          <span className="toggle-main-label">Live Search Filter</span>
+                          <span className="builder-field-hint">Search input for customer filtering</span>
+                        </div>
+                        <label className="builder-switch-wrapper">
+                          <input
+                            type="checkbox"
+                            checked={selectedSection.data?.showSearch !== false}
+                            onChange={(e) => updateSelectedSectionData('showSearch', e.target.checked)}
+                          />
+                          <span className="builder-switch-slider" />
+                        </label>
+                      </div>
+
+                      <div className="builder-toggle-row">
+                        <div className="toggle-info-col">
+                          <span className="toggle-main-label">Category Filter Chips</span>
+                          <span className="builder-field-hint">Interactive categories horizontal bar</span>
+                        </div>
+                        <label className="builder-switch-wrapper">
+                          <input
+                            type="checkbox"
+                            checked={selectedSection.data?.showCategories !== false}
+                            onChange={(e) => updateSelectedSectionData('showCategories', e.target.checked)}
+                          />
+                          <span className="builder-switch-slider" />
+                        </label>
+                      </div>
+
+                      <div className="builder-toggle-row">
+                        <div className="toggle-info-col">
+                          <span className="toggle-main-label">Real-time Stock Badges</span>
+                          <span className="builder-field-hint">In-Stock / Low Stock indicators</span>
+                        </div>
+                        <label className="builder-switch-wrapper">
+                          <input
+                            type="checkbox"
+                            checked={selectedSection.data?.showStockBadge !== false}
+                            onChange={(e) => updateSelectedSectionData('showStockBadge', e.target.checked)}
+                          />
+                          <span className="builder-switch-slider" />
+                        </label>
+                      </div>
                     </div>
-                    <div className="toggle-heading-row" style={{ marginTop: '0.5rem' }}>
-                      <span className="form-label" style={{ margin: 0 }}>Show Live Search Input</span>
-                      <input
-                        type="checkbox"
-                        className="toggle-checkbox"
-                        checked={selectedSection.data?.showSearch !== false}
-                        onChange={(e) => updateSelectedSectionData('showSearch', e.target.checked)}
-                      />
-                    </div>
-                    <div className="toggle-heading-row" style={{ marginTop: '0.5rem' }}>
-                      <span className="form-label" style={{ margin: 0 }}>Show Category Chips</span>
-                      <input
-                        type="checkbox"
-                        className="toggle-checkbox"
-                        checked={selectedSection.data?.showCategories !== false}
-                        onChange={(e) => updateSelectedSectionData('showCategories', e.target.checked)}
-                      />
-                    </div>
-                    <div className="toggle-heading-row" style={{ marginTop: '0.5rem' }}>
-                      <span className="form-label" style={{ margin: 0 }}>Show Real-time Stock Badge</span>
-                      <input
-                        type="checkbox"
-                        className="toggle-checkbox"
-                        checked={selectedSection.data?.showStockBadge !== false}
-                        onChange={(e) => updateSelectedSectionData('showStockBadge', e.target.checked)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 4. PRODUCT_CAROUSEL */}
                 {selectedSection.type === 'PRODUCT_CAROUSEL' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Carousel Headline</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Carousel Headline</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="Trending Highlights"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Carousel Subtitle</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.subtitle || ''}
+                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                          placeholder="Top-selling picks delivered directly from central warehouse"
+                        />
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Carousel Subtitle</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.subtitle || ''}
-                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 5. CATEGORY_TILES */}
                 {selectedSection.type === 'CATEGORY_TILES' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Section Title</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Section Title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="Explore by Category"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Section Subtitle</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.subtitle || ''}
+                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                          placeholder="Find exactly what you need with quick category filters"
+                        />
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Section Subtitle</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.subtitle || ''}
-                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 6. BRAND_STORY */}
                 {selectedSection.type === 'BRAND_STORY' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Heritage Tag</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.badge || ''}
-                        onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Heritage Tag</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.badge || ''}
+                          onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
+                          placeholder="OUR HERITAGE"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Story Headline</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="Crafted with Passion & Precision"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Story Narrative</span>
+                        </label>
+                        <textarea
+                          className="builder-textarea"
+                          rows={4}
+                          value={selectedSection.data?.narrative || ''}
+                          onChange={(e) => updateSelectedSectionData('narrative', e.target.value)}
+                          placeholder="Founded with a clear vision: to bring authenticated products..."
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Story Image URL</span>
+                        </label>
+                        <input
+                          type="url"
+                          className="builder-input"
+                          value={selectedSection.data?.imageUrl || ''}
+                          onChange={(e) => updateSelectedSectionData('imageUrl', e.target.value)}
+                          placeholder="https://images.unsplash.com/..."
+                        />
+                      </div>
+
+                      {selectedSection.data?.imageUrl && (
+                        <div className="builder-img-preview-box">
+                          <img
+                            src={selectedSection.data.imageUrl}
+                            alt="Story Preview"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                          <div className="img-preview-overlay">
+                            <span>Story Visual Preview</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Story Headline</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Story Narrative</label>
-                      <textarea
-                        className="form-control"
-                        rows={4}
-                        value={selectedSection.data?.narrative || ''}
-                        onChange={(e) => updateSelectedSectionData('narrative', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Story Image URL</label>
-                      <input
-                        type="url"
-                        className="form-control"
-                        value={selectedSection.data?.imageUrl || ''}
-                        onChange={(e) => updateSelectedSectionData('imageUrl', e.target.value)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 7. NEWSLETTER_BAR */}
                 {selectedSection.type === 'NEWSLETTER_BAR' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Coupon Code</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.couponCode || ''}
-                        onChange={(e) => updateSelectedSectionData('couponCode', e.target.value.toUpperCase())}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Coupon Code</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.couponCode || ''}
+                          onChange={(e) => updateSelectedSectionData('couponCode', e.target.value.toUpperCase())}
+                          placeholder="WELCOME10"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Offer Headline</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="Get 10% Off Your First Direct Order"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Offer Terms / Subtitle</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.subtitle || ''}
+                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                          placeholder="Subscribe to receive private discount codes & flash sale alerts"
+                        />
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Offer Headline</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Offer Terms / Subtitle</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.subtitle || ''}
-                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 8. CONTACT_MAP */}
                 {selectedSection.type === 'CONTACT_MAP' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Card Title</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Card Title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="Visit Our Store & Contact"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Card Subtitle</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.subtitle || ''}
+                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                          placeholder="Reach out directly for inquiries or orders"
+                        />
+                      </div>
+
+                      <div className="builder-callout-box" style={{ marginTop: '0.5rem' }}>
+                        <MapPin size={15} color={primaryColor} />
+                        <span>Address & phone details are configured in the <strong>Store Header & Navigation</strong> master layer.</span>
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Card Subtitle</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.subtitle || ''}
-                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 9. FAQ_ACCORDION */}
                 {selectedSection.type === 'FAQ_ACCORDION' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">FAQ Title</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>FAQ Title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="Frequently Asked Questions"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>FAQ Subtitle</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.subtitle || ''}
+                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                          placeholder="Everything you need to know about deliveries, returns & warranties"
+                        />
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">FAQ Subtitle</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.subtitle || ''}
-                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 10. TESTIMONIALS */}
                 {selectedSection.type === 'TESTIMONIALS' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Reviews Title</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Reviews Title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="What Our Customers Say"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Reviews Subtitle</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.subtitle || ''}
+                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                          placeholder="Verified buyer feedback across India"
+                        />
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Reviews Subtitle</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.subtitle || ''}
-                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 11. IMAGE_LOOKBOOK */}
                 {selectedSection.type === 'IMAGE_LOOKBOOK' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Lookbook Title</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.title || ''}
-                        onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                      />
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Lookbook Title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.title || ''}
+                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                          placeholder="Store Showcase & Visual Lookbook"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Lookbook Subtitle</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.subtitle || ''}
+                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                          placeholder="Step inside our store atmosphere and curated collections"
+                        />
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Lookbook Subtitle</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedSection.data?.subtitle || ''}
-                        onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
 
+                {/* 12. TRUST_BADGES */}
                 {selectedSection.type === 'TRUST_BADGES' && (
-                  <div className="alert alert-info" style={{ fontSize: '0.8rem', padding: '0.75rem' }}>
-                    <ShieldCheck size={16} /> <span>The trust badges strip shows 4 certified store guarantees.</span>
+                  <div className="inspector-fields-stack">
+                    <div className="builder-field-card">
+                      <div className="builder-card-header">
+                        <ShieldCheck size={16} color={primaryColor} />
+                        <span className="builder-card-title">Value Proposition & Trust Strip</span>
+                      </div>
+                      <p className="builder-field-hint" style={{ margin: '0 0 0.5rem 0' }}>
+                        Displays 4 certified store guarantees: Express Dispatch, 100% Genuine, Flexible Payments & WhatsApp Support.
+                      </p>
+                      <div className="trust-badges-preview-grid">
+                        <div className="trust-pill-preview">
+                          <Zap size={14} color="#f59e0b" /> <span>Express Dispatch</span>
+                        </div>
+                        <div className="trust-pill-preview">
+                          <ShieldCheck size={14} color="#10b981" /> <span>100% Genuine</span>
+                        </div>
+                        <div className="trust-pill-preview">
+                          <CreditCard size={14} color="#3b82f6" /> <span>Flexible Payments</span>
+                        </div>
+                        <div className="trust-pill-preview">
+                          <Phone size={14} color="#982A86" /> <span>Direct Support</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1831,7 +2439,20 @@ export default function StorefrontBuilderPage() {
                 )}
 
                 {/* Main Store Header */}
-                <header className="clean-store-header">
+                <header
+                  className={`clean-store-header interactive-canvas-header ${selectedSectionId === 'HEADER_NAVBAR' ? 'is-selected' : ''}`}
+                  onClick={() => {
+                    setSelectedSectionId('HEADER_NAVBAR');
+                    setActiveTab('inspector');
+                  }}
+                  title="Click to configure Store Header, Branding & Navigation"
+                >
+                  {selectedSectionId === 'HEADER_NAVBAR' && (
+                    <div className="canvas-header-selected-indicator">
+                      <Settings size={12} />
+                      <span>Configuring Store Header & Navigation</span>
+                    </div>
+                  )}
                   <div className="clean-header-container">
                     <div className="clean-brand-section">
                       <div className="clean-brand-avatar" style={{ background: config.branding?.logoUrl ? 'transparent' : primaryColor }}>
