@@ -47,7 +47,12 @@ import {
   SlidersHorizontal,
   X,
   RefreshCw,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Instagram,
+  Facebook,
+  Twitter,
+  Globe,
+  Mail
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { WhatsAppBrandIcon } from './PublicStorePage';
@@ -351,6 +356,41 @@ export const DEFAULT_NAV_LINKS = [
   { id: '5', label: 'Contact', url: '#contact', enabled: true }
 ];
 
+export const DEFAULT_FOOTER = {
+  enabled: true,
+  brandBio: 'Direct digital storefront backed by verified central inventory with guaranteed genuine products, fast doorstep dispatch, and instant WhatsApp support.',
+  copyrightText: 'All rights reserved.',
+  showSocials: true,
+  socials: {
+    whatsapp: '',
+    instagram: 'https://instagram.com',
+    facebook: 'https://facebook.com',
+    twitter: 'https://twitter.com'
+  },
+  col1Title: 'Quick Links',
+  col1Links: [
+    { id: 'fl-1', label: 'Home', url: '#home' },
+    { id: 'fl-2', label: 'All Products', url: '#products' },
+    { id: 'fl-3', label: 'Brand Story', url: '#about' },
+    { id: 'fl-4', label: 'Customer Reviews', url: '#testimonials' }
+  ],
+  col2Title: 'Customer Care & Policies',
+  col2Links: [
+    { id: 'fl-5', label: 'Shipping & Delivery', url: '#faq' },
+    { id: 'fl-6', label: 'Terms & Conditions', url: '#terms' },
+    { id: 'fl-7', label: 'Returns & Refunds', url: '#returns' },
+    { id: 'fl-8', label: 'Privacy Policy', url: '#privacy' }
+  ],
+  showPaymentBadges: true,
+  paymentBadges: {
+    upi: true,
+    cards: true,
+    netbanking: true,
+    cod: true,
+    genuine: true
+  }
+};
+
 export default function StorefrontBuilderPage() {
   const { user } = useSelector((state) => state.auth);
   const companyCode = user?.companyCode || user?.company_code || (user?.companyName ? user.companyName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : 'STORE');
@@ -502,7 +542,8 @@ export default function StorefrontBuilderPage() {
       email: user?.email || '',
       hours: 'Mon - Sat: 9:00 AM - 9:00 PM',
       whatsappNumber: user?.phone || ''
-    }
+    },
+    footer: DEFAULT_FOOTER
   });
 
   // Fetch initial config and normalize sections
@@ -517,6 +558,16 @@ export default function StorefrontBuilderPage() {
           const mergedNavLinks = Array.isArray(loadedNav.navLinks) && loadedNav.navLinks.length > 0
             ? loadedNav.navLinks
             : DEFAULT_NAV_LINKS;
+
+          const loadedFooter = loaded.footer || {};
+          const mergedFooter = {
+            ...DEFAULT_FOOTER,
+            ...loadedFooter,
+            socials: { ...DEFAULT_FOOTER.socials, ...(loadedFooter.socials || {}) },
+            col1Links: Array.isArray(loadedFooter.col1Links) && loadedFooter.col1Links.length > 0 ? loadedFooter.col1Links : DEFAULT_FOOTER.col1Links,
+            col2Links: Array.isArray(loadedFooter.col2Links) && loadedFooter.col2Links.length > 0 ? loadedFooter.col2Links : DEFAULT_FOOTER.col2Links,
+            paymentBadges: { ...DEFAULT_FOOTER.paymentBadges, ...(loadedFooter.paymentBadges || {}) }
+          };
 
           let normalizedSections = prev.sections;
           if (Array.isArray(loaded.sections) && loaded.sections.length > 0) {
@@ -567,7 +618,8 @@ export default function StorefrontBuilderPage() {
               navLinks: mergedNavLinks
             },
             sections: normalizedSections,
-            contact: { ...prev.contact, ...(loaded.contact || {}) }
+            contact: { ...prev.contact, ...(loaded.contact || {}) },
+            footer: mergedFooter
           };
         });
       }
@@ -635,6 +687,13 @@ export default function StorefrontBuilderPage() {
         id: 'HEADER_NAVBAR',
         type: 'HEADER_NAVBAR',
         name: 'Store Header & Navigation'
+      };
+    }
+    if (selectedSectionId === 'FOOTER_MASTER') {
+      return {
+        id: 'FOOTER_MASTER',
+        type: 'FOOTER_MASTER',
+        name: 'Store Footer & Legal Notice'
       };
     }
     if (!selectedSectionId) return config.sections[0] || null;
@@ -930,6 +989,201 @@ export default function StorefrontBuilderPage() {
     toast.info('Removed menu link');
   };
 
+  // Helper dispatchers for Store Footer Master
+  const updateFooter = (field, value) => {
+    setConfig((prev) => ({
+      ...prev,
+      footer: {
+        ...(prev.footer || DEFAULT_FOOTER),
+        [field]: value
+      }
+    }));
+  };
+
+  const updateFooterSocial = (network, value) => {
+    setConfig((prev) => ({
+      ...prev,
+      footer: {
+        ...(prev.footer || DEFAULT_FOOTER),
+        socials: {
+          ...((prev.footer && prev.footer.socials) || DEFAULT_FOOTER.socials),
+          [network]: value
+        }
+      }
+    }));
+  };
+
+  const updateFooterPaymentBadge = (badgeKey, value) => {
+    setConfig((prev) => ({
+      ...prev,
+      footer: {
+        ...(prev.footer || DEFAULT_FOOTER),
+        paymentBadges: {
+          ...((prev.footer && prev.footer.paymentBadges) || DEFAULT_FOOTER.paymentBadges),
+          [badgeKey]: value
+        }
+      }
+    }));
+  };
+
+  const updateFooterLink = (col, linkId, field, value) => {
+    setConfig((prev) => {
+      const footer = prev.footer || DEFAULT_FOOTER;
+      const key = col === 1 ? 'col1Links' : 'col2Links';
+      const list = footer[key] || [];
+      const updated = list.map((item) => (item.id === linkId ? { ...item, [field]: value } : item));
+      return {
+        ...prev,
+        footer: {
+          ...footer,
+          [key]: updated
+        }
+      };
+    });
+  };
+
+  const addFooterLink = (col) => {
+    setConfig((prev) => {
+      const footer = prev.footer || DEFAULT_FOOTER;
+      const key = col === 1 ? 'col1Links' : 'col2Links';
+      const list = footer[key] || [];
+      const newLink = {
+        id: `fl-${Date.now()}`,
+        label: 'New Link',
+        url: '#'
+      };
+      return {
+        ...prev,
+        footer: {
+          ...footer,
+          [key]: [...list, newLink]
+        }
+      };
+    });
+    toast.success(`Added link to Footer Column ${col}`);
+  };
+
+  const deleteFooterLink = (col, linkId) => {
+    setConfig((prev) => {
+      const footer = prev.footer || DEFAULT_FOOTER;
+      const key = col === 1 ? 'col1Links' : 'col2Links';
+      const list = footer[key] || [];
+      return {
+        ...prev,
+        footer: {
+          ...footer,
+          [key]: list.filter((item) => item.id !== linkId)
+        }
+      };
+    });
+    toast.info('Footer link removed');
+  };
+
+  // Helper dispatchers for dynamic items in IMAGE_LOOKBOOK
+  const addLookbookItem = () => {
+    if (!selectedSection) return;
+    const currentItems = selectedSection.data?.items || [
+      { imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80', caption: 'Flagship Store' }
+    ];
+    const newItem = {
+      imageUrl: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&w=800&q=80',
+      caption: `Gallery Photo #${currentItems.length + 1}`
+    };
+    updateSelectedSectionData('items', [...currentItems, newItem]);
+    toast.success('Added photo to lookbook');
+  };
+
+  const updateLookbookItem = (index, field, value) => {
+    if (!selectedSection) return;
+    const currentItems = [...(selectedSection.data?.items || [])];
+    if (currentItems[index]) {
+      currentItems[index] = { ...currentItems[index], [field]: value };
+      updateSelectedSectionData('items', currentItems);
+    }
+  };
+
+  const deleteLookbookItem = (index) => {
+    if (!selectedSection) return;
+    const currentItems = [...(selectedSection.data?.items || [])];
+    if (currentItems.length <= 1) {
+      toast.warning('Lookbook must have at least one photo.');
+      return;
+    }
+    currentItems.splice(index, 1);
+    updateSelectedSectionData('items', currentItems);
+    toast.info('Photo removed from lookbook');
+  };
+
+  // Helper dispatchers for dynamic items in FAQ_ACCORDION
+  const addFaqItem = () => {
+    if (!selectedSection) return;
+    const currentFaqs = selectedSection.data?.faqs || [];
+    const newFaq = {
+      q: 'New Question?',
+      a: 'Add detailed answer here to assist your online customers.'
+    };
+    updateSelectedSectionData('faqs', [...currentFaqs, newFaq]);
+    toast.success('Added question to FAQ list');
+  };
+
+  const updateFaqItem = (index, field, value) => {
+    if (!selectedSection) return;
+    const currentFaqs = [...(selectedSection.data?.faqs || [])];
+    if (currentFaqs[index]) {
+      currentFaqs[index] = { ...currentFaqs[index], [field]: value };
+      updateSelectedSectionData('faqs', currentFaqs);
+    }
+  };
+
+  const deleteFaqItem = (index) => {
+    if (!selectedSection) return;
+    const currentFaqs = [...(selectedSection.data?.faqs || [])];
+    if (currentFaqs.length <= 1) {
+      toast.warning('FAQ must have at least one question.');
+      return;
+    }
+    currentFaqs.splice(index, 1);
+    updateSelectedSectionData('faqs', currentFaqs);
+    toast.info('FAQ item removed');
+  };
+
+  // Helper dispatchers for dynamic items in TESTIMONIALS
+  const addReviewItem = () => {
+    if (!selectedSection) return;
+    const currentReviews = selectedSection.data?.reviews || [];
+    const newRev = {
+      id: Date.now(),
+      name: 'Customer Name',
+      rating: 5,
+      comment: 'Excellent product quality and prompt dispatch!',
+      role: 'Verified Buyer',
+      location: 'City, State'
+    };
+    updateSelectedSectionData('reviews', [...currentReviews, newRev]);
+    toast.success('Added customer review');
+  };
+
+  const updateReviewItem = (index, field, value) => {
+    if (!selectedSection) return;
+    const currentReviews = [...(selectedSection.data?.reviews || [])];
+    if (currentReviews[index]) {
+      currentReviews[index] = { ...currentReviews[index], [field]: value };
+      updateSelectedSectionData('reviews', currentReviews);
+    }
+  };
+
+  const deleteReviewItem = (index) => {
+    if (!selectedSection) return;
+    const currentReviews = [...(selectedSection.data?.reviews || [])];
+    if (currentReviews.length <= 1) {
+      toast.warning('Reviews section must have at least one review.');
+      return;
+    }
+    currentReviews.splice(index, 1);
+    updateSelectedSectionData('reviews', currentReviews);
+    toast.info('Review removed');
+  };
+
   // Product Inline Edit Modal Handlers
   const handleOpenEditProduct = (p) => {
     setEditingProduct(p);
@@ -1082,7 +1336,7 @@ export default function StorefrontBuilderPage() {
               className={`studio-tab-btn ${activeTab === 'layers' ? 'active' : ''}`}
               onClick={() => setActiveTab('layers')}
             >
-              <Layers size={15} /> <span>Layers ({config.sections.length + 1})</span>
+              <Layers size={15} /> <span>Layers ({config.sections.length + 2})</span>
             </button>
             <button
               type="button"
@@ -1254,6 +1508,48 @@ export default function StorefrontBuilderPage() {
                     </div>
                   );
                 })}
+
+                {/* MASTER PINNED LAYER: STORE FOOTER */}
+                <div className="layers-body-divider" style={{ marginTop: '0.75rem' }}>
+                  <span>Store Footer (Pinned at Bottom)</span>
+                </div>
+                <div
+                  onClick={() => {
+                    setSelectedSectionId('FOOTER_MASTER');
+                    setActiveTab('inspector');
+                  }}
+                  className={`layer-row-card master-header-card ${selectedSectionId === 'FOOTER_MASTER' ? 'selected' : ''}`}
+                >
+                  <div className="layer-row-left">
+                    <span className="master-header-pin-badge" title="Master Global Layer (Always Pinned at Bottom)">
+                      <SlidersHorizontal size={13} />
+                    </span>
+                    <div className="layer-block-icon master-icon-glow" style={{ background: `${primaryColor}18`, color: primaryColor }}>
+                      <Layers size={15} />
+                    </div>
+                    <div className="layer-text-wrap">
+                      <div className="layer-title-badge-row">
+                        <span className="layer-title">Store Footer & Legal Notice</span>
+                        <span className="master-layer-pill">Master Layer</span>
+                      </div>
+                      <span className="layer-type">Bio, Social Links, Menus & Badges</span>
+                    </div>
+                  </div>
+
+                  <div className="layer-row-actions" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSectionId('FOOTER_MASTER');
+                        setActiveTab('inspector');
+                      }}
+                      className="btn-icon-action"
+                      title="Configure Store Footer"
+                    >
+                      <Settings size={14} color={primaryColor} />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <button
@@ -1425,92 +1721,6 @@ export default function StorefrontBuilderPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Brand Identity */}
-              <div className="form-group-section">
-                <label className="section-label">Store Brand Information</label>
-                <div className="form-stack-fields">
-                  <div>
-                    <label className="form-label">Storefront Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={config.branding?.storeName || ''}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          branding: { ...prev.branding, storeName: e.target.value }
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label">Tagline Description</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={config.branding?.tagline || ''}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          branding: { ...prev.branding, tagline: e.target.value }
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label">Logo Image URL</label>
-                    <input
-                      type="url"
-                      className="form-control"
-                      placeholder="https://.../logo.png"
-                      value={config.branding?.logoUrl || ''}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          branding: { ...prev.branding, logoUrl: e.target.value }
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Announcement Bar */}
-              <div className="form-group-section">
-                <div className="toggle-heading-row">
-                  <div>
-                    <label className="section-label" style={{ margin: 0 }}>Top Announcement Bar</label>
-                    <p className="field-hint">Sticky top notification strip across the storefront</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    className="toggle-checkbox"
-                    checked={config.announcement?.enabled !== false}
-                    onChange={(e) =>
-                      setConfig((prev) => ({
-                        ...prev,
-                        announcement: { ...prev.announcement, enabled: e.target.checked }
-                      }))
-                    }
-                  />
-                </div>
-                {config.announcement?.enabled !== false && (
-                  <input
-                    type="text"
-                    className="form-control"
-                    style={{ marginTop: '0.5rem' }}
-                    value={config.announcement?.text || ''}
-                    onChange={(e) =>
-                      setConfig((prev) => ({
-                        ...prev,
-                        announcement: { ...prev.announcement, text: e.target.value }
-                      }))
-                    }
-                    placeholder="E.g. Free express delivery on orders above ₹499"
-                  />
-                )}
-              </div>
             </div>
           )}
 
@@ -1521,9 +1731,9 @@ export default function StorefrontBuilderPage() {
                 <div>
                   <div className="inspector-badge-row">
                     <span className="badge badge-primary inspector-type-badge">
-                      {selectedSection.type === 'HEADER_NAVBAR' ? 'GLOBAL MASTER' : selectedSection.type}
+                      {(selectedSection.type === 'HEADER_NAVBAR' || selectedSection.type === 'FOOTER_MASTER') ? 'GLOBAL MASTER' : selectedSection.type}
                     </span>
-                    {selectedSection.type !== 'HEADER_NAVBAR' && (
+                    {(selectedSection.type !== 'HEADER_NAVBAR' && selectedSection.type !== 'FOOTER_MASTER') && (
                       <span className="badge badge-secondary inspector-seq-badge">
                         Section #{config.sections.findIndex((s) => s.id === selectedSection.id) + 1}
                       </span>
@@ -1532,6 +1742,8 @@ export default function StorefrontBuilderPage() {
                   <h4 className="content-title" style={{ marginTop: '0.2rem' }}>
                     {selectedSection.type === 'HEADER_NAVBAR'
                       ? 'Store Header & Navigation'
+                      : selectedSection.type === 'FOOTER_MASTER'
+                      ? 'Store Footer & Legal Notice'
                       : (AVAILABLE_BLOCK_TYPES.find((b) => b.type === selectedSection.type)?.name || 'Configure Section')}
                   </h4>
                 </div>
@@ -1766,6 +1978,314 @@ export default function StorefrontBuilderPage() {
                           placeholder="Mon - Sat: 9:00 AM - 9:00 PM"
                         />
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 0B. GLOBAL MASTER: STORE FOOTER & LEGAL NOTICE */}
+                {selectedSection.type === 'FOOTER_MASTER' && (
+                  <div className="inspector-fields-stack">
+                    {/* Brand Bio & Copyright Card */}
+                    <div className="builder-field-card">
+                      <div className="builder-card-header">
+                        <Store size={15} color={primaryColor} />
+                        <span className="builder-card-title">Store Footer Branding & Bio</span>
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Store Bio & Mission</span>
+                          <span className="builder-field-hint">Short summary in Col 1</span>
+                        </label>
+                        <textarea
+                          className="builder-textarea"
+                          rows={3}
+                          value={config.footer?.brandBio || ''}
+                          onChange={(e) => updateFooter('brandBio', e.target.value)}
+                          placeholder="Direct digital storefront backed by verified central inventory..."
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Copyright Notice</span>
+                          <span className="builder-field-hint">Displays on bottom bar</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={config.footer?.copyrightText || ''}
+                          onChange={(e) => updateFooter('copyrightText', e.target.value)}
+                          placeholder="All rights reserved."
+                        />
+                      </div>
+                    </div>
+
+                    {/* Column 1 Quick Links Manager */}
+                    <div className="builder-field-card">
+                      <div className="builder-card-header" style={{ justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Layers size={15} color={primaryColor} />
+                          <span className="builder-card-title">Column 1 Quick Links</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addFooterLink(1)}
+                          className="btn btn-secondary btn-xs btn-add-link"
+                        >
+                          <Plus size={12} /> <span>Add Link</span>
+                        </button>
+                      </div>
+
+                      <div className="builder-input-group" style={{ marginBottom: '0.6rem' }}>
+                        <label className="builder-field-label">
+                          <span>Column 1 Title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={config.footer?.col1Title || ''}
+                          onChange={(e) => updateFooter('col1Title', e.target.value)}
+                          placeholder="Quick Links"
+                        />
+                      </div>
+
+                      <div className="nav-links-editor-stack">
+                        {(config.footer?.col1Links || DEFAULT_FOOTER.col1Links).map((link, lIdx) => (
+                          <div key={link.id || lIdx} className="nav-link-row-item">
+                            <div className="nav-link-inputs">
+                              <input
+                                type="text"
+                                className="builder-input input-sm"
+                                value={link.label || ''}
+                                onChange={(e) => updateFooterLink(1, link.id, 'label', e.target.value)}
+                                placeholder="Link Label"
+                              />
+                              <input
+                                type="text"
+                                className="builder-input input-sm url-field"
+                                value={link.url || ''}
+                                onChange={(e) => updateFooterLink(1, link.id, 'url', e.target.value)}
+                                placeholder="URL (#home)"
+                              />
+                            </div>
+                            <div className="nav-link-actions">
+                              <button
+                                type="button"
+                                onClick={() => deleteFooterLink(1, link.id)}
+                                className="btn-icon-action delete"
+                                title="Remove Link"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Column 2 Policy & Legal Links Manager */}
+                    <div className="builder-field-card">
+                      <div className="builder-card-header" style={{ justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <FileText size={15} color={primaryColor} />
+                          <span className="builder-card-title">Column 2 Customer Care Links</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addFooterLink(2)}
+                          className="btn btn-secondary btn-xs btn-add-link"
+                        >
+                          <Plus size={12} /> <span>Add Link</span>
+                        </button>
+                      </div>
+
+                      <div className="builder-input-group" style={{ marginBottom: '0.6rem' }}>
+                        <label className="builder-field-label">
+                          <span>Column 2 Title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={config.footer?.col2Title || ''}
+                          onChange={(e) => updateFooter('col2Title', e.target.value)}
+                          placeholder="Customer Care & Policies"
+                        />
+                      </div>
+
+                      <div className="nav-links-editor-stack">
+                        {(config.footer?.col2Links || DEFAULT_FOOTER.col2Links).map((link, lIdx) => (
+                          <div key={link.id || lIdx} className="nav-link-row-item">
+                            <div className="nav-link-inputs">
+                              <input
+                                type="text"
+                                className="builder-input input-sm"
+                                value={link.label || ''}
+                                onChange={(e) => updateFooterLink(2, link.id, 'label', e.target.value)}
+                                placeholder="Link Label"
+                              />
+                              <input
+                                type="text"
+                                className="builder-input input-sm url-field"
+                                value={link.url || ''}
+                                onChange={(e) => updateFooterLink(2, link.id, 'url', e.target.value)}
+                                placeholder="URL (#faq)"
+                              />
+                            </div>
+                            <div className="nav-link-actions">
+                              <button
+                                type="button"
+                                onClick={() => deleteFooterLink(2, link.id)}
+                                className="btn-icon-action delete"
+                                title="Remove Link"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Social Media Links Card */}
+                    <div className="builder-field-card">
+                      <div className="builder-toggle-row">
+                        <div className="toggle-info-col">
+                          <span className="builder-card-title">Social Media Channels</span>
+                          <span className="builder-field-hint">Display brand social profile icons</span>
+                        </div>
+                        <label className="builder-switch-wrapper">
+                          <input
+                            type="checkbox"
+                            checked={config.footer?.showSocials !== false}
+                            onChange={(e) => updateFooter('showSocials', e.target.checked)}
+                          />
+                          <span className="builder-switch-slider" />
+                        </label>
+                      </div>
+
+                      {config.footer?.showSocials !== false && (
+                        <div className="builder-input-stack" style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <div className="builder-input-group">
+                            <label className="builder-field-label">
+                              <span>WhatsApp Chat Link / Number</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="builder-input"
+                              value={config.footer?.socials?.whatsapp || ''}
+                              onChange={(e) => updateFooterSocial('whatsapp', e.target.value)}
+                              placeholder="+91 98765 43210 or wa.me/..."
+                            />
+                          </div>
+
+                          <div className="builder-input-group">
+                            <label className="builder-field-label">
+                              <span>Instagram URL</span>
+                            </label>
+                            <input
+                              type="url"
+                              className="builder-input"
+                              value={config.footer?.socials?.instagram || ''}
+                              onChange={(e) => updateFooterSocial('instagram', e.target.value)}
+                              placeholder="https://instagram.com/yourstore"
+                            />
+                          </div>
+
+                          <div className="builder-input-group">
+                            <label className="builder-field-label">
+                              <span>Facebook Page URL</span>
+                            </label>
+                            <input
+                              type="url"
+                              className="builder-input"
+                              value={config.footer?.socials?.facebook || ''}
+                              onChange={(e) => updateFooterSocial('facebook', e.target.value)}
+                              placeholder="https://facebook.com/yourstore"
+                            />
+                          </div>
+
+                          <div className="builder-input-group">
+                            <label className="builder-field-label">
+                              <span>Twitter / X Profile URL</span>
+                            </label>
+                            <input
+                              type="url"
+                              className="builder-input"
+                              value={config.footer?.socials?.twitter || ''}
+                              onChange={(e) => updateFooterSocial('twitter', e.target.value)}
+                              placeholder="https://x.com/yourstore"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Payment Badges Card */}
+                    <div className="builder-field-card">
+                      <div className="builder-toggle-row">
+                        <div className="toggle-info-col">
+                          <span className="builder-card-title">Accepted Payment Badges & Guarantees</span>
+                          <span className="builder-field-hint">Display trust icons at footer bottom</span>
+                        </div>
+                        <label className="builder-switch-wrapper">
+                          <input
+                            type="checkbox"
+                            checked={config.footer?.showPaymentBadges !== false}
+                            onChange={(e) => updateFooter('showPaymentBadges', e.target.checked)}
+                          />
+                          <span className="builder-switch-slider" />
+                        </label>
+                      </div>
+
+                      {config.footer?.showPaymentBadges !== false && (
+                        <div className="badges-toggles-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.45rem', marginTop: '0.75rem' }}>
+                          <label className="badge-checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={config.footer?.paymentBadges?.upi !== false}
+                              onChange={(e) => updateFooterPaymentBadge('upi', e.target.checked)}
+                            />
+                            <span>UPI (GPay, PhonePe)</span>
+                          </label>
+
+                          <label className="badge-checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={config.footer?.paymentBadges?.cards !== false}
+                              onChange={(e) => updateFooterPaymentBadge('cards', e.target.checked)}
+                            />
+                            <span>RuPay / Visa / Mastercard</span>
+                          </label>
+
+                          <label className="badge-checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={config.footer?.paymentBadges?.netbanking !== false}
+                              onChange={(e) => updateFooterPaymentBadge('netbanking', e.target.checked)}
+                            />
+                            <span>Net Banking</span>
+                          </label>
+
+                          <label className="badge-checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={config.footer?.paymentBadges?.cod !== false}
+                              onChange={(e) => updateFooterPaymentBadge('cod', e.target.checked)}
+                            />
+                            <span>Cash on Delivery</span>
+                          </label>
+
+                          <label className="badge-checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={config.footer?.paymentBadges?.genuine !== false}
+                              onChange={(e) => updateFooterPaymentBadge('genuine', e.target.checked)}
+                            />
+                            <span>100% Genuine Direct Stock</span>
+                          </label>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2218,6 +2738,11 @@ export default function StorefrontBuilderPage() {
                 {selectedSection.type === 'CONTACT_MAP' && (
                   <div className="inspector-fields-stack">
                     <div className="builder-field-card">
+                      <div className="builder-card-header">
+                        <MapPin size={15} color={primaryColor} />
+                        <span className="builder-card-title">Store Contact Card</span>
+                      </div>
+
                       <div className="builder-input-group">
                         <label className="builder-field-label">
                           <span>Card Title</span>
@@ -2243,10 +2768,64 @@ export default function StorefrontBuilderPage() {
                           placeholder="Reach out directly for inquiries or orders"
                         />
                       </div>
+                    </div>
 
-                      <div className="builder-callout-box" style={{ marginTop: '0.5rem' }}>
-                        <MapPin size={15} color={primaryColor} />
-                        <span>Address & phone details are configured in the <strong>Store Header & Navigation</strong> master layer.</span>
+                    <div className="builder-field-card">
+                      <div className="builder-card-header">
+                        <Phone size={15} color={primaryColor} />
+                        <span className="builder-card-title">Direct Store Contact Details</span>
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Store Address</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.address !== undefined ? selectedSection.data.address : (config.contact?.address || '')}
+                          onChange={(e) => updateSelectedSectionData('address', e.target.value)}
+                          placeholder="Retail Center, Commercial Street"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Operating Hours</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.hours !== undefined ? selectedSection.data.hours : (config.contact?.hours || '')}
+                          onChange={(e) => updateSelectedSectionData('hours', e.target.value)}
+                          placeholder="Mon - Sat: 9:00 AM - 9:00 PM"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Direct Phone Number</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.phone !== undefined ? selectedSection.data.phone : (config.contact?.phone || '')}
+                          onChange={(e) => updateSelectedSectionData('phone', e.target.value)}
+                          placeholder="+91 98765 43210"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Direct WhatsApp Number</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.whatsappNumber !== undefined ? selectedSection.data.whatsappNumber : (config.contact?.whatsappNumber || '')}
+                          onChange={(e) => updateSelectedSectionData('whatsappNumber', e.target.value)}
+                          placeholder="+91 98765 43210"
+                        />
                       </div>
                     </div>
                   </div>
@@ -2282,6 +2861,61 @@ export default function StorefrontBuilderPage() {
                         />
                       </div>
                     </div>
+
+                    {/* Dynamic Questions & Answers List */}
+                    <div className="builder-field-card">
+                      <div className="builder-card-header" style={{ justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <HelpCircle size={15} color={primaryColor} />
+                          <span className="builder-card-title">Questions & Answers ({(selectedSection.data?.faqs || []).length})</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={addFaqItem}
+                          className="btn btn-secondary btn-xs btn-add-link"
+                        >
+                          <Plus size={12} /> <span>Add Question</span>
+                        </button>
+                      </div>
+
+                      <div className="dynamic-items-editor-stack" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        {(selectedSection.data?.faqs || []).map((faq, fIdx) => (
+                          <div key={fIdx} className="dynamic-item-card" style={{ padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Q#{fIdx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => deleteFaqItem(fIdx)}
+                                className="btn-icon-action delete"
+                                title="Delete Question"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                            <div className="builder-input-group" style={{ marginBottom: '0.4rem' }}>
+                              <label className="builder-field-label" style={{ fontSize: '0.75rem' }}>Question</label>
+                              <input
+                                type="text"
+                                className="builder-input input-sm"
+                                value={faq.q || ''}
+                                onChange={(e) => updateFaqItem(fIdx, 'q', e.target.value)}
+                                placeholder="How long does delivery take?"
+                              />
+                            </div>
+                            <div className="builder-input-group">
+                              <label className="builder-field-label" style={{ fontSize: '0.75rem' }}>Answer</label>
+                              <textarea
+                                className="builder-textarea input-sm"
+                                rows={2}
+                                value={faq.a || ''}
+                                onChange={(e) => updateFaqItem(fIdx, 'a', e.target.value)}
+                                placeholder="Standard delivery takes 2-4 business days..."
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -2315,6 +2949,74 @@ export default function StorefrontBuilderPage() {
                         />
                       </div>
                     </div>
+
+                    {/* Dynamic Reviews Manager */}
+                    <div className="builder-field-card">
+                      <div className="builder-card-header" style={{ justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Star size={15} color="#f59e0b" />
+                          <span className="builder-card-title">Customer Reviews ({(selectedSection.data?.reviews || []).length})</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={addReviewItem}
+                          className="btn btn-secondary btn-xs btn-add-link"
+                        >
+                          <Plus size={12} /> <span>Add Review</span>
+                        </button>
+                      </div>
+
+                      <div className="dynamic-items-editor-stack" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        {(selectedSection.data?.reviews || []).map((rev, rIdx) => (
+                          <div key={rev.id || rIdx} className="dynamic-item-card" style={{ padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Review #{rIdx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => deleteReviewItem(rIdx)}
+                                className="btn-icon-action delete"
+                                title="Remove Review"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                              <input
+                                type="text"
+                                className="builder-input input-sm"
+                                value={rev.name || ''}
+                                onChange={(e) => updateReviewItem(rIdx, 'name', e.target.value)}
+                                placeholder="Reviewer Name"
+                              />
+                              <select
+                                className="builder-input input-sm"
+                                value={rev.rating || 5}
+                                onChange={(e) => updateReviewItem(rIdx, 'rating', Number(e.target.value))}
+                              >
+                                <option value={5}>⭐⭐⭐⭐⭐ (5)</option>
+                                <option value={4}>⭐⭐⭐⭐ (4)</option>
+                                <option value={3}>⭐⭐⭐ (3)</option>
+                              </select>
+                            </div>
+                            <textarea
+                              className="builder-textarea input-sm"
+                              rows={2}
+                              value={rev.comment || ''}
+                              onChange={(e) => updateReviewItem(rIdx, 'comment', e.target.value)}
+                              placeholder="Review comment..."
+                              style={{ marginBottom: '0.4rem' }}
+                            />
+                            <input
+                              type="text"
+                              className="builder-input input-sm"
+                              value={rev.location || ''}
+                              onChange={(e) => updateReviewItem(rIdx, 'location', e.target.value)}
+                              placeholder="City / Role (e.g. Chennai • Verified Buyer)"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -2346,6 +3048,71 @@ export default function StorefrontBuilderPage() {
                           onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
                           placeholder="Step inside our store atmosphere and curated collections"
                         />
+                      </div>
+                    </div>
+
+                    {/* Dynamic Photos Manager */}
+                    <div className="builder-field-card">
+                      <div className="builder-card-header" style={{ justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <ImageIcon size={15} color={primaryColor} />
+                          <span className="builder-card-title">Gallery Photos ({(selectedSection.data?.items || []).length})</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={addLookbookItem}
+                          className="btn btn-secondary btn-xs btn-add-link"
+                        >
+                          <Plus size={12} /> <span>Add Photo</span>
+                        </button>
+                      </div>
+
+                      <div className="dynamic-items-editor-stack" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        {(selectedSection.data?.items || []).map((item, lIdx) => (
+                          <div key={lIdx} className="dynamic-item-card" style={{ padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Photo #{lIdx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => deleteLookbookItem(lIdx)}
+                                className="btn-icon-action delete"
+                                title="Remove Photo"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                            {item.imageUrl && (
+                              <div style={{ width: '100%', height: '90px', borderRadius: '6px', overflow: 'hidden', marginBottom: '0.4rem', border: '1px solid #e2e8f0' }}>
+                                <img
+                                  src={item.imageUrl}
+                                  alt="Preview"
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              </div>
+                            )}
+                            <div className="builder-input-group" style={{ marginBottom: '0.4rem' }}>
+                              <label className="builder-field-label" style={{ fontSize: '0.75rem' }}>Image URL</label>
+                              <input
+                                type="url"
+                                className="builder-input input-sm"
+                                value={item.imageUrl || ''}
+                                onChange={(e) => updateLookbookItem(lIdx, 'imageUrl', e.target.value)}
+                                placeholder="https://images.unsplash.com/..."
+                              />
+                            </div>
+                            <div className="builder-input-group">
+                              <label className="builder-field-label" style={{ fontSize: '0.75rem' }}>Caption / Hover Text</label>
+                              <input
+                                type="text"
+                                className="builder-input input-sm"
+                                value={item.caption || ''}
+                                onChange={(e) => updateLookbookItem(lIdx, 'caption', e.target.value)}
+                                placeholder="Flagship Store Experience"
+                              />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -2991,15 +3758,29 @@ export default function StorefrontBuilderPage() {
                               <div className="clean-contact-grid-modern">
                                 <div className="clean-contact-info-card">
                                   <div className="clean-contact-icon-box" style={{ background: `${primaryColor}15`, color: primaryColor }}><MapPin size={20} /></div>
-                                  <div><h4>Store Address</h4><p>{config.contact?.address || 'Commercial Center, Main St'}</p></div>
+                                  <div>
+                                    <h4>Store Address</h4>
+                                    <p>{sData.address || config.contact?.address || 'Commercial Center, Main St'}</p>
+                                  </div>
                                 </div>
                                 <div className="clean-contact-info-card">
                                   <div className="clean-contact-icon-box" style={{ background: `${primaryColor}15`, color: primaryColor }}><Clock size={20} /></div>
-                                  <div><h4>Operating Hours</h4><p>{config.contact?.hours || 'Mon - Sat: 9:00 AM - 9:00 PM'}</p></div>
+                                  <div>
+                                    <h4>Operating Hours</h4>
+                                    <p>{sData.hours || config.contact?.hours || 'Mon - Sat: 9:00 AM - 9:00 PM'}</p>
+                                  </div>
                                 </div>
                                 <div className="clean-contact-info-card">
                                   <div className="clean-contact-icon-box" style={{ background: `${primaryColor}15`, color: primaryColor }}><Phone size={20} /></div>
-                                  <div><h4>Direct Line</h4><p>{config.contact?.phone || 'Direct Support'}</p></div>
+                                  <div>
+                                    <h4>Direct Line</h4>
+                                    <p>{sData.phone || config.contact?.phone || 'Direct Support'}</p>
+                                    {(sData.whatsappNumber || config.contact?.whatsappNumber) && (
+                                      <span className="contact-wa-hint">
+                                        <WhatsAppBrandIcon size={12} color="#25D366" /> Direct WhatsApp Available
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -3025,12 +3806,151 @@ export default function StorefrontBuilderPage() {
                 </div>
               </div>
 
-                {/* Store Footer */}
-                <footer className="clean-store-footer-section">
+                {/* Store Footer - Master Interactive Layer */}
+                <footer
+                  className={`clean-store-footer-section clean-store-footer-luxury ${selectedSectionId === 'FOOTER_MASTER' ? 'selected-canvas-footer' : ''}`}
+                  onClick={() => {
+                    setSelectedSectionId('FOOTER_MASTER');
+                    setActiveTab('inspector');
+                  }}
+                  title="Click to configure Store Footer in Inspector"
+                >
                   <div className="clean-footer-container">
-                    <div className="clean-footer-bottom-bar">
-                      <p>© {new Date().getFullYear()} {config.branding?.storeName || 'Store'}. All rights reserved.</p>
-                      <p className="clean-powered-tag">Powered by <strong>StockPilot IMS</strong></p>
+                    <div className="clean-footer-luxury-grid">
+                      {/* Col 1: Brand & Bio */}
+                      <div className="clean-footer-brand-col">
+                        <div className="clean-footer-brand-header">
+                          <div className="clean-footer-logo-wrap" style={{ background: config.branding?.logoUrl ? 'transparent' : primaryColor }}>
+                            {config.branding?.logoUrl ? (
+                              <img src={config.branding.logoUrl} alt="Store Logo" />
+                            ) : (
+                              <Store size={20} color="#ffffff" />
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="clean-footer-store-name">{config.branding?.storeName || 'My Online Store'}</h3>
+                            <p className="clean-footer-tagline">{config.branding?.tagline || 'Quality Products Delivered Directly'}</p>
+                          </div>
+                        </div>
+
+                        <p className="clean-footer-bio-text">
+                          {config.footer?.brandBio || DEFAULT_FOOTER.brandBio}
+                        </p>
+
+                        {/* Social Links */}
+                        {config.footer?.showSocials !== false && (
+                          <div className="clean-footer-social-row">
+                            {config.footer?.socials?.whatsapp && (
+                              <a href={`https://wa.me/${config.footer.socials.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="social-icon-btn whatsapp" onClick={(e) => e.stopPropagation()}>
+                                <WhatsAppBrandIcon size={15} color="#25D366" />
+                              </a>
+                            )}
+                            {config.footer?.socials?.instagram && (
+                              <a href={config.footer.socials.instagram} target="_blank" rel="noreferrer" className="social-icon-btn instagram" onClick={(e) => e.stopPropagation()}>
+                                <Instagram size={15} />
+                              </a>
+                            )}
+                            {config.footer?.socials?.facebook && (
+                              <a href={config.footer.socials.facebook} target="_blank" rel="noreferrer" className="social-icon-btn facebook" onClick={(e) => e.stopPropagation()}>
+                                <Facebook size={15} />
+                              </a>
+                            )}
+                            {config.footer?.socials?.twitter && (
+                              <a href={config.footer.socials.twitter} target="_blank" rel="noreferrer" className="social-icon-btn twitter" onClick={(e) => e.stopPropagation()}>
+                                <Twitter size={15} />
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Col 2: Column 1 Quick Links */}
+                      <div className="clean-footer-links-col">
+                        <h4 className="clean-footer-col-title">{config.footer?.col1Title || 'Quick Links'}</h4>
+                        <ul className="clean-footer-links-list">
+                          {(config.footer?.col1Links || DEFAULT_FOOTER.col1Links).map((link, idx) => (
+                            <li key={link.id || idx}>
+                              <a href={link.url || '#'} onClick={(e) => e.preventDefault()}>{link.label}</a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Col 3: Column 2 Policy Links */}
+                      <div className="clean-footer-links-col">
+                        <h4 className="clean-footer-col-title">{config.footer?.col2Title || 'Customer Care'}</h4>
+                        <ul className="clean-footer-links-list">
+                          {(config.footer?.col2Links || DEFAULT_FOOTER.col2Links).map((link, idx) => (
+                            <li key={link.id || idx}>
+                              <a href={link.url || '#'} onClick={(e) => e.preventDefault()}>{link.label}</a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Col 4: Store Support & Location */}
+                      <div className="clean-footer-contact-col">
+                        <h4 className="clean-footer-col-title">Store & Contact</h4>
+                        <ul className="clean-footer-contact-details">
+                          <li>
+                            <MapPin size={15} color={accentColor} />
+                            <span>{config.contact?.address || 'Commercial Center, Main St'}</span>
+                          </li>
+                          <li>
+                            <Clock size={15} color={accentColor} />
+                            <span>{config.contact?.hours || 'Mon - Sat: 9:00 AM - 9:00 PM'}</span>
+                          </li>
+                          {config.contact?.phone && (
+                            <li>
+                              <Phone size={15} color={accentColor} />
+                              <span>{config.contact.phone}</span>
+                            </li>
+                          )}
+                        </ul>
+
+                        {(config.contact?.whatsappNumber || config.contact?.phone) && (
+                          <div className="clean-footer-wa-action">
+                            <a
+                              href={`https://wa.me/${(config.contact?.whatsappNumber || config.contact?.phone).replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn-footer-whatsapp"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <WhatsAppBrandIcon size={16} color="#25D366" />
+                              <span>Instant WhatsApp Chat</span>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bottom Bar: Copyright & Payment Badges */}
+                    <div className="clean-footer-bottom-luxury">
+                      <div className="footer-bottom-left">
+                        <p>© {new Date().getFullYear()} {config.branding?.storeName || 'Store'}. {config.footer?.copyrightText || DEFAULT_FOOTER.copyrightText}</p>
+                        <p className="clean-powered-tag">Powered by <strong>StockPilot IMS</strong></p>
+                      </div>
+
+                      {config.footer?.showPaymentBadges !== false && (
+                        <div className="clean-footer-payment-badges-row">
+                          {config.footer?.paymentBadges?.upi !== false && (
+                            <span className="payment-badge-pill">UPI</span>
+                          )}
+                          {config.footer?.paymentBadges?.cards !== false && (
+                            <span className="payment-badge-pill">RuPay / Cards</span>
+                          )}
+                          {config.footer?.paymentBadges?.netbanking !== false && (
+                            <span className="payment-badge-pill">Net Banking</span>
+                          )}
+                          {config.footer?.paymentBadges?.cod !== false && (
+                            <span className="payment-badge-pill">Cash on Delivery</span>
+                          )}
+                          {config.footer?.paymentBadges?.genuine !== false && (
+                            <span className="payment-badge-pill genuine"><ShieldCheck size={12} color="#10b981" /> 100% Genuine</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </footer>

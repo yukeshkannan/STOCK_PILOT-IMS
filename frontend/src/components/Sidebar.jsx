@@ -28,6 +28,19 @@ import {
   X
 } from 'lucide-react';
 
+const GROUP_ICONS = {
+  'Inventory & Catalog': Package,
+  'E-Commerce & Sales': Store,
+  'Finance & BI': BarChart3,
+  'Management': Users,
+  'Inventory & Hub Logistics': Warehouse,
+  'Operations & Invoicing': Truck,
+  'Performance & Alerts': Bell,
+  'Operations': ShoppingBag,
+  'Catalog & Stock': Package,
+  'Account': Settings
+};
+
 export default function Sidebar({ isOpen = false, onClose }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -634,55 +647,36 @@ export default function Sidebar({ isOpen = false, onClose }) {
                 <span>Dashboard</span>
               </NavLink>
 
-              {/* Grouped Links with Clickable Dropdown / Accordion */}
+              {/* Grouped Links with Clickable Dropdown Menu */}
               {getFilteredNavItems().map((grp, idx) => {
                 const isOpen = Boolean(openGroups[grp.group]);
+                const hasActiveChild = grp.items && grp.items.some((item) => location.pathname.startsWith(item.to));
+                const GroupIcon = GROUP_ICONS[grp.group] || Package;
+
                 return (
-                  <div key={idx} className="sidebar-accordion-group" style={{ display: 'flex', flexDirection: 'column' }}>
-                    {/* Clickable Dropdown Header */}
+                  <div key={idx} className="sidebar-nav-dropdown-group">
+                    {/* Dropdown Menu Header Button */}
                     <div
                       onClick={() => toggleGroup(grp.group)}
-                      className="sidebar-accordion-header"
+                      className={`sidebar-nav-dropdown-btn ${isOpen ? 'is-open' : ''} ${hasActiveChild ? 'has-active' : ''}`}
                       role="button"
                       tabIndex={0}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.35rem 0.65rem',
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                        borderRadius: '6px',
-                        transition: 'background 0.15s ease'
-                      }}
                     >
-                      <span
-                        style={{
-                          fontSize: '0.67rem',
-                          fontWeight: 700,
-                          color: 'rgba(255, 255, 255, 0.75)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.08em'
-                        }}
-                      >
-                        {grp.group}
-                      </span>
-                      <span style={{ color: 'rgba(255, 255, 255, 0.65)', display: 'flex', alignItems: 'center' }}>
-                        {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                      </span>
+                      <div className="dropdown-btn-left">
+                        <GroupIcon size={18} className="dropdown-btn-icon" />
+                        <span className="dropdown-btn-label">{grp.group}</span>
+                      </div>
+                      <div className="dropdown-btn-right">
+                        {hasActiveChild && <span className="active-dot-pip" title="Active Section" />}
+                        <span className={`dropdown-chevron-wrap ${isOpen ? 'rotate' : ''}`}>
+                          <ChevronDown size={15} />
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Collapsible Sub-Items */}
+                    {/* Submenu List */}
                     {isOpen && (
-                      <div
-                        className="sidebar-accordion-body"
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.2rem',
-                          marginTop: '0.25rem'
-                        }}
-                      >
+                      <div className="sidebar-nav-dropdown-menu">
                         {grp.items.map((item) => {
                           let badge = null;
                           if (item.to === '/notifications' && badgeCounts.notifications > 0) {
@@ -698,17 +692,15 @@ export default function Sidebar({ isOpen = false, onClose }) {
                               key={item.to}
                               to={item.to}
                               onClick={handleNavClick}
-                              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                              className={({ isActive }) => `sidebar-submenu-item ${isActive ? 'active' : ''}`}
                             >
-                              <item.icon size={17} />
-                              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}>
-                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
-                                {badge && (
-                                  <span className={`sidebar-nav-badge ${badge.variant}`}>
-                                    {badge.count}
-                                  </span>
-                                )}
-                              </span>
+                              <item.icon size={16} className="sub-item-icon" />
+                              <span className="sub-item-label">{item.label}</span>
+                              {badge && (
+                                <span className={`sidebar-nav-badge ${badge.variant}`}>
+                                  {badge.count}
+                                </span>
+                              )}
                             </NavLink>
                           );
                         })}

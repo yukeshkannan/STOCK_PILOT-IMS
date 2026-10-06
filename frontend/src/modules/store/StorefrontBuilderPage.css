@@ -1656,3 +1656,83 @@
 @keyframes spin-kf {
   to { transform: rotate(360deg); }
 }
+
+/* Dynamic Items Inspector Styles (Lookbook Photos, FAQ Q&A, Reviews) */
+.dynamic-items-editor-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.dynamic-item-card {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-surface-elevated, #f8fafc);
+  transition: border-color 0.15s ease;
+}
+
+.dynamic-item-card:hover {
+  border-color: #cbd5e1;
+}
+
+/* Badges & Checkbox Toggles in Inspector */
+.badges-toggles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.badge-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  cursor: pointer;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  background: var(--bg-surface-elevated, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  transition: all 0.15s ease;
+}
+
+.badge-checkbox-label:hover {
+  border-color: #982A86;
+  background: #fdf2fb;
+}
+
+.badge-checkbox-label input[type="checkbox"] {
+  accent-color: #982A86;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+/* Interactive Footer Selection in Canvas Stage */
+.selected-canvas-footer {
+  outline: 3px solid #982A86 !important;
+  outline-offset: -3px;
+  cursor: pointer;
+  position: relative;
+}
+
+.selected-canvas-footer::after {
+  content: 'EDITING STORE FOOTER';
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: #982A86;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+

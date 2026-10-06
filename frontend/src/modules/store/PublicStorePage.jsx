@@ -44,7 +44,10 @@ import {
   HelpCircle,
   Tag,
   Percent,
-  Flame
+  Flame,
+  Instagram,
+  Facebook,
+  Twitter
 } from 'lucide-react';
 import './PublicStorePage.css';
 
@@ -393,6 +396,7 @@ export default function PublicStorePage() {
   const testimonials = storeConfig.testimonials || {};
   const contactConfig = storeConfig.contact || {};
   const sectionsConfig = storeConfig.sections || {};
+  const footerConfig = storeConfig.footer || {};
 
   const storeTitle = branding.storeName || tenant?.companyName || tenant?.company_name || 'Retail Store';
   const tagline = branding.tagline || 'Verified In-Stock Quality Products';
@@ -1362,60 +1366,105 @@ export default function PublicStorePage() {
       ))}
 
       {/* 5. Contact & Store Footer Section */}
-      {contactConfig.enabled !== false && (
-        <footer id="contact" className="clean-store-footer-section">
+      {footerConfig.enabled !== false && (
+        <footer id="contact" className="clean-store-footer-section clean-store-footer-luxury">
           <div className="clean-footer-container">
-            <div className="clean-footer-grid">
-              {/* Col 1: Store Brand */}
+            <div className="clean-footer-luxury-grid">
+              {/* Col 1: Brand & Bio */}
               <div className="clean-footer-brand-col">
-                <div className="clean-brand-section">
-                  <div className="clean-brand-avatar" style={{ background: primaryColor }}>
-                    <Store size={22} />
+                <div className="clean-footer-brand-header">
+                  <div className="clean-footer-logo-wrap" style={{ background: branding.logoUrl ? 'transparent' : primaryColor }}>
+                    {branding.logoUrl ? (
+                      <img src={branding.logoUrl} alt={storeTitle} />
+                    ) : (
+                      <Store size={22} color="#ffffff" />
+                    )}
                   </div>
                   <div>
-                    <h3 className="clean-store-title" style={{ fontSize: '1.15rem' }}>{storeTitle}</h3>
-                    <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>
-                      {tagline}
-                    </p>
+                    <h3 className="clean-footer-store-name">{storeTitle}</h3>
+                    <p className="clean-footer-tagline">{tagline}</p>
                   </div>
                 </div>
-                <p className="clean-footer-bio">
-                  Direct digital storefront powered by StockPilot IMS multi-tenant inventory & billing engine.
+
+                <p className="clean-footer-bio-text">
+                  {footerConfig.brandBio || 'Direct digital storefront backed by verified central inventory with guaranteed genuine products, fast doorstep dispatch, and instant WhatsApp support.'}
                 </p>
-                {whatsappUrl && (
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn-clean-whatsapp"
-                    style={{ display: 'inline-flex', marginTop: '0.75rem' }}
-                  >
-                    <WhatsAppBrandIcon size={18} color="#25D366" />
-                    <span>Direct WhatsApp Chat</span>
-                  </a>
+
+                {/* Social Links */}
+                {footerConfig.showSocials !== false && (
+                  <div className="clean-footer-social-row">
+                    {(footerConfig.socials?.whatsapp || cleanPhone) && (
+                      <a
+                        href={footerConfig.socials?.whatsapp ? `https://wa.me/${footerConfig.socials.whatsapp.replace(/\D/g, '')}` : whatsappUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="social-icon-btn whatsapp"
+                        aria-label="WhatsApp"
+                      >
+                        <WhatsAppBrandIcon size={16} color="#25D366" />
+                      </a>
+                    )}
+                    {footerConfig.socials?.instagram && (
+                      <a href={footerConfig.socials.instagram} target="_blank" rel="noreferrer" className="social-icon-btn instagram" aria-label="Instagram">
+                        <Instagram size={16} />
+                      </a>
+                    )}
+                    {footerConfig.socials?.facebook && (
+                      <a href={footerConfig.socials.facebook} target="_blank" rel="noreferrer" className="social-icon-btn facebook" aria-label="Facebook">
+                        <Facebook size={16} />
+                      </a>
+                    )}
+                    {footerConfig.socials?.twitter && (
+                      <a href={footerConfig.socials.twitter} target="_blank" rel="noreferrer" className="social-icon-btn twitter" aria-label="Twitter">
+                        <Twitter size={16} />
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Col 2: Store Information */}
-              <div className="clean-footer-info-col">
-                <h4>Store & Location</h4>
-                <ul className="clean-footer-contact-list">
-                  {(contactConfig.address || tenant.address) && (
+              {/* Col 2: Column 1 Quick Links */}
+              <div className="clean-footer-links-col">
+                <h4 className="clean-footer-col-title">{footerConfig.col1Title || 'Quick Links'}</h4>
+                <ul className="clean-footer-links-list">
+                  {(footerConfig.col1Links && footerConfig.col1Links.length > 0 ? footerConfig.col1Links : [
+                    { id: '1', label: 'Home', url: '#home' },
+                    { id: '2', label: 'Products', url: '#products' },
+                    { id: '3', label: 'About', url: '#about' },
+                    { id: '4', label: 'Reviews', url: '#testimonials' }
+                  ]).map((link, idx) => (
+                    <li key={link.id || idx}>
+                      <a href={link.url || '#'}>{link.label}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Col 3: Column 2 Policy Links */}
+              <div className="clean-footer-links-col">
+                <h4 className="clean-footer-col-title">{footerConfig.col2Title || 'Customer Care'}</h4>
+                <ul className="clean-footer-links-list">
+                  {(footerConfig.col2Links && footerConfig.col2Links.length > 0 ? footerConfig.col2Links : [
+                    { id: '1', label: 'Shipping & Delivery', url: '#faq' },
+                    { id: '2', label: 'Terms & Conditions', url: '#terms' },
+                    { id: '3', label: 'Refund Policy', url: '#returns' },
+                    { id: '4', label: 'Privacy Policy', url: '#privacy' }
+                  ]).map((link, idx) => (
+                    <li key={link.id || idx}>
+                      <a href={link.url || '#'}>{link.label}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Col 4: Store Support & Location */}
+              <div className="clean-footer-contact-col">
+                <h4 className="clean-footer-col-title">Store & Contact</h4>
+                <ul className="clean-footer-contact-details">
+                  {(contactConfig.address || tenant?.address) && (
                     <li>
                       <MapPin size={16} color={accentColor} />
-                      <span>{contactConfig.address || tenant.address}</span>
-                    </li>
-                  )}
-                  {(contactConfig.phone || tenant.phone) && (
-                    <li>
-                      <Phone size={16} color={accentColor} />
-                      <span>{contactConfig.phone || tenant.phone}</span>
-                    </li>
-                  )}
-                  {(contactConfig.email || tenant.email) && (
-                    <li>
-                      <Mail size={16} color={accentColor} />
-                      <span>{contactConfig.email || tenant.email}</span>
+                      <span>{contactConfig.address || tenant?.address}</span>
                     </li>
                   )}
                   {contactConfig.hours && (
@@ -1424,31 +1473,62 @@ export default function PublicStorePage() {
                       <span>{contactConfig.hours}</span>
                     </li>
                   )}
+                  {(contactConfig.phone || tenant?.phone) && (
+                    <li>
+                      <Phone size={16} color={accentColor} />
+                      <span>{contactConfig.phone || tenant?.phone}</span>
+                    </li>
+                  )}
+                  {(contactConfig.email || tenant?.email) && (
+                    <li>
+                      <Mail size={16} color={accentColor} />
+                      <span>{contactConfig.email || tenant?.email}</span>
+                    </li>
+                  )}
                 </ul>
-              </div>
 
-              {/* Col 3: Customer Assurance */}
-              <div className="clean-footer-info-col">
-                <h4>Customer Assurance</h4>
-                <div className="clean-footer-badges">
-                  <div className="footer-badge-pill">
-                    <ShieldCheck size={14} color={accentColor} /> 100% Genuine Stock
+                {whatsappUrl && (
+                  <div className="clean-footer-wa-action">
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-footer-whatsapp"
+                    >
+                      <WhatsAppBrandIcon size={16} color="#25D366" />
+                      <span>Instant WhatsApp Chat</span>
+                    </a>
                   </div>
-                  <div className="footer-badge-pill">
-                    <Zap size={14} color={accentColor} /> Express Dispatch
-                  </div>
-                  <div className="footer-badge-pill">
-                    <CreditCard size={14} color={accentColor} /> Flexible UPI & COD
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
-            <div className="clean-footer-bottom-bar">
-              <p>© {new Date().getFullYear()} {storeTitle}. All rights reserved.</p>
-              <p className="clean-powered-tag">
-                Powered by <strong>StockPilot IMS</strong>
-              </p>
+            {/* Bottom Bar: Copyright & Payment Badges */}
+            <div className="clean-footer-bottom-luxury">
+              <div className="footer-bottom-left">
+                <p>© {new Date().getFullYear()} {storeTitle}. {footerConfig.copyrightText || 'All rights reserved.'}</p>
+                <p className="clean-powered-tag">Powered by <strong>StockPilot IMS</strong></p>
+              </div>
+
+              {footerConfig.showPaymentBadges !== false && (
+                <div className="clean-footer-payment-badges-row">
+                  {footerConfig.paymentBadges?.upi !== false && (
+                    <span className="payment-badge-pill">UPI</span>
+                  )}
+                  {footerConfig.paymentBadges?.cards !== false && (
+                    <span className="payment-badge-pill">RuPay / Cards</span>
+                  )}
+                  {footerConfig.paymentBadges?.netbanking !== false && (
+                    <span className="payment-badge-pill">Net Banking</span>
+                  )}
+                  {footerConfig.paymentBadges?.cod !== false && (
+                    <span className="payment-badge-pill">Cash on Delivery</span>
+                  )}
+                  {footerConfig.paymentBadges?.genuine !== false && (
+                    <span className="payment-badge-pill genuine"><ShieldCheck size={12} color="#10b981" /> 100% Genuine</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </footer>
