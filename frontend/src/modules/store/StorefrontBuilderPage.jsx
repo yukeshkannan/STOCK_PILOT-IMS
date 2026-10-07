@@ -52,7 +52,13 @@ import {
   Facebook,
   Twitter,
   Globe,
-  Mail
+  Mail,
+  Maximize2,
+  Minimize2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Coffee,
+  Activity
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { WhatsAppBrandIcon } from './PublicStorePage';
@@ -304,47 +310,308 @@ export const AVAILABLE_BLOCK_TYPES = [
   }
 ];
 
-// 5 Industry 1-Click Templates
+// 6 Enterprise Industry 1-Click Templates with Curated Copy & Palettes
 export const INDUSTRY_TEMPLATES = [
   {
     id: 'FASHION_BOUTIQUE',
-    name: 'Fashion Boutique',
-    tagline: 'Modern Apparel, Accessories & Lifestyle',
-    theme: 'CLEAN_LIGHT',
+    name: 'Haute Fashion & Luxury Boutique',
+    category: 'Fashion & Apparel',
+    tagline: 'Minimalist editorial aesthetics for designer wear, apparel & accessories',
+    badgeText: 'Editorial Luxe',
+    theme: 'MINIMAL_WHITE',
     icon: Sparkles,
-    sections: ['HERO_BANNER', 'FLASH_SALE', 'PRODUCT_CAROUSEL', 'CATEGORY_TILES', 'PRODUCT_GRID', 'IMAGE_LOOKBOOK', 'BRAND_STORY', 'TESTIMONIALS', 'FAQ_ACCORDION', 'CONTACT_MAP']
+    bannerImage: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80',
+    palette: {
+      primary: '#0f172a',
+      accent: '#c084fc',
+      bg: '#f8fafc',
+      card: '#ffffff',
+      text: '#0f172a'
+    },
+    sections: ['HERO_BANNER', 'FLASH_SALE', 'PRODUCT_CAROUSEL', 'CATEGORY_TILES', 'PRODUCT_GRID', 'IMAGE_LOOKBOOK', 'BRAND_STORY', 'TESTIMONIALS', 'FAQ_ACCORDION', 'CONTACT_MAP'],
+    customSectionData: {
+      HERO_BANNER: {
+        badge: 'Autumn / Winter Edit 2026',
+        title: 'Curated Silhouettes & Modern Tailoring',
+        subtitle: 'Step into understated elegance with handcrafted luxury pieces delivered directly to your doorstep.',
+        ctaText: 'Shop Runway Arrivals',
+        imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80'
+      },
+      FLASH_SALE: {
+        badge: 'LIMITED DROP',
+        endsIn: 'Only 36 Hours Left',
+        title: 'VIP Capsule Collection Clearance',
+        subtitle: 'Exclusive privileges on runway archive pieces. Zero restocking once sold out.',
+        discountText: 'FLAT 35% OFF AT CHECKOUT',
+        ctaText: 'Claim Capsule Deal'
+      },
+      PRODUCT_CAROUSEL: {
+        title: 'Trending Runway Highlights',
+        subtitle: 'Curated direct picks from our Paris & Milan design ateliers'
+      },
+      CATEGORY_TILES: {
+        title: 'Browse Atelier Collections',
+        subtitle: 'Find bespoke silhouettes by category'
+      },
+      PRODUCT_GRID: {
+        title: 'Ready-to-Wear Catalog',
+        subtitle: 'Hand-tailored luxury garments ready for immediate courier dispatch'
+      },
+      IMAGE_LOOKBOOK: {
+        title: 'Atelier Runway & Lookbook',
+        subtitle: 'Behind the scenes with our artisan designers and handcrafted textiles'
+      },
+      BRAND_STORY: {
+        badge: 'HERITAGE ATELIER',
+        title: 'Conscious Luxury & Sustainable Elegance',
+        narrative: 'Tailored with fair-trade organic silk, Japanese selvedge denim, and certified fine wool. Every silhouette tells a story of enduring quality.'
+      },
+      FAQ_ACCORDION: {
+        title: 'Boutique Client Assistance',
+        subtitle: 'Everything about doorstep size trials, authenticity, and private styling',
+        faqs: [
+          { q: 'How does the doorstep sizing trial work?', a: 'Our courier waits up to 15 minutes while you try on your garments. Keep what fits, return what doesn’t.' },
+          { q: 'Are all garments authenticated?', a: 'Every garment arrives with an NFC-enabled authenticity seal and serialized certificate.' },
+          { q: 'What is your return & exchange window?', a: 'We provide complimentary 10-day doorstep exchanges across all domestic orders.' }
+        ]
+      }
+    }
   },
   {
     id: 'RETAIL_SUPERMART',
-    name: 'Retail Supermarket',
-    tagline: 'Groceries, Daily Essentials & FMCG',
+    name: 'Express Supermarket & Daily Essentials',
+    category: 'Retail & Supermarket',
+    tagline: 'High-density grocery layout for fresh farm produce, dairy, snacks & household staples',
+    badgeText: 'High Converting',
     theme: 'VIBRANT_RETAIL',
     icon: Package,
-    sections: ['FLASH_SALE', 'HERO_BANNER', 'CATEGORY_TILES', 'PRODUCT_GRID', 'TRUST_BADGES', 'NEWSLETTER_BAR', 'TESTIMONIALS', 'CONTACT_MAP']
+    bannerImage: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80',
+    palette: {
+      primary: '#e11d48',
+      accent: '#f59e0b',
+      bg: '#ffffff',
+      card: '#ffffff',
+      text: '#18181b'
+    },
+    sections: ['FLASH_SALE', 'HERO_BANNER', 'CATEGORY_TILES', 'PRODUCT_GRID', 'TRUST_BADGES', 'NEWSLETTER_BAR', 'TESTIMONIALS', 'CONTACT_MAP'],
+    customSectionData: {
+      HERO_BANNER: {
+        badge: '⚡ 30-Minute Guaranteed Delivery',
+        title: 'Farm Fresh Produce & Daily Pantry Essentials',
+        subtitle: 'Direct from wholesale mandi to your kitchen. Quality-checked staples, dairy, and household goods at lowest mandi rates.',
+        ctaText: 'Order Daily Essentials',
+        imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80'
+      },
+      FLASH_SALE: {
+        badge: 'DAILY BUMPER SAVER',
+        endsIn: 'Refreshes at 9:00 PM Tonight',
+        title: 'Mega Grocery Bumper Hour',
+        subtitle: 'Stock up on sunflower oils, basmati rice sacks, and breakfast combos at direct warehouse prices.',
+        discountText: 'UP TO 50% COMBO DISCOUNTS',
+        ctaText: 'Shop Grocery Steals'
+      },
+      CATEGORY_TILES: {
+        title: 'Shop by Grocery Aisles',
+        subtitle: 'Farm veggies, dairy, pulses, beverages & cleaning essentials'
+      },
+      PRODUCT_GRID: {
+        title: 'Pantry & Daily Essentials Catalog',
+        subtitle: 'Verified stock ready for immediate batch dispatch'
+      },
+      TRUST_BADGES: {
+        badges: [
+          { icon: 'Zap', title: '30-Min Delivery', desc: 'Direct from neighborhood hub' },
+          { icon: 'ShieldCheck', title: 'Farm Fresh Inspected', desc: 'Zero wilted vegetables' },
+          { icon: 'CreditCard', title: 'Cash & UPI on Delivery', desc: 'Inspect first, pay later' },
+          { icon: 'Phone', title: 'WhatsApp List Order', desc: 'Send text to place order' }
+        ]
+      },
+      NEWSLETTER_BAR: {
+        title: 'Save ₹100 On Your First Grocery Order',
+        subtitle: 'Use this coupon on orders above ₹499 for instant doorstep discount.',
+        couponCode: 'SUPERMART100'
+      }
+    }
   },
   {
     id: 'TECH_ELECTRONICS',
-    name: 'Tech & Electronics Hub',
-    tagline: 'Smartphones, Audio Gear & Gadgets',
+    name: 'NextGen Tech & Electronics Hub',
+    category: 'Tech & Electronics',
+    tagline: 'Sleek dark mode engineering for flagship smartphones, audio & smart gadgets',
+    badgeText: 'Midnight Dark',
     theme: 'MODERN_DARK',
     icon: Zap,
-    sections: ['HERO_BANNER', 'TRUST_BADGES', 'PRODUCT_CAROUSEL', 'PRODUCT_GRID', 'FLASH_SALE', 'BRAND_STORY', 'FAQ_ACCORDION', 'CONTACT_MAP']
+    bannerImage: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=800&q=80',
+    palette: {
+      primary: '#6366f1',
+      accent: '#06b6d4',
+      bg: '#0f172a',
+      card: '#1e293b',
+      text: '#f8fafc'
+    },
+    sections: ['HERO_BANNER', 'TRUST_BADGES', 'PRODUCT_CAROUSEL', 'PRODUCT_GRID', 'FLASH_SALE', 'BRAND_STORY', 'FAQ_ACCORDION', 'CONTACT_MAP'],
+    customSectionData: {
+      HERO_BANNER: {
+        badge: 'Authorized Brand Distributor • GST Invoice',
+        title: 'Next-Gen Flagships & Studio Audio Gear',
+        subtitle: 'Uncompromised performance. 100% authorized stock with official brand warranty, sealed packaging, and express dispatch.',
+        ctaText: 'Explore Tech Catalog',
+        imageUrl: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=1600&q=80'
+      },
+      FLASH_SALE: {
+        badge: 'TECH BLITZ DEAL',
+        endsIn: 'Batch 03 Closing in 4 Hours',
+        title: 'Audiophile & Gaming Rig Clearance',
+        subtitle: 'Limited batch imports of noise-canceling headsets, mechanical keyboards, and 4K displays.',
+        discountText: 'SAVE UP TO ₹4,500',
+        ctaText: 'Grab Tech Deal'
+      },
+      PRODUCT_CAROUSEL: {
+        title: 'Trending Hardware & Gadgets',
+        subtitle: 'Verified top-rated picks backed by authorized manufacturer warranties'
+      },
+      TRUST_BADGES: {
+        badges: [
+          { icon: 'ShieldCheck', title: '1-Year Brand Warranty', desc: 'Authorized service network' },
+          { icon: 'Zap', title: 'Express Tech Dispatch', desc: 'Secure anti-shock packaging' },
+          { icon: 'CreditCard', title: 'GST Input Tax Credit', desc: 'Save 18% with business invoice' },
+          { icon: 'Phone', title: 'Tech Setup Hotline', desc: 'Direct WhatsApp engineer support' }
+        ]
+      },
+      BRAND_STORY: {
+        badge: 'AUTHENTIC HARDWARE',
+        title: 'Zero Grey Market • 100% Authorized Tech',
+        narrative: 'We are direct supply partners for tier-1 tech brands. Every gadget is serial-tracked, verified for regional warranty, and dispatched with tamper-proof seals.'
+      }
+    }
   },
   {
     id: 'ORGANIC_WELLNESS',
-    name: 'Organic & Wellness Mart',
-    tagline: 'Farm Fresh, Ayurvedic & Health',
+    name: 'Pure Herbal & Botanical Wellness',
+    category: 'Organic & Wellness',
+    tagline: 'Calming emerald and earth tones for ayurveda, cold-pressed oils & farm-to-table health',
+    badgeText: 'Eco Botanicals',
     theme: 'EMERALD_NATURE',
     icon: ShieldCheck,
-    sections: ['HERO_BANNER', 'TRUST_BADGES', 'CATEGORY_TILES', 'PRODUCT_GRID', 'BRAND_STORY', 'NEWSLETTER_BAR', 'TESTIMONIALS', 'FAQ_ACCORDION', 'CONTACT_MAP']
+    bannerImage: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
+    palette: {
+      primary: '#059669',
+      accent: '#10b981',
+      bg: '#f0fdf4',
+      card: '#ffffff',
+      text: '#064e3b'
+    },
+    sections: ['HERO_BANNER', 'TRUST_BADGES', 'CATEGORY_TILES', 'PRODUCT_GRID', 'BRAND_STORY', 'NEWSLETTER_BAR', 'TESTIMONIALS', 'FAQ_ACCORDION', 'CONTACT_MAP'],
+    customSectionData: {
+      HERO_BANNER: {
+        badge: '100% Certified Organic • Jaivik Bharat',
+        title: 'Pure Herbal Living & Ancient Ayurvedic Care',
+        subtitle: 'Cold-pressed traditional wood oils, raw forest honey, and ancient ayurvedic remedies directly from certified regenerative organic farms.',
+        ctaText: 'Shop Pure Harvest',
+        imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1600&q=80'
+      },
+      BRAND_STORY: {
+        badge: 'NATURE’S PROMISE',
+        title: 'Ethical Sourcing from Certified Groves',
+        narrative: 'We work directly with 140+ tribal cooperatives across the Western Ghats. Zero pesticides, zero microplastics, unrefined and nutrient-dense.'
+      },
+      TRUST_BADGES: {
+        badges: [
+          { icon: 'ShieldCheck', title: 'Govt Organic Certified', desc: 'FSSAI & Jaivik Bharat mark' },
+          { icon: 'Zap', title: 'Plastic-Free Glass', desc: 'Zero harmful chemical leaching' },
+          { icon: 'CreditCard', title: 'Fair Trade Direct', desc: 'Fair revenue sharing to farmers' },
+          { icon: 'Phone', title: 'Ayurvedic Vaidya Help', desc: 'Free consultation on chat' }
+        ]
+      },
+      NEWSLETTER_BAR: {
+        title: 'Enjoy 15% Off Your Pure Wellness Box',
+        subtitle: 'Use code BOTANICAL15 for an instant discount on certified unrefined oils.',
+        couponCode: 'BOTANICAL15'
+      }
+    }
   },
   {
-    id: 'LUXURY_LIFESTYLE',
-    name: 'Luxury & Lifestyle Studio',
-    tagline: 'High-end Watches, Jewelry & Decor',
-    theme: 'MINIMAL_WHITE',
-    icon: Star,
-    sections: ['HERO_BANNER', 'IMAGE_LOOKBOOK', 'PRODUCT_CAROUSEL', 'PRODUCT_GRID', 'BRAND_STORY', 'TESTIMONIALS', 'NEWSLETTER_BAR', 'CONTACT_MAP']
+    id: 'CAFE_GOURMET',
+    name: 'Artisan Bakery & Specialty Roastery',
+    category: 'Cafe & Dining',
+    tagline: 'Warm amber and espresso tones for patisseries, coffee roasters & cloud kitchens',
+    badgeText: 'Artisan Gourmet',
+    theme: 'CLEAN_LIGHT',
+    icon: Coffee,
+    bannerImage: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
+    palette: {
+      primary: '#b45309',
+      accent: '#f59e0b',
+      bg: '#fffbeb',
+      card: '#ffffff',
+      text: '#78350f'
+    },
+    sections: ['HERO_BANNER', 'FLASH_SALE', 'PRODUCT_CAROUSEL', 'PRODUCT_GRID', 'BRAND_STORY', 'NEWSLETTER_BAR', 'TESTIMONIALS', 'CONTACT_MAP'],
+    customSectionData: {
+      HERO_BANNER: {
+        badge: 'Fresh Oven Bakes Daily at 6:00 AM',
+        title: 'Sourdough Breads & Single-Origin Roasts',
+        subtitle: 'Crafted with 48-hour natural wild yeast, Normandy butter, and high-altitude Arabica beans. Order for doorstep breakfast or evening treats.',
+        ctaText: 'Order Fresh Bakes',
+        imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1600&q=80'
+      },
+      FLASH_SALE: {
+        badge: 'MORNING BATCH CLEARANCE',
+        endsIn: 'While Today’s Bakes Last',
+        title: 'Weekend Viennoiserie Box Special',
+        subtitle: 'Curated assortment of butter croissants, pain au chocolat, and vanilla almond Danishes.',
+        discountText: 'COMPLIMENTARY COLD BREW WITH BOX',
+        ctaText: 'Reserve My Pastry Box'
+      },
+      NEWSLETTER_BAR: {
+        title: 'First Morning Coffee on Us',
+        subtitle: 'Use code MORNINGBAKE on your first breakfast delivery above ₹300.',
+        couponCode: 'MORNINGBAKE'
+      }
+    }
+  },
+  {
+    id: 'HEALTH_PHARMACY',
+    name: 'CarePlus Direct Pharmacy & Healthcare',
+    category: 'Healthcare & Pharmacy',
+    tagline: 'Clinical teal and sanitary white for licensed pharmacies, vitamins & medical supplies',
+    badgeText: 'Licensed Clinical',
+    theme: 'ROYAL_INDIGO',
+    icon: Activity,
+    bannerImage: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=800&q=80',
+    palette: {
+      primary: '#0284c7',
+      accent: '#10b981',
+      bg: '#f0f9ff',
+      card: '#ffffff',
+      text: '#0c4a6e'
+    },
+    sections: ['HERO_BANNER', 'TRUST_BADGES', 'CATEGORY_TILES', 'PRODUCT_GRID', 'BRAND_STORY', 'FAQ_ACCORDION', 'CONTACT_MAP'],
+    customSectionData: {
+      HERO_BANNER: {
+        badge: 'Govt Licensed Dispensary • 100% Genuine',
+        title: 'Prescription Medicines & Daily Healthcare',
+        subtitle: 'Temperature-controlled storage, certified pharmacist verification, and doorstep delivery with GST bill.',
+        ctaText: 'Order Healthcare Essentials',
+        imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=1600&q=80'
+      },
+      TRUST_BADGES: {
+        badges: [
+          { icon: 'ShieldCheck', title: '100% Batch Authenticated', desc: 'Direct from authorized pharma' },
+          { icon: 'Zap', title: 'Express Medical Courier', desc: 'Urgent doorstep dispatch' },
+          { icon: 'CreditCard', title: 'Zero Surge Pricing', desc: 'Government MRP cap verified' },
+          { icon: 'Phone', title: 'Pharmacist on Call', desc: 'Direct WhatsApp assistance' }
+        ]
+      },
+      FAQ_ACCORDION: {
+        title: 'Medicine Ordering & Safety FAQ',
+        subtitle: 'How we verify prescriptions, ensure cold storage, and deliver safely',
+        faqs: [
+          { q: 'Do you require a doctor’s prescription?', a: 'Yes, for schedule H/H1 medicines, our registered pharmacist verifies prescription via WhatsApp before dispatch.' },
+          { q: 'How are sensitive medicines like insulin stored?', a: 'All temperature-sensitive medicines are transported in certified insulated cold-chain boxes.' }
+        ]
+      }
+    }
   }
 ];
 
@@ -409,6 +676,13 @@ export default function StorefrontBuilderPage() {
 
   // 1-Click Templates Modal
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
+  const [templateCategoryFilter, setTemplateCategoryFilter] = useState('ALL');
+
+  // Fullscreen Studio & Collapsible Workbench States
+  const [isFullscreenStudio, setIsFullscreenStudio] = useState(false);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [canvasZoom, setCanvasZoom] = useState(100);
 
   // Drag and Drop State
   const [draggedSectionIndex, setDraggedSectionIndex] = useState(null);
@@ -839,11 +1113,16 @@ export default function StorefrontBuilderPage() {
 
     const newSections = tmpl.sections.map((type, idx) => {
       const def = AVAILABLE_BLOCK_TYPES.find((b) => b.type === type);
+      const customData = tmpl.customSectionData?.[type] || {};
+      const mergedData = {
+        ...(def?.defaultData || {}),
+        ...customData
+      };
       return {
         id: `sec-${idx + 1}-${type.toLowerCase()}`,
         type,
         enabled: true,
-        data: JSON.parse(JSON.stringify(def?.defaultData || {}))
+        data: JSON.parse(JSON.stringify(mergedData))
       };
     });
 
@@ -852,11 +1131,11 @@ export default function StorefrontBuilderPage() {
       theme: preset.id,
       branding: {
         ...prev.branding,
-        primaryColor: preset.primary,
-        accentColor: preset.accent,
-        bgColor: preset.bg,
-        cardColor: preset.card,
-        textColor: preset.text
+        primaryColor: tmpl.palette?.primary || preset.primary,
+        accentColor: tmpl.palette?.accent || preset.accent,
+        bgColor: tmpl.palette?.bg || preset.bg,
+        cardColor: tmpl.palette?.card || preset.card,
+        textColor: tmpl.palette?.text || preset.text
       },
       sections: newSections
     }));
@@ -864,7 +1143,7 @@ export default function StorefrontBuilderPage() {
       setSelectedSectionId(newSections[0].id);
     }
     setIsTemplateModalOpen(false);
-    toast.success(`Applied "${tmpl.name}" layout & palette!`);
+    toast.success(`Applied "${tmpl.name}" layout & tailored content!`);
   };
 
   // Apply Theme Preset
@@ -1234,7 +1513,7 @@ export default function StorefrontBuilderPage() {
   const textColor = config.branding?.textColor || '#0f172a';
 
   return (
-    <div className="store-builder-integrated-page">
+    <div className={`store-builder-integrated-page ${isFullscreenStudio ? 'is-fullscreen-studio' : ''}`}>
       {/* 1. STOCKPILOT STANDARD PAGE HEADER */}
       <div className="page-header store-builder-page-header">
         <div className="page-header-title-box">
@@ -1283,7 +1562,17 @@ export default function StorefrontBuilderPage() {
             onClick={() => setIsTemplateModalOpen(true)}
             className="btn btn-secondary btn-sm"
           >
-            <Sparkles size={14} color="#982A86" /> <span>1-Click Templates</span>
+            <Sparkles size={14} color="#982A86" /> <span>1-Click Themes</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsFullscreenStudio(!isFullscreenStudio)}
+            className={`btn btn-sm ${isFullscreenStudio ? 'btn-primary' : 'btn-secondary'}`}
+            title={isFullscreenStudio ? "Exit Fullscreen Studio" : "Expand Fullscreen Studio Focus Mode"}
+          >
+            {isFullscreenStudio ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            <span>{isFullscreenStudio ? 'Exit Studio' : 'Fullscreen Studio'}</span>
           </button>
 
           <button
@@ -1326,7 +1615,20 @@ export default function StorefrontBuilderPage() {
       </div>
 
       {/* 2. MAIN SPLIT WORKBENCH LAYOUT */}
-      <div className="builder-workbench-layout">
+      <div className={`builder-workbench-layout ${isPanelCollapsed ? 'is-panel-collapsed' : ''}`}>
+        {/* Floating reopen button when panel is collapsed */}
+        {isPanelCollapsed && (
+          <button
+            type="button"
+            onClick={() => setIsPanelCollapsed(false)}
+            className="btn-floating-open-panel"
+            title="Open Studio Tools Panel"
+          >
+            <PanelLeftOpen size={16} />
+            <span>Show Studio Tools</span>
+          </button>
+        )}
+
         {/* LEFT STUDIO PANEL (SECTIONS, BLOCKS, THEME, INSPECTOR) */}
         <aside className="card builder-studio-panel">
           {/* Studio Tab Headers */}
@@ -1336,28 +1638,36 @@ export default function StorefrontBuilderPage() {
               className={`studio-tab-btn ${activeTab === 'layers' ? 'active' : ''}`}
               onClick={() => setActiveTab('layers')}
             >
-              <Layers size={15} /> <span>Layers ({config.sections.length + 2})</span>
+              <Layers size={14} /> <span>Layers ({config.sections.length + 2})</span>
             </button>
             <button
               type="button"
               className={`studio-tab-btn ${activeTab === 'add' ? 'active' : ''}`}
               onClick={() => setActiveTab('add')}
             >
-              <Plus size={15} /> <span>Add Block</span>
+              <Plus size={14} /> <span>Add Block</span>
             </button>
             <button
               type="button"
               className={`studio-tab-btn ${activeTab === 'theme' ? 'active' : ''}`}
               onClick={() => setActiveTab('theme')}
             >
-              <Palette size={15} /> <span>Theme</span>
+              <Palette size={14} /> <span>Theme</span>
             </button>
             <button
               type="button"
               className={`studio-tab-btn ${activeTab === 'inspector' ? 'active' : ''}`}
               onClick={() => setActiveTab('inspector')}
             >
-              <Settings size={15} /> <span>Inspector</span>
+              <Settings size={14} /> <span>Inspector</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsPanelCollapsed(true)}
+              className="btn-collapse-panel-trigger"
+              title="Collapse Panel for Full-Width Canvas"
+            >
+              <PanelLeftClose size={15} />
             </button>
           </div>
 
@@ -3154,16 +3464,64 @@ export default function StorefrontBuilderPage() {
         {/* RIGHT LIVE PREVIEW CANVAS */}
         <section className="card builder-canvas-stage">
           <div className="canvas-stage-top-meta">
-            <span className="stage-device-badge">
-              Preview Mode: <strong>{previewDevice.toUpperCase()}</strong>
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span className="stage-device-badge">
+                Preview Mode: <strong>{previewDevice.toUpperCase()}</strong>
+              </span>
+              {previewDevice === 'desktop' && (
+                <div className="canvas-zoom-control-pill">
+                  <button
+                    type="button"
+                    className="btn-zoom-step"
+                    onClick={() => setCanvasZoom((z) => Math.max(60, z - 10))}
+                    title="Zoom Out"
+                  >
+                    -
+                  </button>
+                  <span className="zoom-percentage-text">{canvasZoom}%</span>
+                  <button
+                    type="button"
+                    className="btn-zoom-step"
+                    onClick={() => setCanvasZoom((z) => Math.min(130, z + 10))}
+                    title="Zoom In"
+                  >
+                    +
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn-zoom-preset ${canvasZoom === 100 ? 'active' : ''}`}
+                    onClick={() => setCanvasZoom(100)}
+                  >
+                    100%
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn-zoom-preset ${canvasZoom === 85 ? 'active' : ''}`}
+                    onClick={() => setCanvasZoom(85)}
+                  >
+                    Fit
+                  </button>
+                </div>
+              )}
+            </div>
             <span className="stage-reactive-hint">
               ⚡ Live Synchronized Canvas • Click any section to configure
             </span>
           </div>
 
           <div className="canvas-scroll-viewport">
-            <div className={`canvas-device-frame device-frame-${previewDevice}`}>
+            <div
+              className={`canvas-device-frame device-frame-${previewDevice}`}
+              style={
+                previewDevice === 'desktop' && canvasZoom !== 100
+                  ? {
+                      transform: `scale(${canvasZoom / 100})`,
+                      transformOrigin: 'top center',
+                      marginBottom: canvasZoom < 100 ? `-${(100 - canvasZoom) * 5}px` : undefined
+                    }
+                  : undefined
+              }
+            >
               {/* Phone Notch for Mobile View */}
               {previewDevice === 'mobile' && (
                 <div className="device-phone-notch">
@@ -3967,42 +4325,110 @@ export default function StorefrontBuilderPage() {
         </section>
       </div>
 
-      {/* 3. 1-CLICK INDUSTRY TEMPLATES MODAL */}
+      {/* 3. 1-CLICK INDUSTRY THEMES GALLERY MODAL */}
       {isTemplateModalOpen && (
         <Modal
           isOpen={isTemplateModalOpen}
           onClose={() => setIsTemplateModalOpen(false)}
-          title="Choose a 1-Click Storefront Template"
+          title="Curated 1-Click Storefront Themes"
         >
-          <div className="templates-modal-content">
-            <p className="templates-modal-subtitle">
-              Select an industry template to automatically apply tailored modular layouts and matching color palettes.
-            </p>
-            <div className="templates-selection-grid">
-              {INDUSTRY_TEMPLATES.map((tmpl) => {
-                const IconComp = tmpl.icon;
-                return (
-                  <div key={tmpl.id} className="template-card-choice" onClick={() => handleApplyTemplate(tmpl.id)}>
-                    <div className="template-card-top">
-                      <div className="template-icon-circle">
-                        <IconComp size={20} color="#982A86" />
+          <div className="templates-gallery-modal">
+            <div className="templates-gallery-controls">
+              <div className="template-search-wrap">
+                <Search size={16} className="template-search-icon" />
+                <input
+                  type="text"
+                  className="template-search-input"
+                  placeholder="Search themes by industry (e.g., fashion, organic, tech, groceries, cafe)..."
+                  value={templateSearch}
+                  onChange={(e) => setTemplateSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="template-filter-tabs">
+                {['ALL', 'Fashion & Apparel', 'Retail & Supermarket', 'Tech & Electronics', 'Organic & Wellness', 'Cafe & Dining', 'Healthcare & Pharmacy'].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setTemplateCategoryFilter(cat)}
+                    className={`template-filter-tab-btn ${templateCategoryFilter === cat ? 'active' : ''}`}
+                  >
+                    {cat === 'ALL' ? '🌟 All Themes' : cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="templates-showcase-grid">
+              {INDUSTRY_TEMPLATES
+                .filter((tmpl) => {
+                  if (templateCategoryFilter !== 'ALL' && tmpl.category !== templateCategoryFilter) return false;
+                  if (templateSearch.trim()) {
+                    const q = templateSearch.toLowerCase();
+                    return (
+                      tmpl.name.toLowerCase().includes(q) ||
+                      tmpl.tagline.toLowerCase().includes(q) ||
+                      tmpl.category.toLowerCase().includes(q)
+                    );
+                  }
+                  return true;
+                })
+                .map((tmpl) => {
+                  const IconComp = tmpl.icon;
+                  return (
+                    <div key={tmpl.id} className="template-theme-card">
+                      <div className="template-banner-preview">
+                        <img
+                          src={tmpl.bannerImage}
+                          alt={tmpl.name}
+                          className="template-banner-bg"
+                        />
+                        <div className="template-banner-overlay" />
+                        <div className="template-banner-header">
+                          <span className="template-badge-pill">{tmpl.badgeText || 'Curated'}</span>
+                          <span className="template-blocks-count">{tmpl.sections.length} Modular Blocks</span>
+                        </div>
                       </div>
-                      <span className="badge badge-success">{tmpl.sections.length} Blocks</span>
+
+                      <div className="template-theme-body">
+                        <div className="template-title-row">
+                          <h3>{tmpl.name}</h3>
+                          <IconComp size={18} color={tmpl.palette?.primary || '#982A86'} />
+                        </div>
+                        <p>{tmpl.tagline}</p>
+
+                        <div className="template-palette-row">
+                          <span className="palette-label">Theme Palette:</span>
+                          <div className="palette-swatches">
+                            <span className="palette-circle" style={{ background: tmpl.palette?.primary }} title="Primary Color" />
+                            <span className="palette-circle" style={{ background: tmpl.palette?.accent }} title="Accent Color" />
+                            <span className="palette-circle" style={{ background: tmpl.palette?.bg }} title="Background" />
+                            <span className="palette-circle" style={{ background: tmpl.palette?.card }} title="Card Surface" />
+                          </div>
+                        </div>
+
+                        <div className="template-sections-pills-wrap">
+                          {tmpl.sections.slice(0, 5).map((s) => (
+                            <span key={s} className="template-section-chip">{s.replace('_', ' ')}</span>
+                          ))}
+                          {tmpl.sections.length > 5 && (
+                            <span className="template-section-chip">+{tmpl.sections.length - 5} more</span>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleApplyTemplate(tmpl.id)}
+                          className="btn-apply-template-primary"
+                          style={{ background: tmpl.palette?.primary || '#982A86' }}
+                        >
+                          <span>Apply "{tmpl.name.split(' ')[0]}" Theme</span>
+                          <ArrowRight size={15} />
+                        </button>
+                      </div>
                     </div>
-                    <h4>{tmpl.name}</h4>
-                    <p>{tmpl.tagline}</p>
-                    <div className="template-blocks-chips">
-                      {tmpl.sections.slice(0, 4).map((s) => (
-                        <span key={s} className="badge badge-secondary">{s.replace('_', ' ')}</span>
-                      ))}
-                      {tmpl.sections.length > 4 && <span className="badge badge-secondary">+{tmpl.sections.length - 4} more</span>}
-                    </div>
-                    <button type="button" className="btn btn-primary btn-sm btn-block" style={{ marginTop: '0.6rem' }}>
-                      Apply This Template &rarr;
-                    </button>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
         </Modal>
