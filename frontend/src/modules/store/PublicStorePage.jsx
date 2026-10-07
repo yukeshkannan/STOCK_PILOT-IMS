@@ -113,6 +113,45 @@ export default function PublicStorePage() {
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
 
+  // 1-Second Countdown Timer for Flash Sale Blocks
+  const [countdown, setCountdown] = useState({ days: 2, hours: 14, minutes: 35, seconds: 48 });
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59 };
+        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        if (prev.days > 0) return { ...prev, days: prev.days - 1, hours: 23, minutes: 59, seconds: 59 };
+        return prev;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Accordion open/close state for FAQ blocks
+  const [openFaqKeys, setOpenFaqKeys] = useState({ 0: true });
+  const toggleFaq = (key) => setOpenFaqKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  // One-click coupon code copy state
+  const [copiedPromoCode, setCopiedPromoCode] = useState(false);
+  const handleCopyCode = (code) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(code);
+    }
+    setCopiedPromoCode(true);
+    toast.success(`Coupon code "${code}" copied to clipboard!`, { autoClose: 1500 });
+    setTimeout(() => setCopiedPromoCode(false), 2500);
+  };
+
+  // Horizontal scroll controller for Product Carousel blocks
+  const carouselTrackRef = useRef(null);
+  const scrollCarousel = (direction) => {
+    if (carouselTrackRef.current) {
+      const scrollAmount = direction === 'left' ? -340 : 340;
+      carouselTrackRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   // Close sort dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
@@ -427,45 +466,6 @@ export default function PublicStorePage() {
 
   const handleNextTestimonials = () => {
     setTestimonialIndex((prev) => (prev < maxTestimonialIndex ? prev + 1 : 0));
-  };
-
-  // 1-Second Countdown Timer for Flash Sale Blocks
-  const [countdown, setCountdown] = useState({ days: 2, hours: 14, minutes: 35, seconds: 48 });
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59 };
-        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        if (prev.days > 0) return { ...prev, days: prev.days - 1, hours: 23, minutes: 59, seconds: 59 };
-        return prev;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Accordion open/close state for FAQ blocks
-  const [openFaqKeys, setOpenFaqKeys] = useState({ 0: true });
-  const toggleFaq = (key) => setOpenFaqKeys((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  // One-click coupon code copy state
-  const [copiedPromoCode, setCopiedPromoCode] = useState(false);
-  const handleCopyCode = (code) => {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(code);
-    }
-    setCopiedPromoCode(true);
-    toast.success(`Coupon code "${code}" copied to clipboard!`, { autoClose: 1500 });
-    setTimeout(() => setCopiedPromoCode(false), 2500);
-  };
-
-  // Horizontal scroll controller for Product Carousel blocks
-  const carouselTrackRef = useRef(null);
-  const scrollCarousel = (direction) => {
-    if (carouselTrackRef.current) {
-      const scrollAmount = direction === 'left' ? -340 : 340;
-      carouselTrackRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
   };
 
   // Dynamic Navigation Links

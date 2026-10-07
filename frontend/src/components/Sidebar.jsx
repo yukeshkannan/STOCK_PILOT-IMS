@@ -667,7 +667,6 @@ export default function Sidebar({ isOpen = false, onClose }) {
                         <span className="dropdown-btn-label">{grp.group}</span>
                       </div>
                       <div className="dropdown-btn-right">
-                        {hasActiveChild && <span className="active-dot-pip" title="Active Section" />}
                         <span className={`dropdown-chevron-wrap ${isOpen ? 'rotate' : ''}`}>
                           <ChevronDown size={15} />
                         </span>
