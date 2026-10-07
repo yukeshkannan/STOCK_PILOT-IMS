@@ -133,7 +133,7 @@ export const THEME_PRESETS = [
 export const AVAILABLE_BLOCK_TYPES = [
   {
     type: 'HERO_BANNER',
-    name: 'Hero Showcase Banner',
+    name: 'Hero Banner',
     category: 'Header & Intro',
     icon: Sparkles,
     badgeText: 'Essential',
@@ -164,7 +164,7 @@ export const AVAILABLE_BLOCK_TYPES = [
   },
   {
     type: 'PRODUCT_GRID',
-    name: 'Product Catalog Grid',
+    name: 'Product Catalog',
     category: 'Catalog & Store',
     icon: Package,
     badgeText: 'Core',
@@ -179,7 +179,7 @@ export const AVAILABLE_BLOCK_TYPES = [
   },
   {
     type: 'PRODUCT_CAROUSEL',
-    name: 'Product Carousel Slider',
+    name: 'Featured Carousel',
     category: 'Catalog & Store',
     icon: Sliders,
     badgeText: 'Dynamic',
@@ -191,7 +191,7 @@ export const AVAILABLE_BLOCK_TYPES = [
   },
   {
     type: 'CATEGORY_TILES',
-    name: 'Visual Category Cards',
+    name: 'Category Showcase',
     category: 'Navigation',
     icon: Layers,
     badgeText: 'Discovery',
@@ -203,7 +203,7 @@ export const AVAILABLE_BLOCK_TYPES = [
   },
   {
     type: 'TRUST_BADGES',
-    name: 'Value Proposition Strip',
+    name: 'Value Proposition',
     category: 'Trust & Proof',
     icon: ShieldCheck,
     badgeText: 'Assurance',
@@ -219,7 +219,7 @@ export const AVAILABLE_BLOCK_TYPES = [
   },
   {
     type: 'BRAND_STORY',
-    name: 'Brand Story Narrative',
+    name: 'Brand Story',
     category: 'About & Branding',
     icon: FileText,
     badgeText: 'Story',
@@ -233,7 +233,7 @@ export const AVAILABLE_BLOCK_TYPES = [
   },
   {
     type: 'IMAGE_LOOKBOOK',
-    name: 'Visual Lookbook Gallery',
+    name: 'Store Lookbook',
     category: 'Media & Visuals',
     icon: ImageIcon,
     badgeText: 'Lifestyle',
@@ -250,7 +250,7 @@ export const AVAILABLE_BLOCK_TYPES = [
   },
   {
     type: 'TESTIMONIALS',
-    name: 'Customer Reviews Carousel',
+    name: 'Customer Reviews',
     category: 'Trust & Proof',
     icon: Star,
     badgeText: 'Social Proof',
@@ -267,7 +267,7 @@ export const AVAILABLE_BLOCK_TYPES = [
   },
   {
     type: 'FAQ_ACCORDION',
-    name: 'FAQ Accordion List',
+    name: 'FAQ Accordion',
     category: 'Information & Support',
     icon: HelpCircle,
     badgeText: 'Support',
@@ -285,7 +285,7 @@ export const AVAILABLE_BLOCK_TYPES = [
   },
   {
     type: 'NEWSLETTER_BAR',
-    name: 'Promo Coupon Offer Bar',
+    name: 'Offer & Coupon Bar',
     category: 'Promotions',
     icon: Tag,
     badgeText: 'Incentive',
@@ -298,7 +298,7 @@ export const AVAILABLE_BLOCK_TYPES = [
   },
   {
     type: 'CONTACT_MAP',
-    name: 'Store Locator & Contact',
+    name: 'Store Locator & Map',
     category: 'Information & Support',
     icon: MapPin,
     badgeText: 'Contact',
@@ -396,7 +396,7 @@ export const INDUSTRY_TEMPLATES = [
     sections: ['FLASH_SALE', 'HERO_BANNER', 'CATEGORY_TILES', 'PRODUCT_GRID', 'TRUST_BADGES', 'NEWSLETTER_BAR', 'TESTIMONIALS', 'CONTACT_MAP'],
     customSectionData: {
       HERO_BANNER: {
-        badge: '⚡ 30-Minute Guaranteed Delivery',
+        badge: 'Fast Doorstep Delivery',
         title: 'Farm Fresh Produce & Daily Pantry Essentials',
         subtitle: 'Direct from wholesale mandi to your kitchen. Quality-checked staples, dairy, and household goods at lowest mandi rates.',
         ctaText: 'Order Daily Essentials',
@@ -1514,14 +1514,24 @@ export default function StorefrontBuilderPage() {
 
   return (
     <div className={`store-builder-integrated-page ${isFullscreenStudio ? 'is-fullscreen-studio' : ''}`}>
+      {/* Pinned Exit Studio button at top-right corner when in Fullscreen Studio */}
+      {isFullscreenStudio && (
+        <button
+          type="button"
+          onClick={() => setIsFullscreenStudio(false)}
+          className="btn-fixed-exit-studio-corner"
+          title="Exit Fullscreen Studio Mode"
+        >
+          <Minimize2 size={15} />
+          <span>Exit Studio</span>
+        </button>
+      )}
+
       {/* 1. STOCKPILOT STANDARD PAGE HEADER */}
       <div className="page-header store-builder-page-header">
         <div className="page-header-title-box">
           <div className="title-with-badge">
             <h1 className="page-title">Online Storefront Studio</h1>
-            <span className="badge badge-success">
-              <span className="live-pulsing-dot" /> Live Active
-            </span>
           </div>
           <p className="page-subtitle">
             Visually customize, reorder with drag & drop, and publish your digital e-commerce store
@@ -1567,16 +1577,6 @@ export default function StorefrontBuilderPage() {
 
           <button
             type="button"
-            onClick={() => setIsFullscreenStudio(!isFullscreenStudio)}
-            className={`btn btn-sm ${isFullscreenStudio ? 'btn-primary' : 'btn-secondary'}`}
-            title={isFullscreenStudio ? "Exit Fullscreen Studio" : "Expand Fullscreen Studio Focus Mode"}
-          >
-            {isFullscreenStudio ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            <span>{isFullscreenStudio ? 'Exit Studio' : 'Fullscreen Studio'}</span>
-          </button>
-
-          <button
-            type="button"
             onClick={handleCopyUrl}
             className="btn btn-secondary btn-sm"
             title="Copy Public Storefront Link"
@@ -1610,6 +1610,17 @@ export default function StorefrontBuilderPage() {
                 <Zap size={14} /> <span>Publish Changes</span>
               </>
             )}
+          </button>
+
+          {/* Right-most Top-Right Fullscreen Studio Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsFullscreenStudio(!isFullscreenStudio)}
+            className={`btn btn-sm btn-fullscreen-toggle ${isFullscreenStudio ? 'btn-primary' : 'btn-secondary'}`}
+            title={isFullscreenStudio ? "Exit Fullscreen Studio" : "Expand Fullscreen Studio Focus Mode"}
+          >
+            {isFullscreenStudio ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            <span>{isFullscreenStudio ? 'Exit Studio' : 'Fullscreen Studio'}</span>
           </button>
         </div>
       </div>
@@ -2982,18 +2993,70 @@ export default function StorefrontBuilderPage() {
                         />
                       </div>
 
-                      {selectedSection.data?.imageUrl && (
-                        <div className="builder-img-preview-box">
-                          <img
-                            src={selectedSection.data.imageUrl}
-                            alt="Story Preview"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                          <div className="img-preview-overlay">
-                            <span>Story Visual Preview</span>
-                          </div>
-                        </div>
-                      )}
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Floating Image Badge</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.floatingBadge || ''}
+                          onChange={(e) => updateSelectedSectionData('floatingBadge', e.target.value)}
+                          placeholder="100% Verified Origin"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Highlight Point 1 Title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.point1Title || ''}
+                          onChange={(e) => updateSelectedSectionData('point1Title', e.target.value)}
+                          placeholder="Direct Sourcing"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Highlight Point 1 Description</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.point1Desc || ''}
+                          onChange={(e) => updateSelectedSectionData('point1Desc', e.target.value)}
+                          placeholder="Zero intermediaries, authentic inventory"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Highlight Point 2 Title</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.point2Title || ''}
+                          onChange={(e) => updateSelectedSectionData('point2Title', e.target.value)}
+                          placeholder="Rapid Dispatch"
+                        />
+                      </div>
+
+                      <div className="builder-input-group">
+                        <label className="builder-field-label">
+                          <span>Highlight Point 2 Description</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="builder-input"
+                          value={selectedSection.data?.point2Desc || ''}
+                          onChange={(e) => updateSelectedSectionData('point2Desc', e.target.value)}
+                          placeholder="Same-day verification & tracking updates"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -3504,9 +3567,6 @@ export default function StorefrontBuilderPage() {
                 </div>
               )}
             </div>
-            <span className="stage-reactive-hint">
-              ⚡ Live Synchronized Canvas • Click any section to configure
-            </span>
           </div>
 
           <div className="canvas-scroll-viewport">
@@ -3557,7 +3617,7 @@ export default function StorefrontBuilderPage() {
                         {config.contact?.phone && <span><Phone size={11} /> {config.contact.phone}</span>}
                       </div>
                       <div className="utility-right">
-                        <span>⚡ Verified Official Online Store</span>
+                        <span><ShieldCheck size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Verified Official Online Store</span>
                       </div>
                     </div>
                   </div>
@@ -3670,7 +3730,7 @@ export default function StorefrontBuilderPage() {
                                   setSelectedSectionId(sec.id);
                                   setActiveTab('inspector');
                                 }}
-                                title="Configure in Inspector (⚙)"
+                                title="Configure in Inspector"
                               >
                                 <Settings size={12} />
                               </button>
@@ -3976,21 +4036,21 @@ export default function StorefrontBuilderPage() {
                                 <div className="clean-story-media-wrap">
                                   <img src={sData.imageUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80'} alt="Story" />
                                   <div className="clean-story-badge-floating" style={{ background: primaryColor }}>
-                                    <span>100% Verified Origin</span>
+                                    <span>{sData.floatingBadge || '100% Verified Origin'}</span>
                                   </div>
                                 </div>
                                 <div className="clean-story-content">
                                   <div className="clean-pill-tag" style={{ color: primaryColor }}>{sData.badge || 'OUR HERITAGE'}</div>
-                                  <h2>{sData.title || 'Crafted with Passion & Precision'}</h2>
-                                  <p className="clean-story-body-text">{sData.narrative || 'Authenticated products direct to your doorstep.'}</p>
+                                  <h2>{sData.title || (config.branding?.storeName ? `Crafted for ${config.branding.storeName}` : 'Crafted with Passion & Precision')}</h2>
+                                  <p className="clean-story-body-text">{sData.narrative || (config.branding?.storeName ? `Welcome to ${config.branding.storeName}. We bring authenticated, premium-grade products directly to our community with rigorous quality checks.` : 'Founded with a clear vision: to bring authenticated, premium-grade products directly to our community. Every single item in our inventory is inspected, certified, and dispatched from verified facilities to guarantee genuine quality.')}</p>
                                   <div className="clean-story-points">
                                     <div className="clean-story-point-item">
                                       <CheckCircle2 size={18} color={accentColor} />
-                                      <div><strong>Direct Sourcing</strong><span>Zero intermediaries</span></div>
+                                      <div><strong>{sData.point1Title || 'Direct Sourcing'}</strong><span>{sData.point1Desc || 'Zero intermediaries, authentic inventory'}</span></div>
                                     </div>
                                     <div className="clean-story-point-item">
                                       <CheckCircle2 size={18} color={accentColor} />
-                                      <div><strong>Rapid Dispatch</strong><span>Same-day tracking updates</span></div>
+                                      <div><strong>{sData.point2Title || 'Rapid Dispatch'}</strong><span>{sData.point2Desc || 'Same-day verification & tracking updates'}</span></div>
                                     </div>
                                   </div>
                                 </div>
@@ -4353,7 +4413,7 @@ export default function StorefrontBuilderPage() {
                     onClick={() => setTemplateCategoryFilter(cat)}
                     className={`template-filter-tab-btn ${templateCategoryFilter === cat ? 'active' : ''}`}
                   >
-                    {cat === 'ALL' ? '🌟 All Themes' : cat}
+                    {cat === 'ALL' ? 'All Themes' : cat}
                   </button>
                 ))}
               </div>

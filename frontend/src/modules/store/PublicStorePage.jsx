@@ -974,10 +974,16 @@ export default function PublicStorePage() {
       }
 
       case 'BRAND_STORY': {
-        const storyTitle = sData.title || 'Crafted with Passion & Precision';
+        const storeBrand = config?.branding?.storeName || 'Our Store';
+        const storyTitle = sData.title || `Crafted for ${storeBrand}`;
         const storyTag = sData.badge || 'OUR HERITAGE';
-        const storyText = sData.narrative || 'Founded with a clear vision: to bring authenticated, premium-grade products directly to our community. Every single item in our inventory is inspected, certified, and dispatched from verified facilities to guarantee genuine quality.';
+        const storyText = sData.narrative || `Founded with a clear vision: to bring authenticated, premium-grade products directly to our community at ${storeBrand}. Every single item in our inventory is inspected, certified, and dispatched from verified facilities to guarantee genuine quality.`;
         const storyImg = sData.imageUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80';
+        const floatingBadge = sData.floatingBadge || '100% Verified Origin';
+        const point1Title = sData.point1Title || 'Direct Sourcing';
+        const point1Desc = sData.point1Desc || 'Zero intermediaries, authentic inventory';
+        const point2Title = sData.point2Title || 'Rapid Dispatch';
+        const point2Desc = sData.point2Desc || 'Same-day verification and tracking updates';
         return (
           <section key={sec.id} id="story" className="clean-story-section">
             <div className="clean-story-container">
@@ -985,7 +991,7 @@ export default function PublicStorePage() {
                 <div className="clean-story-media-wrap">
                   <img src={storyImg} alt={storyTitle} />
                   <div className="clean-story-badge-floating" style={{ background: primaryColor }}>
-                    <span>100% Verified Origin</span>
+                    <span>{floatingBadge}</span>
                   </div>
                 </div>
                 <div className="clean-story-content">
@@ -996,15 +1002,15 @@ export default function PublicStorePage() {
                     <div className="clean-story-point-item">
                       <CheckCircle2 size={18} color={accentColor} />
                       <div>
-                        <strong>Direct Sourcing</strong>
-                        <span>Zero intermediaries, authentic inventory</span>
+                        <strong>{point1Title}</strong>
+                        <span>{point1Desc}</span>
                       </div>
                     </div>
                     <div className="clean-story-point-item">
                       <CheckCircle2 size={18} color={accentColor} />
                       <div>
-                        <strong>Rapid Dispatch</strong>
-                        <span>Same-day verification and tracking updates</span>
+                        <strong>{point2Title}</strong>
+                        <span>{point2Desc}</span>
                       </div>
                     </div>
                   </div>
