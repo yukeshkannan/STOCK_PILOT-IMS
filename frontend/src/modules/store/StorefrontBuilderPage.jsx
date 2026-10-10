@@ -4335,7 +4335,7 @@ export default function StorefrontBuilderPage() {
                               className="btn-footer-whatsapp"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <WhatsAppBrandIcon size={16} color="#25D366" />
+                              <WhatsAppBrandIcon size={16} color="#ffffff" />
                               <span>Instant WhatsApp Chat</span>
                             </a>
                           </div>
@@ -4500,66 +4500,205 @@ export default function StorefrontBuilderPage() {
           isOpen={isEditProductModalOpen}
           onClose={() => setIsEditProductModalOpen(false)}
           title={`Edit Product: ${editingProduct?.name || ''}`}
+          maxWidth="640px"
         >
-          <form onSubmit={handleSaveProductEdit} className="product-quick-edit-form">
-            <div className="form-group">
-              <label className="form-label">Product Name</label>
+          <form onSubmit={handleSaveProductEdit} className="product-quick-edit-modal-wrap">
+            {/* Top Product Summary Banner */}
+            <div className="quick-edit-product-banner">
+              <div className="banner-left-info">
+                <div className="product-brand-icon-box">
+                  <Package size={22} color="#982A86" />
+                </div>
+                <div>
+                  <h4 className="banner-product-title">{editingProduct?.name || 'Catalog Item'}</h4>
+                  <div className="banner-meta-pills">
+                    <span className="banner-sku-badge">
+                      <Tag size={11} /> {editingProduct?.product_code || `PRD-${editingProduct?.id}`}
+                    </span>
+                    {editingProduct?.currentStock !== undefined && (
+                      <span className={`banner-stock-badge ${editingProduct.currentStock > 0 ? 'in-stock' : 'out-of-stock'}`}>
+                        {editingProduct.currentStock > 0 ? `${editingProduct.currentStock} Units in Stock` : 'Out of Stock'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Storefront Image Preview Card */}
+            <div className="quick-edit-image-section">
+              <div className="image-preview-card">
+                <div className="image-preview-thumbnail">
+                  {productEditForm.imageUrl ? (
+                    <img
+                      src={productEditForm.imageUrl}
+                      alt="Product Preview"
+                      className="preview-img-active"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fb = e.currentTarget.nextElementSibling;
+                        if (fb) fb.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className="preview-img-fallback"
+                    style={{ display: productEditForm.imageUrl ? 'none' : 'flex' }}
+                  >
+                    <ImageIcon size={30} color="#94a3b8" />
+                    <span>No image set</span>
+                  </div>
+                </div>
+                <div className="image-preview-meta">
+                  <div className="preview-label-row">
+                    <span className="preview-title">Storefront Display Image</span>
+                    {productEditForm.imageUrl && (
+                      <span className="live-tag">
+                        <span className="live-dot" /> Live Preview
+                      </span>
+                    )}
+                  </div>
+                  <p className="preview-help-text">
+                    This photo will be displayed prominently across catalog grids, hero highlights, and customer checkout bags.
+                  </p>
+                  {productEditForm.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setProductEditForm({ ...productEditForm, imageUrl: '' })}
+                      className="btn-clear-photo"
+                    >
+                      <Trash2 size={13} /> Remove Image URL
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Direct Image URL Input */}
+              <div className="quick-edit-field">
+                <label className="quick-edit-label">
+                  <span className="label-with-icon">
+                    <ImageIcon size={14} color="#982A86" />
+                    Direct Image URL
+                  </span>
+                  <span className="label-subhint">Unsplash / CDN / S3 link</span>
+                </label>
+                <div className="input-with-icon-wrap">
+                  <input
+                    type="url"
+                    className="quick-edit-input url-input"
+                    placeholder="https://images.unsplash.com/photo-..."
+                    value={productEditForm.imageUrl}
+                    onChange={(e) => setProductEditForm({ ...productEditForm, imageUrl: e.target.value })}
+                  />
+                  {productEditForm.imageUrl && (
+                    <a
+                      href={productEditForm.imageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="input-link-btn"
+                      title="Open image in new tab"
+                    >
+                      <ExternalLink size={14} />
+                    </a>
+                  )}
+                </div>
+                <span className="field-hint">Paste an image URL from Unsplash or CDN to display on the storefront.</span>
+              </div>
+            </div>
+
+            {/* Product Name */}
+            <div className="quick-edit-field">
+              <label className="quick-edit-label">
+                <span className="label-with-icon">
+                  <Tag size={14} color="#982A86" />
+                  Product Name
+                </span>
+                <span className="label-required">*Required</span>
+              </label>
               <input
                 type="text"
                 required
-                className="form-control"
+                className="quick-edit-input"
+                placeholder="Enter product name..."
                 value={productEditForm.name}
                 onChange={(e) => setProductEditForm({ ...productEditForm, name: e.target.value })}
               />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div className="form-group">
-                <label className="form-label">Selling Price (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  className="form-control"
-                  value={productEditForm.sellingPrice}
-                  onChange={(e) => setProductEditForm({ ...productEditForm, sellingPrice: e.target.value })}
-                />
+
+            {/* Selling Price & GST Rate 2-Column Grid */}
+            <div className="quick-edit-grid-2col">
+              <div className="quick-edit-field">
+                <label className="quick-edit-label">
+                  <span className="label-with-icon">
+                    <span className="currency-pill">₹</span>
+                    Selling Price (₹)
+                  </span>
+                  <span className="label-required">*Required</span>
+                </label>
+                <div className="input-affix-wrap">
+                  <span className="input-prefix">₹</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    className="quick-edit-input with-prefix"
+                    placeholder="0.00"
+                    value={productEditForm.sellingPrice}
+                    onChange={(e) => setProductEditForm({ ...productEditForm, sellingPrice: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">GST Rate (%)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  className="form-control"
-                  value={productEditForm.taxRate}
-                  onChange={(e) => setProductEditForm({ ...productEditForm, taxRate: e.target.value })}
-                />
+
+              <div className="quick-edit-field">
+                <label className="quick-edit-label">
+                  <span className="label-with-icon">
+                    <span className="percent-pill">%</span>
+                    GST Rate (%)
+                  </span>
+                  <span className="label-subhint">Standard slab</span>
+                </label>
+                <div className="input-affix-wrap">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    className="quick-edit-input with-suffix"
+                    placeholder="0"
+                    value={productEditForm.taxRate}
+                    onChange={(e) => setProductEditForm({ ...productEditForm, taxRate: e.target.value })}
+                  />
+                  <span className="input-suffix">%</span>
+                </div>
               </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Direct Image URL</label>
-              <input
-                type="url"
-                className="form-control"
-                placeholder="https://images.unsplash.com/photo-..."
-                value={productEditForm.imageUrl}
-                onChange={(e) => setProductEditForm({ ...productEditForm, imageUrl: e.target.value })}
-              />
-              <span className="field-hint">Paste an image URL from Unsplash or CDN to display on the storefront.</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+
+            {/* Modal Action Buttons Footer */}
+            <div className="quick-edit-actions-footer">
               <button
                 type="button"
                 onClick={() => setIsEditProductModalOpen(false)}
-                className="btn btn-secondary"
+                className="btn-quick-edit-cancel"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSavingProduct}
-                className="btn btn-primary"
+                className="btn-quick-edit-save"
               >
-                {isSavingProduct ? 'Saving...' : 'Save Product Details'}
+                {isSavingProduct ? (
+                  <>
+                    <RefreshCw size={15} className="spinner" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} />
+                    <span>Save Product Details</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

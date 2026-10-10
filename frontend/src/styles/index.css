@@ -741,22 +741,41 @@ body.sidebar-is-collapsed .sidebar {
   margin-bottom: 0.35rem;
 }
 
-.form-input, .form-textarea {
+.form-input,
+.form-control,
+.form-textarea {
   width: 100%;
   padding: 0.65rem 0.9rem;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1.5px solid #cbd5e1;
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 0.85rem;
   outline: none;
   transition: all 0.18s ease;
+  box-sizing: border-box;
 }
 
-.form-input:focus, .form-textarea:focus {
+.form-input:hover,
+.form-control:hover,
+.form-textarea:hover {
+  border-color: #94a3b8;
+}
+
+.form-input:focus,
+.form-control:focus,
+.form-textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(152, 42, 134, 0.14);
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  font-weight: 500;
 }
 
 /* Enhanced Native <select> and .form-select */
@@ -1322,6 +1341,32 @@ table.invoice-receipt-table,
   overflow-y: auto;
   box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.25);
   padding: 1.75rem;
+}
+
+/* Universal Modal Form Controls Fallback to guarantee no raw HTML inputs */
+.modal-content input[type="text"],
+.modal-content input[type="number"],
+.modal-content input[type="url"],
+.modal-content input[type="email"],
+.modal-content input[type="password"] {
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  box-sizing: border-box;
+}
+
+.modal-content input[type="text"]:focus,
+.modal-content input[type="number"]:focus,
+.modal-content input[type="url"]:focus,
+.modal-content input[type="email"]:focus,
+.modal-content input[type="password"]:focus {
+  border-color: #982A86;
+  box-shadow: 0 0 0 3px rgba(152, 42, 134, 0.14);
 }
 
 .confirm-modal-content {

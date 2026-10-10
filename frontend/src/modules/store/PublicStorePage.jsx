@@ -405,6 +405,38 @@ export default function PublicStorePage() {
     }
   };
 
+  const storeConfig = storeData?.storeConfig || {};
+  const heroConfig = storeConfig.hero || {};
+  const sectionsConfig = storeConfig.sections || {};
+  const productsSection = storeConfig.productsSection || {};
+  const testimonials = storeConfig.testimonials || {};
+  const contactConfig = storeConfig.contact || {};
+  const allReviews = testimonials.reviews || [];
+
+  // Dynamic Modular Sections Normalization (Backward compatibility for legacy stores) - Must run before any conditional returns
+  const dynamicSections = useMemo(() => {
+    if (!storeData) return [];
+    if (Array.isArray(storeConfig.sections) && storeConfig.sections.length > 0) {
+      return storeConfig.sections.filter((s) => s.enabled !== false);
+    }
+    // Backward compatibility fallback for existing stores
+    const legacy = [];
+    if (heroConfig.enabled !== false) {
+      legacy.push({ id: 'sec-hero', type: 'HERO_BANNER', enabled: true, data: heroConfig });
+    }
+    if (sectionsConfig.trustBadgesEnabled !== false) {
+      legacy.push({ id: 'sec-trust', type: 'TRUST_BADGES', enabled: true, data: { badges: storeConfig.trustBadges } });
+    }
+    legacy.push({ id: 'sec-catalog', type: 'PRODUCT_GRID', enabled: true, data: productsSection });
+    if (testimonials.enabled !== false && allReviews.length > 0) {
+      legacy.push({ id: 'sec-testimonials', type: 'TESTIMONIALS', enabled: true, data: testimonials });
+    }
+    if (contactConfig.enabled !== false) {
+      legacy.push({ id: 'sec-contact', type: 'CONTACT_MAP', enabled: true, data: contactConfig });
+    }
+    return legacy;
+  }, [storeData, storeConfig, heroConfig, sectionsConfig, productsSection, testimonials, contactConfig, allReviews]);
+
   if (loading) {
     return (
       <div className="clean-store-loading">
@@ -427,14 +459,9 @@ export default function PublicStorePage() {
     );
   }
 
-  const { tenant, categories = [], products = [], storeConfig = {} } = storeData;
+  const { tenant, categories = [], products = [] } = storeData;
   const branding = storeConfig.branding || {};
   const navbarConfig = storeConfig.navbar || {};
-  const heroConfig = storeConfig.hero || {};
-  const productsSection = storeConfig.productsSection || {};
-  const testimonials = storeConfig.testimonials || {};
-  const contactConfig = storeConfig.contact || {};
-  const sectionsConfig = storeConfig.sections || {};
   const footerConfig = storeConfig.footer || {};
 
   const storeTitle = branding.storeName || tenant?.companyName || tenant?.company_name || 'Retail Store';
@@ -454,7 +481,6 @@ export default function PublicStorePage() {
   const textColor = branding.textColor || '#0f172a';
 
   // Testimonials Carousel Slice (3 per view)
-  const allReviews = testimonials.reviews || [];
   const maxTestimonialIndex = Math.max(0, allReviews.length - 3);
   const visibleReviews = allReviews.length <= 3 
     ? allReviews 
@@ -479,29 +505,6 @@ export default function PublicStorePage() {
   const navLinks = Array.isArray(navbarConfig.navLinks) ? navbarConfig.navLinks : defaultNavLinks;
 
   const activeSortOption = SORT_OPTIONS.find((opt) => opt.value === sortBy) || SORT_OPTIONS[0];
-
-  // Dynamic Modular Sections Normalization (Backward compatibility for legacy stores)
-  const dynamicSections = useMemo(() => {
-    if (Array.isArray(storeConfig.sections) && storeConfig.sections.length > 0) {
-      return storeConfig.sections.filter((s) => s.enabled !== false);
-    }
-    // Backward compatibility fallback for existing stores
-    const legacy = [];
-    if (heroConfig.enabled !== false) {
-      legacy.push({ id: 'sec-hero', type: 'HERO_BANNER', enabled: true, data: heroConfig });
-    }
-    if (sectionsConfig.trustBadgesEnabled !== false) {
-      legacy.push({ id: 'sec-trust', type: 'TRUST_BADGES', enabled: true, data: { badges: storeConfig.trustBadges } });
-    }
-    legacy.push({ id: 'sec-catalog', type: 'PRODUCT_GRID', enabled: true, data: productsSection });
-    if (testimonials.enabled !== false && allReviews.length > 0) {
-      legacy.push({ id: 'sec-testimonials', type: 'TESTIMONIALS', enabled: true, data: testimonials });
-    }
-    if (contactConfig.enabled !== false) {
-      legacy.push({ id: 'sec-contact', type: 'CONTACT_MAP', enabled: true, data: contactConfig });
-    }
-    return legacy;
-  }, [storeConfig, heroConfig, sectionsConfig, productsSection, testimonials, contactConfig, allReviews]);
 
   // Enterprise Storefront Section Renderer for all 12 Modular Blocks
   const renderDynamicStorefrontSection = (sec) => {
@@ -1501,7 +1504,7 @@ export default function PublicStorePage() {
                       rel="noreferrer"
                       className="btn-footer-whatsapp"
                     >
-                      <WhatsAppBrandIcon size={16} color="#25D366" />
+                      <WhatsAppBrandIcon size={16} color="#ffffff" />
                       <span>Instant WhatsApp Chat</span>
                     </a>
                   </div>
