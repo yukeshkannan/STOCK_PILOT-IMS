@@ -120,7 +120,6 @@ export default function PublicStorePage() {
   const [otpSending, setOtpSending] = useState(false);
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
-  const [devOtpHint, setDevOtpHint] = useState(null);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [isExistingCustomer, setIsExistingCustomer] = useState(false);
 
@@ -420,9 +419,6 @@ export default function PublicStorePage() {
       setFastCheckoutStep('OTP');
       setOtpTimer(30);
       setOtpDigits(['', '', '', '']);
-      if (data?.devOtp) {
-        setDevOtpHint(data.devOtp);
-      }
       toast.success(data?.message || `4-digit OTP sent to +91 ${cleanPhone}`);
     } catch (err) {
       toast.error(err?.response?.data?.message || err?.message || 'Failed to send OTP. Please try again.');
@@ -498,7 +494,7 @@ export default function PublicStorePage() {
     setFastCheckoutStep('PHONE');
     setPhoneInput('');
     setOtpDigits(['', '', '', '']);
-    setDevOtpHint(null);
+    setActiveOtp(null);
   };
 
   const handleOtpDigitChange = (index, val) => {
@@ -1868,14 +1864,11 @@ export default function PublicStorePage() {
                 {/* ⚡ StockPilot Fast 1-Click Checkout (GoKwik Style) */}
                 <form onSubmit={handlePlaceOrder} className="clean-checkout-form">
                   <div className="fast-checkout-container">
-                    <div className="fast-checkout-badge-row">
-                      <div className="fast-checkout-pill">
-                        <Zap size={13} className="text-amber" />
-                        <span>Fast 1-Click Checkout</span>
-                      </div>
+                    <div className="fast-checkout-header-clean">
+                      <h4 className="fast-checkout-main-title">Customer Verification</h4>
                       <div className="fast-checkout-trust">
-                        <ShieldCheck size={13} className="text-emerald" />
-                        <span>OTP Verified</span>
+                        <ShieldCheck size={14} className="text-emerald" />
+                        <span>Secure Checkout</span>
                       </div>
                     </div>
 
@@ -1884,8 +1877,8 @@ export default function PublicStorePage() {
                         {fastCheckoutStep === 'PHONE' ? (
                           <div className="fast-phone-step">
                             <div className="fast-step-title-wrap">
-                              <h4 className="fast-step-title">Enter Mobile Number to Checkout</h4>
-                              <p className="fast-step-sub">We'll send a 4-digit OTP to verify your bag &amp; auto-fill your saved address.</p>
+                              <h4 className="fast-step-title">Enter Mobile Number</h4>
+                              <p className="fast-step-sub">We will verify your order &amp; auto-fill your delivery address.</p>
                             </div>
 
                             <div className="fast-phone-form-row">
@@ -1894,7 +1887,7 @@ export default function PublicStorePage() {
                                 <input
                                   type="tel"
                                   maxLength={10}
-                                  placeholder="Enter 10-digit mobile"
+                                  placeholder="10-digit mobile number"
                                   value={phoneInput}
                                   onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
                                   onKeyDown={(e) => {
@@ -1937,9 +1930,9 @@ export default function PublicStorePage() {
                           <div className="fast-otp-step">
                             <div className="fast-otp-header">
                               <div>
-                                <h4 className="fast-step-title">Verify Phone Number</h4>
+                                <h4 className="fast-step-title">Enter Verification Code</h4>
                                 <p className="fast-step-sub">
-                                  Enter 4-digit OTP sent to <strong>+91 {phoneInput}</strong>
+                                  Enter 4-digit code sent to <strong>+91 {phoneInput}</strong>
                                 </p>
                               </div>
                               <button
@@ -1973,21 +1966,6 @@ export default function PublicStorePage() {
                               ))}
                             </div>
 
-                            {/* Dev Demo OTP Hint */}
-                            {devOtpHint && (
-                              <div
-                                className="fast-demo-otp-pill"
-                                onClick={() => {
-                                  const arr = String(devOtpHint).split('');
-                                  setOtpDigits(arr);
-                                  handleVerifyOtp(devOtpHint);
-                                }}
-                                title="Click to auto-fill"
-                              >
-                                <Sparkles size={13} color="#6366f1" />
-                                <span>Demo Code: <strong>{devOtpHint}</strong> (Click to auto-fill)</span>
-                              </div>
-                            )}
 
                             <div className="fast-otp-actions">
                               <button

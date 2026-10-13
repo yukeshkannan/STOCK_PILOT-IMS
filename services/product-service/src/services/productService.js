@@ -597,6 +597,32 @@ class ProductService {
 
     const tenantId = tenantInfo.tenantId;
 
+    // Always fetch latest live store_config directly from tenant_db
+    try {
+      const { createDatabaseConnection } = require('@stockpilot/common');
+      const tenantDb = createDatabaseConnection('tenant_db');
+      const [tRows] = await tenantDb.query(
+        'SELECT store_config, company_name, phone, email, address, tax_number FROM tenants WHERE id = :tenantId LIMIT 1;',
+        { replacements: { tenantId } }
+      );
+      if (tRows && tRows.length > 0) {
+        const rawConfig = tRows[0].store_config;
+        if (rawConfig) {
+          try {
+            tenantInfo.storeConfig = typeof rawConfig === 'string' ? JSON.parse(rawConfig) : rawConfig;
+          } catch (e) {
+            console.warn('Failed to parse store_config:', e.message);
+          }
+        }
+        if (tRows[0].company_name) tenantInfo.companyName = tRows[0].company_name;
+        if (tRows[0].phone) tenantInfo.phone = tRows[0].phone;
+        if (tRows[0].email) tenantInfo.email = tRows[0].email;
+        if (tRows[0].address) tenantInfo.address = tRows[0].address;
+      }
+    } catch (e) {
+      console.warn('Tenant store_config fetch error:', e.message);
+    }
+
     // Fetch categories
     const categories = await Category.findAll({
       where: { tenant_id: tenantId },
@@ -744,20 +770,25 @@ class ProductService {
     const mergedConfig = tenantInfo.storeConfig
       ? {
           ...defaultConfig,
-          ...tenantInfo.storeConfig,
-          branding: { ...defaultConfig.branding, ...(tenantInfo.storeConfig.branding || {}) },
-          navbar: { ...defaultConfig.navbar, ...(tenantInfo.storeConfig.navbar || {}) },
-          hero: { ...defaultConfig.hero, ...(tenantInfo.storeConfig.hero || {}) },
-          productsSection: { ...defaultConfig.productsSection, ...(tenantInfo.storeConfig.productsSection || {}) },
+          ...savedConfig,
+          branding: { ...defaultConfig.branding, ...(savedConfig.branding || {}) },
+          navbar: { ...defaultConfig.navbar, ...(savedConfig.navbar || {}) },
+          hero: { ...defaultConfig.hero, ...(savedConfig.hero || {}) },
+          productsSection: { ...defaultConfig.productsSection, ...(savedConfig.productsSection || {}) },
           testimonials: {
             ...defaultConfig.testimonials,
-            ...(tenantInfo.storeConfig.testimonials || {}),
-            reviews: tenantInfo.storeConfig.testimonials?.reviews || defaultConfig.testimonials.reviews
+            ...(savedConfig.testimonials || {}),
+            reviews: savedConfig.testimonials?.reviews || defaultConfig.testimonials.reviews
           },
-          contact: { ...defaultConfig.contact, ...(tenantInfo.storeConfig.contact || {}) },
-          announcement: { ...defaultConfig.announcement, ...(tenantInfo.storeConfig.announcement || {}) },
-          sections: { ...defaultConfig.sections, ...(tenantInfo.storeConfig.sections || {}) },
-          whatsapp: { ...defaultConfig.whatsapp, ...(tenantInfo.storeConfig.whatsapp || {}) }
+          contact: { ...defaultConfig.contact, ...(savedConfig.contact || {}) },
+          announcement: { ...defaultConfig.announcement, ...(savedConfig.announcement || {}) },
+          sections: Array.isArray(savedConfig.sections) && savedConfig.sections.length > 0
+            ? savedConfig.sections
+            : (savedConfig.sections && typeof savedConfig.sections === 'object' && !Array.isArray(savedConfig.sections)
+                ? { ...defaultConfig.sections, ...savedConfig.sections }
+                : defaultConfig.sections),
+          footer: savedConfig.footer || null,
+          whatsapp: { ...defaultConfig.whatsapp, ...(savedConfig.whatsapp || {}) }
         }
       : defaultConfig;
 
