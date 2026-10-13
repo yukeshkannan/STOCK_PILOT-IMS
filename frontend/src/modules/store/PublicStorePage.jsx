@@ -419,7 +419,11 @@ export default function PublicStorePage() {
       setFastCheckoutStep('OTP');
       setOtpTimer(30);
       setOtpDigits(['', '', '', '']);
-      toast.success(data?.message || `4-digit OTP sent to +91 ${cleanPhone}`);
+      if (data?.smsSent) {
+        toast.success(`OTP sent to +91 ${cleanPhone}`, { icon: '📱' });
+      } else {
+        toast.info(data?.message || `4-digit OTP sent to +91 ${cleanPhone}`);
+      }
     } catch (err) {
       toast.error(err?.response?.data?.message || err?.message || 'Failed to send OTP. Please try again.');
     } finally {

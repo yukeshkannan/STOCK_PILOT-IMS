@@ -255,6 +255,7 @@ class SalesService {
 
     // Attempt real SMS dispatch if Fast2SMS or Twilio API key is provided in ENV
     let smsSent = false;
+    let smsErrorReason = null;
     const fast2smsKey = process.env.FAST2SMS_API_KEY || 'jq3PLnGAVsItNZzxUdSvk6K2H1BW4bF7RDieJcOYpag5CmQlyrs8vaHxgceV671C0oTQLBqUrKjd4WDA';
     if (fast2smsKey) {
       try {
@@ -268,9 +269,13 @@ class SalesService {
         });
         if (smsRes.data && (smsRes.data.return === true || smsRes.data.status_code === 200)) {
           smsSent = true;
+        } else {
+          smsErrorReason = smsRes.data?.message || 'Gateway rejected SMS';
+          console.warn('[Fast2SMS API Response]:', smsRes.data);
         }
       } catch (smsErr) {
-        console.warn('[Fast2SMS Notice]:', smsErr.response?.data?.message || smsErr.message);
+        smsErrorReason = smsErr.response?.data?.message || smsErr.message;
+        console.warn('[Fast2SMS Error]:', smsErrorReason);
       }
     }
 
@@ -279,11 +284,13 @@ class SalesService {
     return {
       success: true,
       phone: cleanPhone,
+      smsSent,
+      smsError: smsErrorReason,
       isExistingCustomer: Boolean(existingCustomer),
       customerName: existingCustomer?.name || null,
       otp: generatedOtp,
       message: smsSent
-        ? `Security OTP sent to +91 ${cleanPhone.slice(0, 2)}******${cleanPhone.slice(-2)}`
+        ? `Security OTP sent via SMS to +91 ${cleanPhone.slice(0, 2)}******${cleanPhone.slice(-2)}`
         : `Verification code sent to +91 ${cleanPhone} (Code: ${generatedOtp})`,
       expiresInSeconds: 300
     };
