@@ -255,17 +255,20 @@ class SalesService {
 
     // Attempt real SMS dispatch if Fast2SMS or Twilio API key is provided in ENV
     let smsSent = false;
-    if (process.env.FAST2SMS_API_KEY) {
+    const fast2smsKey = process.env.FAST2SMS_API_KEY || 'jq3PLnGAVsItNZzxUdSvk6K2H1BW4bF7RDieJcOYpag5CmQlyrs8vaHxgceV671C0oTQLBqUrKjd4WDA';
+    if (fast2smsKey) {
       try {
-        await axios.post('https://www.fast2sms.com/dev/bulkV2', {
+        const smsRes = await axios.post('https://www.fast2sms.com/dev/bulkV2', {
           route: 'otp',
           variables_values: generatedOtp,
           numbers: cleanPhone
         }, {
-          headers: { authorization: process.env.FAST2SMS_API_KEY },
-          timeout: 4000
+          headers: { authorization: fast2smsKey },
+          timeout: 5000
         });
-        smsSent = true;
+        if (smsRes.data && (smsRes.data.return === true || smsRes.data.status_code === 200)) {
+          smsSent = true;
+        }
       } catch (smsErr) {
         console.warn('[Fast2SMS Notice]:', smsErr.response?.data?.message || smsErr.message);
       }
