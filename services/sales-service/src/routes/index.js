@@ -14,6 +14,8 @@ const salesRouter = express.Router();
 // Public Unauthenticated Routes (E-Bill viewer & Online Storefront Checkout)
 salesRouter.get('/public/invoice/:invoiceNumber', (req, res, next) => salesController.getPublicInvoice(req, res, next));
 salesRouter.post('/public/order', (req, res, next) => salesController.createPublicOrder(req, res, next));
+salesRouter.post('/public/otp/send', (req, res, next) => salesController.sendStorefrontOtp(req, res, next));
+salesRouter.post('/public/otp/verify', (req, res, next) => salesController.verifyStorefrontOtp(req, res, next));
 
 // Authenticated Routes
 salesRouter.use(authenticateToken, requireTenant);

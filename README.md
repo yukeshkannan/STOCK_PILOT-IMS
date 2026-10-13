@@ -107,3 +107,21 @@ To launch the complete infrastructure (MySQL, RabbitMQ, Redis, API Gateway, 9 Mi
 ```bash
 docker compose up --build
 ```
+
+---
+
+## 📚 Production Documentation
+
+For detailed architecture diagrams, multi-tenant security specifications, database schemas, and API contracts, refer to the [docs/](docs/) directory:
+
+| Document | Purpose |
+| :--- | :--- |
+| [AI Context Cheat Sheet](docs/AI_CONTEXT.md) | High-density context for AI agents & developers (<600 tokens) |
+| [System Architecture](docs/ARCHITECTURE.md) | Service topology, Gateway routing, and inter-service flow |
+| [Security & Multi-Tenancy](docs/SECURITY.md) | Row-level tenant isolation, JWT claims, and RBAC matrix |
+| [API Contracts](docs/API_CONTRACTS.md) | Standard response envelopes, header injection, and 10-service endpoint catalog |
+| [Database Schema](docs/DATABASE_SCHEMA.md) | Microservice database models, indexing rules, and seed instructions |
+| [Event-Driven Flows](docs/EVENT_DRIVEN_FLOWS.md) | RabbitMQ topic exchange, queues, and pub/sub event workflows |
+| [DevOps & Deployment](docs/DEPLOYMENT_DEVOPS.md) | Production Docker Compose, environment variables, and zero-downtime updates |
+| [Incident Runbook](docs/INCIDENT_RUNBOOK.md) | Severity guidelines, service recovery, and disaster recovery commands |
+

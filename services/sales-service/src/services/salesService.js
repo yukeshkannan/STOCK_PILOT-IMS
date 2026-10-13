@@ -35,6 +35,20 @@ async function dispatchNotification(tenantId, { title, message, type = 'RETURN',
   }
 }
 
+// In-memory OTP Store with automatic expiration
+// Key: `${tenantId}:${cleanPhone}` -> Value: { otp, expiresAt, phone, tenantId, attempts }
+const otpStore = new Map();
+
+// Periodic sweep for expired OTPs every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of otpStore.entries()) {
+    if (now > record.expiresAt) {
+      otpStore.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
 class SalesService {
   // Customers
   async getCustomers(tenantId) {
@@ -154,21 +168,16 @@ class SalesService {
     return saleJson;
   }
 
-  async createPublicOrder(orderData) {
-    const {
-      companyCode,
-      customerName,
-      customerPhone,
-      customerEmail,
-      customerAddress,
-      items,
-      paymentMethod = 'COD',
-      notes
-    } = orderData;
-
+  /**
+   * Helper: Resolve tenant info by company code
+   */
+  async resolveTenantByCode(companyCode) {
     const cleanCode = (companyCode || '').trim().toUpperCase();
-    let tenantInfo = null;
+    if (!cleanCode) {
+      throw { statusCode: 400, message: 'Valid company code is required' };
+    }
 
+    let tenantInfo = null;
     try {
       const { createDatabaseConnection } = require('@stockpilot/common');
       const authDb = createDatabaseConnection('auth_db');
@@ -207,6 +216,132 @@ class SalesService {
       throw { statusCode: 404, message: `Store with code '${companyCode}' not found` };
     }
 
+    return tenantInfo;
+  }
+
+  /**
+   * Fast Checkout: Send 4-digit OTP to Customer's Mobile Number
+   */
+  async sendStorefrontOtp({ companyCode, phone }) {
+    if (!phone) {
+      throw { statusCode: 400, message: 'Mobile number is required' };
+    }
+
+    const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+    if (cleanPhone.length !== 10) {
+      throw { statusCode: 400, message: 'Please enter a valid 10-digit mobile number' };
+    }
+
+    const tenantInfo = await this.resolveTenantByCode(companyCode);
+    const tenantId = tenantInfo.tenantId;
+
+    // Check if customer is already registered/ordered previously
+    const existingCustomer = await Customer.findOne({
+      where: { tenant_id: tenantId, phone: cleanPhone }
+    });
+
+    // Generate random 4-digit numeric OTP
+    const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes validity
+    const cacheKey = `${tenantId}:${cleanPhone}`;
+
+    otpStore.set(cacheKey, {
+      otp: generatedOtp,
+      expiresAt,
+      phone: cleanPhone,
+      tenantId,
+      attempts: 0
+    });
+
+    console.log(`[Storefront OTP] Sent OTP ${generatedOtp} to +91 ${cleanPhone} for Store [${tenantInfo.companyCode}]`);
+
+    return {
+      success: true,
+      phone: cleanPhone,
+      isExistingCustomer: Boolean(existingCustomer),
+      customerName: existingCustomer?.name || null,
+      message: `OTP sent successfully to +91 ${cleanPhone.slice(0, 2)}******${cleanPhone.slice(-2)}`,
+      devOtp: process.env.NODE_ENV === 'production' ? undefined : generatedOtp,
+      expiresInSeconds: 300
+    };
+  }
+
+  /**
+   * Fast Checkout: Verify Customer OTP & Retrieve Pre-filled Profile
+   */
+  async verifyStorefrontOtp({ companyCode, phone, otp }) {
+    if (!phone || !otp) {
+      throw { statusCode: 400, message: 'Phone number and OTP are required' };
+    }
+
+    const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+    const cleanOtp = String(otp).trim();
+
+    const tenantInfo = await this.resolveTenantByCode(companyCode);
+    const tenantId = tenantInfo.tenantId;
+    const cacheKey = `${tenantId}:${cleanPhone}`;
+
+    const record = otpStore.get(cacheKey);
+
+    // Allow demo passcode 1234 in non-production for frictionless testing
+    const isMasterCode = process.env.NODE_ENV !== 'production' && cleanOtp === '1234';
+
+    if (!record && !isMasterCode) {
+      throw { statusCode: 400, message: 'OTP has expired or is invalid. Please request a new code.' };
+    }
+
+    if (record) {
+      if (Date.now() > record.expiresAt) {
+        otpStore.delete(cacheKey);
+        throw { statusCode: 400, message: 'OTP has expired. Please request a new code.' };
+      }
+
+      if (record.otp !== cleanOtp && !isMasterCode) {
+        record.attempts = (record.attempts || 0) + 1;
+        if (record.attempts >= 5) {
+          otpStore.delete(cacheKey);
+          throw { statusCode: 429, message: 'Too many incorrect attempts. Please request a new OTP.' };
+        }
+        throw { statusCode: 400, message: 'Incorrect OTP entered. Please check and try again.' };
+      }
+
+      // Verified successfully - purge OTP
+      otpStore.delete(cacheKey);
+    }
+
+    // Lookup customer in database
+    const customer = await Customer.findOne({
+      where: { tenant_id: tenantId, phone: cleanPhone }
+    });
+
+    return {
+      success: true,
+      verified: true,
+      phone: cleanPhone,
+      isExisting: Boolean(customer),
+      customer: customer ? {
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone,
+        email: customer.email,
+        address: customer.address
+      } : null
+    };
+  }
+
+  async createPublicOrder(orderData) {
+    const {
+      companyCode,
+      customerName,
+      customerPhone,
+      customerEmail,
+      customerAddress,
+      items,
+      paymentMethod = 'COD',
+      notes
+    } = orderData;
+
+    const tenantInfo = await this.resolveTenantByCode(companyCode);
     const tenantId = tenantInfo.tenantId;
 
     // Resolve primary warehouse
@@ -241,6 +376,21 @@ class SalesService {
           credit_limit: 10000,
           status: 'ACTIVE'
         });
+      } else {
+        // If returning customer updated their address/email, update profile
+        const updates = {};
+        if (customerAddress && (!customer.address || customer.address !== customerAddress)) {
+          updates.address = customerAddress;
+        }
+        if (customerEmail && !customer.email) {
+          updates.email = customerEmail;
+        }
+        if (customerName && customer.name === 'Online Customer' && customerName !== 'Online Customer') {
+          updates.name = customerName;
+        }
+        if (Object.keys(updates).length > 0) {
+          await customer.update(updates);
+        }
       }
     }
 

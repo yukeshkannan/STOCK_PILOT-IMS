@@ -113,6 +113,56 @@ export default function PublicStorePage() {
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
 
+  // Fast Checkout (GoKwik / 1-Click) OTP State
+  const [fastCheckoutStep, setFastCheckoutStep] = useState('PHONE'); // 'PHONE' | 'OTP' | 'VERIFIED'
+  const [phoneInput, setPhoneInput] = useState('');
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '']);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [devOtpHint, setDevOtpHint] = useState(null);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [isExistingCustomer, setIsExistingCustomer] = useState(false);
+
+  // Restore saved verified customer session from localStorage if present
+  useEffect(() => {
+    if (!companyCode) return;
+    try {
+      const savedSession = localStorage.getItem(`stockpilot_customer_${companyCode.toUpperCase()}`);
+      if (savedSession) {
+        const parsed = JSON.parse(savedSession);
+        if (parsed?.phone) {
+          setIsPhoneVerified(true);
+          setFastCheckoutStep('VERIFIED');
+          setPhoneInput(parsed.phone);
+          setIsExistingCustomer(Boolean(parsed.isExisting));
+          setCustomer((prev) => ({
+            ...prev,
+            name: parsed.name || prev.name,
+            phone: parsed.phone,
+            email: parsed.email || prev.email,
+            address: parsed.address || prev.address
+          }));
+        }
+      }
+    } catch (e) {
+      // Ignore parse error
+    }
+  }, [companyCode]);
+
+  // OTP Countdown timer
+  useEffect(() => {
+    let interval = null;
+    if (otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [otpTimer]);
+
   // 1-Second Countdown Timer for Flash Sale Blocks
   const [countdown, setCountdown] = useState({ days: 2, hours: 14, minutes: 35, seconds: 48 });
   useEffect(() => {
@@ -351,14 +401,158 @@ export default function PublicStorePage() {
     }
   };
 
+  // Fast Checkout OTP Handlers
+  const handleSendOtp = async (e) => {
+    if (e) e.preventDefault();
+    const cleanPhone = phoneInput.replace(/\D/g, '').slice(-10);
+    if (cleanPhone.length !== 10) {
+      toast.warn('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
+    try {
+      setOtpSending(true);
+      const res = await api.post('/sales/public/otp/send', {
+        companyCode: companyCode.toUpperCase(),
+        phone: cleanPhone
+      });
+      const data = res?.data || res;
+      setFastCheckoutStep('OTP');
+      setOtpTimer(30);
+      setOtpDigits(['', '', '', '']);
+      if (data?.devOtp) {
+        setDevOtpHint(data.devOtp);
+      }
+      toast.success(data?.message || `4-digit OTP sent to +91 ${cleanPhone}`);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleVerifyOtp = async (overrideCode) => {
+    const codeToVerify = overrideCode || otpDigits.join('');
+    if (codeToVerify.length !== 4) {
+      toast.warn('Please enter the complete 4-digit OTP');
+      return;
+    }
+
+    const cleanPhone = phoneInput.replace(/\D/g, '').slice(-10);
+
+    try {
+      setOtpVerifying(true);
+      const res = await api.post('/sales/public/otp/verify', {
+        companyCode: companyCode.toUpperCase(),
+        phone: cleanPhone,
+        otp: codeToVerify
+      });
+      const data = res?.data || res;
+      setIsPhoneVerified(true);
+      setFastCheckoutStep('VERIFIED');
+      setIsExistingCustomer(Boolean(data?.isExisting));
+
+      const customerProfile = data?.customer;
+      const updatedCustomer = {
+        name: customerProfile?.name || customer.name || '',
+        phone: cleanPhone,
+        email: customerProfile?.email || customer.email || '',
+        address: customerProfile?.address || customer.address || '',
+        deliveryType: customer.deliveryType,
+        paymentMethod: customer.paymentMethod
+      };
+
+      setCustomer((prev) => ({
+        ...prev,
+        ...updatedCustomer
+      }));
+
+      // Cache session in localStorage
+      try {
+        localStorage.setItem(`stockpilot_customer_${companyCode.toUpperCase()}`, JSON.stringify({
+          phone: cleanPhone,
+          name: updatedCustomer.name,
+          email: updatedCustomer.email,
+          address: updatedCustomer.address,
+          isExisting: Boolean(data?.isExisting)
+        }));
+      } catch (e) {}
+
+      if (data?.isExisting && customerProfile?.name) {
+        toast.success(`Welcome back, ${customerProfile.name}! Details pre-filled 🎉`);
+      } else {
+        toast.success('Mobile number verified! Proceed to confirm details ✅');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Invalid or expired OTP');
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
+
+  const handleResetPhone = () => {
+    try {
+      localStorage.removeItem(`stockpilot_customer_${companyCode.toUpperCase()}`);
+    } catch (e) {}
+    setIsPhoneVerified(false);
+    setFastCheckoutStep('PHONE');
+    setPhoneInput('');
+    setOtpDigits(['', '', '', '']);
+    setDevOtpHint(null);
+  };
+
+  const handleOtpDigitChange = (index, val) => {
+    const cleanVal = val.replace(/\D/g, '').slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = cleanVal;
+    setOtpDigits(newDigits);
+
+    if (cleanVal && index < 3) {
+      const nextInput = document.getElementById(`otp-input-${index + 1}`);
+      if (nextInput) nextInput.focus();
+    }
+
+    if (cleanVal && index === 3 && newDigits.every((d) => d !== '')) {
+      handleVerifyOtp(newDigits.join(''));
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-input-${index - 1}`);
+      if (prevInput) prevInput.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+    if (pastedData) {
+      const arr = pastedData.split('');
+      while (arr.length < 4) arr.push('');
+      setOtpDigits(arr);
+      if (pastedData.length === 4) {
+        handleVerifyOtp(pastedData);
+      }
+    }
+  };
+
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (cart.length === 0) {
       toast.warn('Your bag is empty.');
       return;
     }
-    if (!customer.name.trim() || !customer.phone.trim()) {
-      toast.warn('Please provide your Name and Mobile Number.');
+    if (!isPhoneVerified) {
+      toast.warn('Please verify your mobile number with OTP to checkout.');
+      return;
+    }
+    if (!customer.name.trim()) {
+      toast.warn('Please provide your Full Name.');
+      return;
+    }
+    if (customer.deliveryType === 'DELIVERY' && !customer.address.trim()) {
+      toast.warn('Please provide your Delivery Address.');
       return;
     }
 
@@ -1671,82 +1865,260 @@ export default function PublicStorePage() {
                   </div>
                 </div>
 
-                {/* Checkout Customer Form */}
+                {/* ⚡ StockPilot Fast 1-Click Checkout (GoKwik Style) */}
                 <form onSubmit={handlePlaceOrder} className="clean-checkout-form">
-                  <h4 className="clean-form-heading">Delivery &amp; Customer Details</h4>
-
-                  {/* Delivery Mode Tabs */}
-                  <div className="clean-delivery-toggle">
-                    <button
-                      type="button"
-                      onClick={() => setCustomer({ ...customer, deliveryType: 'DELIVERY' })}
-                      className={`clean-toggle-btn ${customer.deliveryType === 'DELIVERY' ? 'active' : ''}`}
-                    >
-                      <Truck size={14} /> Doorstep Delivery
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCustomer({ ...customer, deliveryType: 'PICKUP' })}
-                      className={`clean-toggle-btn ${customer.deliveryType === 'PICKUP' ? 'active' : ''}`}
-                    >
-                      <Store size={14} /> Store Pickup
-                    </button>
-                  </div>
-
-                  <div className="clean-form-grid">
-                    <div className="clean-input-group">
-                      <label>Full Name *</label>
-                      <div className="input-with-icon">
-                        <User size={14} className="input-icon" />
-                        <input
-                          type="text"
-                          placeholder="e.g. Ramesh"
-                          required
-                          value={customer.name}
-                          onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                        />
+                  <div className="fast-checkout-container">
+                    <div className="fast-checkout-badge-row">
+                      <div className="fast-checkout-pill">
+                        <Zap size={13} className="text-amber" />
+                        <span>Fast 1-Click Checkout</span>
+                      </div>
+                      <div className="fast-checkout-trust">
+                        <ShieldCheck size={13} className="text-emerald" />
+                        <span>OTP Verified</span>
                       </div>
                     </div>
-                    <div className="clean-input-group">
-                      <label>Mobile Number *</label>
-                      <div className="input-with-icon">
-                        <Phone size={14} className="input-icon" />
-                        <input
-                          type="tel"
-                          placeholder="10-digit mobile"
-                          required
-                          value={customer.phone}
-                          onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
-                        />
+
+                    {!isPhoneVerified ? (
+                      <div className="fast-checkout-auth-card">
+                        {fastCheckoutStep === 'PHONE' ? (
+                          <div className="fast-phone-step">
+                            <div className="fast-step-title-wrap">
+                              <h4 className="fast-step-title">Enter Mobile Number to Checkout</h4>
+                              <p className="fast-step-sub">We'll send a 4-digit OTP to verify your bag &amp; auto-fill your saved address.</p>
+                            </div>
+
+                            <div className="fast-phone-form-row">
+                              <div className="fast-phone-input-wrap">
+                                <span className="fast-country-prefix">🇮🇳 +91</span>
+                                <input
+                                  type="tel"
+                                  maxLength={10}
+                                  placeholder="Enter 10-digit mobile"
+                                  value={phoneInput}
+                                  onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleSendOtp();
+                                    }
+                                  }}
+                                  className="fast-phone-input"
+                                  autoFocus
+                                />
+                                {phoneInput.length === 10 && (
+                                  <span className="fast-phone-valid-check">
+                                    <CheckCircle2 size={16} color="#10b981" />
+                                  </span>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={handleSendOtp}
+                                disabled={otpSending || phoneInput.length !== 10}
+                                className="btn-fast-continue"
+                              >
+                                {otpSending ? (
+                                  <>
+                                    <Loader2 size={15} className="clean-spin" />
+                                    <span>Sending...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>Get OTP</span>
+                                    <ArrowRight size={15} />
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="fast-otp-step">
+                            <div className="fast-otp-header">
+                              <div>
+                                <h4 className="fast-step-title">Verify Phone Number</h4>
+                                <p className="fast-step-sub">
+                                  Enter 4-digit OTP sent to <strong>+91 {phoneInput}</strong>
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFastCheckoutStep('PHONE');
+                                  setOtpDigits(['', '', '', '']);
+                                }}
+                                className="btn-edit-phone"
+                              >
+                                Edit
+                              </button>
+                            </div>
+
+                            {/* 4-digit OTP Inputs */}
+                            <div className="fast-otp-grid">
+                              {otpDigits.map((digit, idx) => (
+                                <input
+                                  key={idx}
+                                  id={`otp-input-${idx}`}
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={1}
+                                  value={digit}
+                                  onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                                  onPaste={idx === 0 ? handleOtpPaste : undefined}
+                                  className={`fast-otp-box ${digit ? 'filled' : ''}`}
+                                  autoFocus={idx === 0}
+                                />
+                              ))}
+                            </div>
+
+                            {/* Dev Demo OTP Hint */}
+                            {devOtpHint && (
+                              <div
+                                className="fast-demo-otp-pill"
+                                onClick={() => {
+                                  const arr = String(devOtpHint).split('');
+                                  setOtpDigits(arr);
+                                  handleVerifyOtp(devOtpHint);
+                                }}
+                                title="Click to auto-fill"
+                              >
+                                <Sparkles size={13} color="#6366f1" />
+                                <span>Demo Code: <strong>{devOtpHint}</strong> (Click to auto-fill)</span>
+                              </div>
+                            )}
+
+                            <div className="fast-otp-actions">
+                              <button
+                                type="button"
+                                disabled={otpVerifying || otpDigits.join('').length !== 4}
+                                onClick={() => handleVerifyOtp()}
+                                className="btn-fast-verify"
+                              >
+                                {otpVerifying ? (
+                                  <>
+                                    <Loader2 size={15} className="clean-spin" />
+                                    <span>Verifying...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 size={15} />
+                                    <span>Verify &amp; Continue</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <div className="fast-resend-row">
+                                {otpTimer > 0 ? (
+                                  <span className="fast-timer-text">
+                                    Resend code in <strong>00:{otpTimer < 10 ? `0${otpTimer}` : otpTimer}</strong>
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={handleSendOtp}
+                                    disabled={otpSending}
+                                    className="btn-resend-otp"
+                                  >
+                                    Resend OTP
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </div>
+                    ) : (
+                      /* Verified Customer Details State */
+                      <div className="fast-verified-card">
+                        <div className="fast-verified-header">
+                          <div className="fast-verified-user-info">
+                            <div className="fast-verified-avatar">
+                              <CheckCircle2 size={18} color="#10b981" />
+                            </div>
+                            <div>
+                              <div className="fast-verified-title">
+                                <span>+91 {customer.phone}</span>
+                                <span className="fast-verified-tag">VERIFIED</span>
+                              </div>
+                              {isExistingCustomer && customer.name && (
+                                <p className="fast-verified-welcome">Welcome back, {customer.name}!</p>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleResetPhone}
+                            className="btn-change-number"
+                            title="Change mobile number"
+                          >
+                            Change
+                          </button>
+                        </div>
 
-                  <div className="clean-input-group">
-                    <label>Email Address (Optional)</label>
-                    <div className="input-with-icon">
-                      <Mail size={14} className="input-icon" />
-                      <input
-                        type="email"
-                        placeholder="For digital e-invoice receipt"
-                        value={customer.email}
-                        onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
-                      />
-                    </div>
-                  </div>
+                        {/* Delivery Mode Tabs */}
+                        <div className="clean-delivery-toggle">
+                          <button
+                            type="button"
+                            onClick={() => setCustomer({ ...customer, deliveryType: 'DELIVERY' })}
+                            className={`clean-toggle-btn ${customer.deliveryType === 'DELIVERY' ? 'active' : ''}`}
+                          >
+                            <Truck size={14} /> Doorstep Delivery
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCustomer({ ...customer, deliveryType: 'PICKUP' })}
+                            className={`clean-toggle-btn ${customer.deliveryType === 'PICKUP' ? 'active' : ''}`}
+                          >
+                            <Store size={14} /> Store Pickup
+                          </button>
+                        </div>
 
-                  {customer.deliveryType === 'DELIVERY' && (
-                    <div className="clean-input-group">
-                      <label>Delivery Address *</label>
-                      <textarea
-                        rows={2}
-                        placeholder="Flat/House, Street, Area, City & Pincode"
-                        required
-                        value={customer.address}
-                        onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                      />
-                    </div>
-                  )}
+                        {/* Name & Email */}
+                        <div className="clean-form-grid">
+                          <div className="clean-input-group">
+                            <label>Full Name *</label>
+                            <div className="input-with-icon">
+                              <User size={14} className="input-icon" />
+                              <input
+                                type="text"
+                                placeholder="e.g. Ramesh"
+                                required
+                                value={customer.name}
+                                onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                          <div className="clean-input-group">
+                            <label>Email Address (Optional)</label>
+                            <div className="input-with-icon">
+                              <Mail size={14} className="input-icon" />
+                              <input
+                                type="email"
+                                placeholder="For digital tax invoice"
+                                value={customer.email}
+                                onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {customer.deliveryType === 'DELIVERY' && (
+                          <div className="clean-input-group">
+                            <label>Delivery Address *</label>
+                            <textarea
+                              rows={2}
+                              placeholder="Flat/House no, Street, Area, City & Pincode"
+                              required
+                              value={customer.address}
+                              onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Payment Mode Selector */}
                   <div className="clean-payment-group">

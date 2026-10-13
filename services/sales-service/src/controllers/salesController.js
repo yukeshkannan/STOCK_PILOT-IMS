@@ -67,6 +67,24 @@ class SalesController {
     }
   }
 
+  async sendStorefrontOtp(req, res, next) {
+    try {
+      const result = await salesService.sendStorefrontOtp(req.body);
+      return ApiResponse.success(res, result, result.message || 'OTP dispatched successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async verifyStorefrontOtp(req, res, next) {
+    try {
+      const result = await salesService.verifyStorefrontOtp(req.body);
+      return ApiResponse.success(res, result, 'OTP verified successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async sendInvoiceEmail(req, res, next) {
     try {
       const result = await salesService.sendInvoiceEmail(req.user.tenantId, req.params.id, {
