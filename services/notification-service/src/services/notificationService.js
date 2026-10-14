@@ -187,8 +187,6 @@ class NotificationService {
                   message: `Product [${pName} (${pCode})] is completely OUT OF STOCK in ${whName}. Sales paused for this item.`,
                   type: 'OUT_OF_STOCK',
                   category: 'STOCK',
-                  actionType: 'REORDER',
-                  actionId: pId,
                   metadata: { productId: pId, warehouseId: item.warehouse_id || item.warehouseId },
                   link: '/inventory'
                 });
@@ -206,8 +204,6 @@ class NotificationService {
                   message: `Product [${pName} (${pCode})] has only ${curr} units remaining in ${whName} (Minimum threshold: ${min} units).`,
                   type: 'LOW_STOCK',
                   category: 'STOCK',
-                  actionType: 'REORDER',
-                  actionId: pId,
                   metadata: { productId: pId, warehouseId: item.warehouse_id || item.warehouseId },
                   link: '/inventory'
                 });
@@ -720,9 +716,11 @@ class NotificationService {
    * Execute Action directly from Notification Card (Approve / Reject / Reorder)
    */
   async executeAction({ tenantId, notificationId, action, user, authHeader }) {
-    const notif = await Notification.findOne({
-      where: { id: notificationId, tenant_id: tenantId ? Number(tenantId) : null }
-    });
+    const where = { id: notificationId };
+    if (tenantId && !user?.isSuperAdmin) {
+      where.tenant_id = Number(tenantId);
+    }
+    const notif = await Notification.findOne({ where });
 
     if (!notif) {
       throw { statusCode: 404, message: 'Notification not found' };
@@ -732,7 +730,14 @@ class NotificationService {
       throw { statusCode: 400, message: 'This notification is not actionable' };
     }
 
-    if (notif.action_status && notif.action_status !== 'PENDING') {
+    const actionUpper = String(action || '').toUpperCase();
+
+    // Idempotent: If already in target status, return cleanly without throwing error
+    if (notif.action_status && notif.action_status === actionUpper) {
+      return notif;
+    }
+
+    if (notif.action_status && ['COMPLETED', 'APPROVED', 'REJECTED', 'PROCESSED'].includes(notif.action_status)) {
       throw { statusCode: 400, message: `Action already processed as ${notif.action_status}` };
     }
 
@@ -743,8 +748,6 @@ class NotificationService {
       'x-user-permissions': JSON.stringify(user?.permissions || ['*']),
       ...(authHeader ? { Authorization: authHeader } : {})
     };
-
-    const actionUpper = String(action || '').toUpperCase();
 
     // 1. Warehouse Transfer Actions
     if (notif.action_type === 'TRANSFER_APPROVE') {

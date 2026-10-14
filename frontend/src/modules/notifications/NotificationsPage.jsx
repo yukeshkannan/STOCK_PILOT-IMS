@@ -748,42 +748,10 @@ export default function NotificationsPage() {
                       borderTop: '1px dashed #e2e8f0',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
+                      justifyContent: 'flex-end',
                       gap: '0.6rem'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <button
-                        onClick={() => {
-                          handleMarkAsRead(n.id);
-                          navigate(n.action_id ? `/purchases?action=new&productId=${n.action_id}` : '/purchases?action=new');
-                        }}
-                        className="btn btn-primary btn-sm"
-                        style={{
-                          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                          border: 'none',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          fontSize: '0.78rem'
-                        }}
-                      >
-                        <ShoppingCart size={13} /> Reorder Stock (Create PO)
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          handleMarkAsRead(n.id);
-                          navigate('/inventory');
-                        }}
-                        className="btn btn-secondary btn-sm"
-                        style={{ fontSize: '0.78rem' }}
-                      >
-                        Adjust Stock
-                      </button>
-                    </div>
-
                     <button
                       onClick={() => {
                         handleMarkAsRead(n.id);

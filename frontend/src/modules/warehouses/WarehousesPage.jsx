@@ -52,7 +52,8 @@ import {
   CheckCheck,
   Info,
   Building,
-  Maximize2
+  Maximize2,
+  Calendar
 } from 'lucide-react';
 
 const CAPACITY_UNIT_OPTIONS = [
@@ -646,7 +647,14 @@ export default function WarehousesPage() {
     if (!dispatchModalTransfer) return;
     try {
       setIsDispatching(true);
-      await api.patch(`/transfers/${dispatchModalTransfer.id}/dispatch`, dispatchForm);
+      const formattedEta = dispatchForm.estimatedArrival && dispatchForm.estimatedArrival.includes('|')
+        ? dispatchForm.estimatedArrival.split('|')[1]
+        : dispatchForm.estimatedArrival;
+
+      await api.patch(`/transfers/${dispatchModalTransfer.id}/dispatch`, {
+        ...dispatchForm,
+        estimatedArrival: formattedEta
+      });
       toast.success(`Transfer ${dispatchModalTransfer.transfer_number} dispatched & in transit`);
       setIsDispatchModalOpen(false);
       setDispatchModalTransfer(null);
@@ -2984,18 +2992,142 @@ export default function WarehousesPage() {
               </div>
             )}
 
-            {/* Approximate / Estimated Delivery Date & Time Picker */}
+            {/* Interactive Date & Time Picker */}
             <div className="form-group" style={{ marginTop: '0.85rem' }}>
-              <label className="form-label">Estimated / Approximate Delivery Arrival</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. 11 Sep 2026, 04:00 PM (or Tomorrow Evening)"
-                value={dispatchForm.estimatedArrival}
-                onChange={(e) => setDispatchForm({ ...dispatchForm, estimatedArrival: e.target.value })}
-              />
-              <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px', display: 'block' }}>
-                Expected arrival time of shipment at destination hub
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <label className="form-label" style={{ marginBottom: 0, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <Calendar size={14} style={{ color: 'var(--primary)' }} /> Estimated Delivery Arrival Time
+                </label>
+                {dispatchForm.estimatedArrival && (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--primary)', fontWeight: 700 }}>
+                    {dispatchForm.estimatedArrival.includes('|') ? dispatchForm.estimatedArrival.split('|')[1] : dispatchForm.estimatedArrival}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="datetime-local"
+                  className="form-input"
+                  style={{
+                    paddingLeft: '2.5rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                  value={
+                    dispatchForm.estimatedArrival && dispatchForm.estimatedArrival.includes('T')
+                      ? (dispatchForm.estimatedArrival.includes('|') ? dispatchForm.estimatedArrival.split('|')[0] : dispatchForm.estimatedArrival.substring(0, 16))
+                      : ''
+                  }
+                  onChange={(e) => {
+                    const rawVal = e.target.value;
+                    if (!rawVal) {
+                      setDispatchForm({ ...dispatchForm, estimatedArrival: '' });
+                      return;
+                    }
+                    const d = new Date(rawVal);
+                    if (!isNaN(d.getTime())) {
+                      const formatted = d.toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      });
+                      setDispatchForm({ ...dispatchForm, estimatedArrival: `${rawVal}|${formatted}` });
+                    } else {
+                      setDispatchForm({ ...dispatchForm, estimatedArrival: rawVal });
+                    }
+                  }}
+                />
+                <Calendar
+                  size={16}
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'var(--primary)',
+                    pointerEvents: 'none'
+                  }}
+                />
+              </div>
+
+              {/* Quick Preset Date Selector Pills */}
+              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                {[
+                  {
+                    label: 'Today Evening (07:00 PM)',
+                    getVal: () => {
+                      const d = new Date();
+                      d.setHours(19, 0, 0, 0);
+                      return d;
+                    }
+                  },
+                  {
+                    label: 'Tomorrow Morning (10:00 AM)',
+                    getVal: () => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + 1);
+                      d.setHours(10, 0, 0, 0);
+                      return d;
+                    }
+                  },
+                  {
+                    label: 'Tomorrow Evening (06:00 PM)',
+                    getVal: () => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + 1);
+                      d.setHours(18, 0, 0, 0);
+                      return d;
+                    }
+                  },
+                  {
+                    label: 'In 2 Days',
+                    getVal: () => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + 2);
+                      d.setHours(14, 0, 0, 0);
+                      return d;
+                    }
+                  }
+                ].map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      const d = preset.getVal();
+                      const iso = d.toISOString().substring(0, 16);
+                      const formatted = d.toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      });
+                      setDispatchForm({ ...dispatchForm, estimatedArrival: `${iso}|${formatted}` });
+                    }}
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      padding: '3px 8px',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      color: '#475569',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    ⚡ {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                Pick an arrival date & time from calendar or select a quick delivery window above.
               </span>
             </div>
 

@@ -116,7 +116,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
       const currentRole = (user?.roleName || user?.role || 'ADMIN').toUpperCase();
       const isPrivileged = currentRole === 'ADMIN' || currentRole === 'MANAGER' || isSuper;
       const canViewPurchases = isPrivileged || perms.includes('purchases:view') || perms.includes('purchases:manage');
-      const canViewTransfers = isPrivileged || perms.includes('inventory:transfer') || perms.includes('warehouses:view');
+      const canViewTransfers = isPrivileged || perms.includes('inventory:transfer') || perms.includes('warehouses:view') || Boolean(user?.warehouseId || user?.warehouse_id) || currentRole === 'STAFF';
 
       const [notifRes, poRes, retRes, trfRes] = await Promise.all([
         api.get('/notifications').catch(() => ({ data: {} })),
@@ -295,60 +295,20 @@ export default function Sidebar({ isOpen = false, onClose }) {
   ];
 
   const getFilteredNavItems = () => {
-    if (userRole === 'STAFF') {
-      return [
-        {
-          group: 'Operations',
-          items: [
-            {
-              label: 'Sales & POS Invoicing',
-              to: '/sales',
-              icon: ShoppingBag
-            }
-          ]
-        },
-        {
-          group: 'Catalog & Stock',
-          items: [
-            {
-              label: 'Products & Catalog',
-              to: '/products',
-              icon: Package
-            },
-            {
-              label: 'Live Stock & History',
-              to: '/inventory',
-              icon: Layers
-            }
-          ]
-        },
-        {
-          group: 'Account',
-          items: [
-            {
-              label: 'Notifications',
-              to: '/notifications',
-              icon: Bell
-            }
-          ]
-        }
-      ];
-    }
-
-    if (isBranchAdmin) {
+    if (isBranchScoped) {
       return [
         {
           group: 'Inventory & Hub Logistics',
           items: [
             {
-              label: 'Live Stock & History',
-              to: '/inventory',
-              icon: Layers
-            },
-            {
               label: 'Warehouses & Transfers',
               to: '/warehouses',
               icon: Warehouse
+            },
+            {
+              label: 'Live Stock & History',
+              to: '/inventory',
+              icon: Layers
             },
             {
               label: 'Products & Catalog',
@@ -380,6 +340,51 @@ export default function Sidebar({ isOpen = false, onClose }) {
               to: '/reports',
               icon: BarChart3
             },
+            {
+              label: 'Notifications',
+              to: '/notifications',
+              icon: Bell
+            }
+          ]
+        }
+      ];
+    }
+
+    if (userRole === 'STAFF') {
+      return [
+        {
+          group: 'Operations',
+          items: [
+            {
+              label: 'Sales & POS Invoicing',
+              to: '/sales',
+              icon: ShoppingBag
+            }
+          ]
+        },
+        {
+          group: 'Catalog & Stock',
+          items: [
+            {
+              label: 'Products & Catalog',
+              to: '/products',
+              icon: Package
+            },
+            {
+              label: 'Live Stock & History',
+              to: '/inventory',
+              icon: Layers
+            },
+            {
+              label: 'Warehouses & Transfers',
+              to: '/warehouses',
+              icon: Warehouse
+            }
+          ]
+        },
+        {
+          group: 'Account',
+          items: [
             {
               label: 'Notifications',
               to: '/notifications',

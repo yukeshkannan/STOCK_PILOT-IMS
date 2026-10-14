@@ -631,35 +631,11 @@ export default function NotificationDropdown() {
                             borderTop: '1px dashed #e2e8f0',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
+                            justifyContent: 'flex-end',
                             gap: '0.4rem'
                           }}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <button
-                            onClick={() => {
-                              markAsRead(n.id);
-                              setIsOpen(false);
-                              navigate(n.action_id ? `/purchases?action=new&productId=${n.action_id}` : '/purchases?action=new');
-                            }}
-                            style={{
-                              padding: '0.22rem 0.6rem',
-                              borderRadius: '5px',
-                              border: 'none',
-                              background: '#f59e0b',
-                              color: '#ffffff',
-                              fontSize: '0.7rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '3px'
-                            }}
-                          >
-                            <ShoppingCart size={11} /> Reorder Stock
-                          </button>
-
                           <span
                             onClick={() => handleNotificationClick(n)}
                             style={{
