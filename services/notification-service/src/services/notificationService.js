@@ -116,6 +116,35 @@ class NotificationService {
         }
       });
 
+      // 1b. Clean up duplicate historical stock notifications (keep only latest 1 per product alert)
+      try {
+        const allStockAlerts = await Notification.findAll({
+          where: {
+            type: { [Op.in]: ['LOW_STOCK', 'OUT_OF_STOCK'] }
+          },
+          order: [['id', 'DESC']]
+        });
+        const seenStockKeys = new Set();
+        const duplicatesToDelete = [];
+        for (const notif of allStockAlerts) {
+          const key = `${notif.tenant_id}_${notif.type}_${notif.action_id || notif.title}`;
+          if (seenStockKeys.has(key)) {
+            duplicatesToDelete.push(notif.id);
+          } else {
+            seenStockKeys.add(key);
+          }
+        }
+        if (duplicatesToDelete.length > 0) {
+          await Notification.destroy({
+            where: {
+              id: { [Op.in]: duplicatesToDelete }
+            }
+          });
+        }
+      } catch (dedupErr) {
+        console.warn('Stock alert deduplication cleanup:', dedupErr.message);
+      }
+
       // 2. Identify tenants to synchronize
       let tenantIdsToSync = [];
       if (tenantId) {
@@ -181,37 +210,73 @@ class NotificationService {
               if (isNaN(curr)) continue;
 
               if (curr <= 0) {
-                await this.createNotification({
-                  tenantId: tId,
-                  title: `Out of Stock Alert: ${pName}`,
-                  message: `Product [${pName} (${pCode})] is completely OUT OF STOCK in ${whName}. Sales paused for this item.`,
-                  type: 'OUT_OF_STOCK',
-                  category: 'STOCK',
-                  metadata: { productId: pId, warehouseId: item.warehouse_id || item.warehouseId },
-                  link: '/inventory'
+                const existing = await Notification.findOne({
+                  where: {
+                    tenant_id: tId,
+                    type: 'OUT_OF_STOCK',
+                    [Op.or]: [
+                      { action_id: String(pId) },
+                      { title: { [Op.like]: `%${pName}%` } }
+                    ]
+                  }
                 });
+
+                if (!existing) {
+                  await this.createNotification({
+                    tenantId: tId,
+                    title: `Out of Stock Alert: ${pName}`,
+                    message: `Product [${pName} (${pCode})] is completely OUT OF STOCK in ${whName}. Sales paused for this item.`,
+                    type: 'OUT_OF_STOCK',
+                    category: 'STOCK',
+                    actionId: pId,
+                    metadata: { productId: pId, warehouseId: item.warehouse_id || item.warehouseId },
+                    link: '/inventory'
+                  });
+                }
+
                 await Notification.destroy({
                   where: {
                     tenant_id: tId,
                     type: 'LOW_STOCK',
-                    action_id: String(pId)
+                    [Op.or]: [
+                      { action_id: String(pId) },
+                      { title: { [Op.like]: `%${pName}%` } }
+                    ]
                   }
                 });
               } else if (curr <= min) {
-                await this.createNotification({
-                  tenantId: tId,
-                  title: `Low Stock Alert: ${pName}`,
-                  message: `Product [${pName} (${pCode})] has only ${curr} units remaining in ${whName} (Minimum threshold: ${min} units).`,
-                  type: 'LOW_STOCK',
-                  category: 'STOCK',
-                  metadata: { productId: pId, warehouseId: item.warehouse_id || item.warehouseId },
-                  link: '/inventory'
+                const existing = await Notification.findOne({
+                  where: {
+                    tenant_id: tId,
+                    type: 'LOW_STOCK',
+                    [Op.or]: [
+                      { action_id: String(pId) },
+                      { title: { [Op.like]: `%${pName}%` } }
+                    ]
+                  }
                 });
+
+                if (!existing) {
+                  await this.createNotification({
+                    tenantId: tId,
+                    title: `Low Stock Alert: ${pName}`,
+                    message: `Product [${pName} (${pCode})] has only ${curr} units remaining in ${whName} (Minimum threshold: ${min} units).`,
+                    type: 'LOW_STOCK',
+                    category: 'STOCK',
+                    actionId: pId,
+                    metadata: { productId: pId, warehouseId: item.warehouse_id || item.warehouseId },
+                    link: '/inventory'
+                  });
+                }
+
                 await Notification.destroy({
                   where: {
                     tenant_id: tId,
                     type: 'OUT_OF_STOCK',
-                    action_id: String(pId)
+                    [Op.or]: [
+                      { action_id: String(pId) },
+                      { title: { [Op.like]: `%${pName}%` } }
+                    ]
                   }
                 });
               } else {
@@ -220,7 +285,10 @@ class NotificationService {
                   where: {
                     tenant_id: tId,
                     type: { [Op.in]: ['LOW_STOCK', 'OUT_OF_STOCK'] },
-                    action_id: String(pId)
+                    [Op.or]: [
+                      { action_id: String(pId) },
+                      { title: { [Op.like]: `%${pName}%` } }
+                    ]
                   }
                 });
               }
@@ -669,25 +737,29 @@ class NotificationService {
     const finalCategory = category || inferCategory(type, actionType);
 
     // Prevent duplicate unread notifications for stock or approval items
-    if (['LOW_STOCK', 'OUT_OF_STOCK', 'RETURN_APPROVAL', 'PURCHASE'].includes(type) && actionId) {
+    if (['LOW_STOCK', 'OUT_OF_STOCK', 'RETURN_APPROVAL', 'PURCHASE'].includes(type)) {
       try {
-        const existing = await Notification.findOne({
-          where: {
-            tenant_id: tenantId ? Number(tenantId) : 0,
-            type,
-            action_id: String(actionId)
-          }
-        });
+        const whereCond = {
+          tenant_id: tenantId ? Number(tenantId) : 0,
+          type
+        };
+        if (actionId) {
+          whereCond[Op.or] = [
+            { action_id: String(actionId) },
+            { title }
+          ];
+        } else {
+          whereCond.title = title;
+        }
+
+        const existing = await Notification.findOne({ where: whereCond });
         if (existing) {
+          // Keep existing user read state, do not re-insert or force unread!
           await existing.update({
-            title,
             message,
             category: finalCategory,
-            action_type: actionType || existing.action_type,
-            action_status: actionType ? (actionStatus || existing.action_status) : null,
             metadata: typeof metadata === 'object' ? JSON.stringify(metadata) : (metadata || null),
-            link: link || existing.link,
-            is_read: false
+            link: link || existing.link
           });
           return existing;
         }
