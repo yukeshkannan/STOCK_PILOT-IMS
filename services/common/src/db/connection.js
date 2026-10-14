@@ -122,6 +122,7 @@ async function initDatabase(sequelize, dbName) {
     }
 
     await sequelize.authenticate();
+    await syncTableColumns(sequelize);
     await sequelize.sync({ alter: false });
     await syncTableColumns(sequelize);
     logger.info(`Database schema synchronized for [${dbName}] (${dialect})`);

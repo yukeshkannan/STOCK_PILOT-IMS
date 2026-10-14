@@ -56,25 +56,38 @@ All microservices adhere to standard JSON response envelopes to simplify client 
 ### 🔐 1. Auth Service (`/api/v1/auth`)
 | Method | Route | Description | Auth Required |
 | :--- | :--- | :--- | :---: |
-| `POST` | `/api/v1/auth/login` | Authenticate user with company code, email, password | No |
+| `POST` | `/api/v1/auth/register` | Register user account with first name, last name, email, password | No |
+| `POST` | `/api/v1/auth/login` | Authenticate user with email and password (auto-routes by role) | No |
+| `POST` | `/api/v1/auth/dev-login` | Authenticate developer team member with email and passkey | No |
+| `POST` | `/api/v1/auth/complete-profile` | Complete organization setup (business name, phone, city, plan) | Yes |
 | `POST` | `/api/v1/auth/refresh` | Refresh access token using refresh token | No |
-| `GET` | `/api/v1/auth/me` | Fetch authenticated profile details | Yes |
+| `GET` | `/api/v1/auth/me` | Fetch authenticated profile details & active subscription | Yes |
 | `POST` | `/api/v1/auth/logout` | Invalidate current session token | Yes |
 
 ### 🏢 2. Tenant & User Service (`/api/v1/...`)
 | Method | Route | Description | Min Role |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/tenants/current` | Get current tenant profile & settings | `STAFF` |
-| `PUT` | `/api/v1/tenants/current` | Update tenant business settings | `ADMIN` |
+| `GET` | `/api/v1/tenants/me` | Get current tenant profile | `STAFF` |
+| `PUT` | `/api/v1/tenants/me` | Update tenant company profile | `ADMIN` |
+| `GET` | `/api/v1/tenants/settings` | Get tenant business settings | `STAFF` |
+| `PUT` | `/api/v1/tenants/settings` | Update tenant business settings | `ADMIN` |
+| `GET` | `/api/v1/tenants/store-config` | Load storefront visual builder config & theme | `ADMIN` |
+| `PUT` | `/api/v1/tenants/store-config` | Save and publish storefront builder design | `ADMIN` |
+| `GET` | `/api/v1/tenants/tickets` | List tenant support tickets & status | `STAFF` |
+| `POST` | `/api/v1/tenants/tickets` | Submit new support helpdesk ticket | `STAFF` |
 | `GET` | `/api/v1/users` | List company staff users | `ADMIN` |
 | `POST` | `/api/v1/users` | Invite / create user account | `ADMIN` |
 | `GET` | `/api/v1/roles` | List tenant roles and permissions | `ADMIN` |
 | `GET` | `/api/v1/admin/tenants` | Platform Super Admin list of tenants | `SUPER_ADMIN` |
+| `POST` | `/api/v1/admin/tenants` | Provision new tenant organization | `SUPER_ADMIN` |
 | `PATCH` | `/api/v1/admin/tenants/:id/status` | Suspend or activate tenant company | `SUPER_ADMIN` |
+| `GET` | `/api/v1/admin/tickets` | Helpdesk ticket queue for devs and superadmin | `SUPER_ADMIN / DEV` |
+| `GET` | `/api/v1/admin/team` | Developer & support team directory | `SUPER_ADMIN / DEV` |
 
 ### 📦 3. Product Service (`/api/v1/...`)
 | Method | Route | Description | Min Role |
 | :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/products/public/store/:companyCode` | Public storefront catalog & theme configuration | `PUBLIC` |
 | `GET` | `/api/v1/products` | Paginated product list with search/filter | `STAFF` |
 | `POST` | `/api/v1/products` | Create new SKU with barcode, pricing, tax | `MANAGER` |
 | `GET` | `/api/v1/products/:id` | Get single product details | `STAFF` |

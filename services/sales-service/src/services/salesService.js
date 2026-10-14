@@ -177,13 +177,14 @@ class SalesService {
       throw { statusCode: 400, message: 'Valid company code is required' };
     }
 
+    const numericId = Number(cleanCode) || 0;
     let tenantInfo = null;
     try {
       const { createDatabaseConnection } = require('@stockpilot/common');
       const authDb = createDatabaseConnection('auth_db');
       const [lookups] = await authDb.query(
-        'SELECT tenant_id, company_code, company_name FROM tenant_lookup WHERE UPPER(company_code) = :code LIMIT 1;',
-        { replacements: { code: cleanCode } }
+        'SELECT tenant_id, company_code, company_name FROM tenant_lookup WHERE UPPER(company_code) = :code OR tenant_id = :numericId LIMIT 1;',
+        { replacements: { code: cleanCode, numericId } }
       );
       if (lookups && lookups.length > 0) {
         tenantInfo = {
@@ -199,8 +200,8 @@ class SalesService {
         const { createDatabaseConnection } = require('@stockpilot/common');
         const tenantDb = createDatabaseConnection('tenant_db');
         const [tenants] = await tenantDb.query(
-          'SELECT id, company_code, company_name FROM tenants WHERE UPPER(company_code) = :code LIMIT 1;',
-          { replacements: { code: cleanCode } }
+          'SELECT id, company_code, company_name FROM tenants WHERE UPPER(company_code) = :code OR id = :numericId LIMIT 1;',
+          { replacements: { code: cleanCode, numericId } }
         );
         if (tenants && tenants.length > 0) {
           tenantInfo = {

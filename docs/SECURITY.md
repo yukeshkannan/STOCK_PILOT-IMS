@@ -35,10 +35,11 @@ graph TD
 ## 2. Authentication & JWT Context Lifecycle
 
 ### Step 1: Login Request
-Users authenticate using three attributes:
-- `company_code` (e.g. `ABC001`)
-- `email` (e.g. `admin@abc.com`)
+Users authenticate directly using their credentials without entering a manual company code:
+- `email` (e.g. `admin@abc.com` or `superadmin@stockpilot.io`)
 - `password`
+
+Tenant organization context and RBAC permissions are automatically resolved on the backend through secure tenant lookup mapping.
 
 ### Step 2: Token Issuance
 Auth Service verifies credentials (comparing Bcrypt hash) and returns signed JSON Web Tokens containing:

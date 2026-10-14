@@ -456,7 +456,84 @@ export default function NotificationDropdown() {
                       </div>
 
                       {/* Interactive In-Card Actions */}
-                      {['TRANSFER_APPROVE', 'PURCHASE_APPROVE', 'RETURN_APPROVE'].includes(n.action_type) ? (
+                      {n.action_type === 'TRANSFER_RECEIVE' ? (
+                        <div
+                          style={{
+                            marginTop: '0.55rem',
+                            paddingTop: '0.45rem',
+                            borderTop: '1px dashed #e2e8f0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '0.4rem'
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {n.action_status === 'COMPLETED' ? (
+                            <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <CheckCheck size={13} /> Stock Received
+                            </span>
+                          ) : (
+                            (() => {
+                              const meta = n.metadata ? (typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata) : {};
+                              const userWhId = user?.warehouseId || user?.warehouse_id ? String(user?.warehouseId || user?.warehouse_id) : null;
+                              const isDest = Boolean(userWhId && String(meta.toWarehouseId) === String(userWhId));
+                              const isReq = Boolean(meta.requestedBy && user?.email && meta.requestedBy.toLowerCase() === user.email.toLowerCase());
+                              const canReceive = isDest || isReq;
+
+                              if (canReceive) {
+                                return (
+                                  <button
+                                    onClick={(e) => handleExecuteAction(e, n, 'RECEIVE')}
+                                    disabled={actionLoadingId === n.id}
+                                    style={{
+                                      padding: '0.22rem 0.55rem',
+                                      borderRadius: '5px',
+                                      border: 'none',
+                                      background: '#059669',
+                                      color: '#ffffff',
+                                      fontSize: '0.7rem',
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '3px'
+                                    }}
+                                  >
+                                    {actionLoadingId === n.id ? (
+                                      <RefreshCw size={11} className="spin" />
+                                    ) : (
+                                      <CheckCheck size={12} />
+                                    )}
+                                    Receive Stock
+                                  </button>
+                                );
+                              }
+                              return (
+                                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                  <ArrowRightLeft size={12} color="var(--primary)" /> En Route to Destination
+                                </span>
+                              );
+                            })()
+                          )}
+
+                          <span
+                            onClick={() => handleNotificationClick(n)}
+                            style={{
+                              color: 'var(--primary)',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '2px'
+                            }}
+                          >
+                            Details <ArrowRight size={11} />
+                          </span>
+                        </div>
+                      ) : ['TRANSFER_APPROVE', 'PURCHASE_APPROVE', 'RETURN_APPROVE'].includes(n.action_type) ? (
                         <div
                           style={{
                             marginTop: '0.55rem',

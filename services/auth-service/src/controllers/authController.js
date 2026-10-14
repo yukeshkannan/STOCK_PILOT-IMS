@@ -6,11 +6,7 @@ const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().optional(),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  companyName: z.string().optional(),
-  companyCode: z.string().optional(),
-  phone: z.string().optional(),
-  plan: z.string().optional()
+  password: z.string().min(6, 'Password must be at least 6 characters')
 });
 
 const completeProfileSchema = z.object({
@@ -24,7 +20,6 @@ const completeProfileSchema = z.object({
 });
 
 const loginSchema = z.object({
-  companyCode: z.string().optional(),
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required')
 });
@@ -33,12 +28,7 @@ class AuthController {
   async register(req, res, next) {
     try {
       const validatedData = registerSchema.parse(req.body);
-      let result;
-      if (validatedData.companyCode && validatedData.companyName) {
-        result = await authService.registerTenant(validatedData);
-      } else {
-        result = await authService.registerUser(validatedData);
-      }
+      const result = await authService.registerUser(validatedData);
       return ApiResponse.created(res, result, 'Account registered successfully');
     } catch (err) {
       next(err);

@@ -609,6 +609,7 @@ export default function WarehousesPage() {
       });
       setShowTransportInTransferForm(false);
       setActiveTab('transfers');
+      setTransferStatusFilter('PENDING');
       fetchData();
     } catch (err) {
       toast.error(err.message || 'Transfer request failed');
@@ -619,6 +620,7 @@ export default function WarehousesPage() {
     try {
       await api.patch(`/transfers/${id}/approve`);
       toast.success('Transfer request approved. Ready for transport dispatch.');
+      setTransferStatusFilter('APPROVED');
       fetchData();
     } catch (err) {
       toast.error(err.message || 'Approve failed');
@@ -648,6 +650,7 @@ export default function WarehousesPage() {
       toast.success(`Transfer ${dispatchModalTransfer.transfer_number} dispatched & in transit`);
       setIsDispatchModalOpen(false);
       setDispatchModalTransfer(null);
+      setTransferStatusFilter('IN_TRANSIT');
       fetchData();
     } catch (err) {
       toast.error(err.message || 'Dispatch failed');
@@ -658,8 +661,11 @@ export default function WarehousesPage() {
 
   const handleReceiveTransfer = async (transfer) => {
     try {
-      await api.patch(`/transfers/${transfer.id}/receive`);
+      await api.patch(`/transfers/${transfer.id}/receive`, {
+        receivedBy: currentUser?.name || currentUser?.email || 'Warehouse Staff'
+      });
       toast.success(`Transfer ${transfer.transfer_number} goods received & added to stock`);
+      setTransferStatusFilter('COMPLETED');
       fetchData();
     } catch (err) {
       toast.error(err.message || 'Receive transfer failed');
@@ -686,6 +692,7 @@ export default function WarehousesPage() {
       await api.patch(`/transfers/${rejectingTransfer.id}/reject`);
       toast.info('Transfer request rejected');
       setRejectingTransfer(null);
+      setTransferStatusFilter('REJECTED');
       fetchData();
     } catch (err) {
       toast.error(err.message || 'Reject failed');
@@ -1998,6 +2005,26 @@ export default function WarehousesPage() {
                     })
                   : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
+                // Multi-hub ownership & receiver permissions check
+                const userEmail = (currentUser?.email || '').toLowerCase().trim();
+                const userName = (currentUser?.name || currentUser?.username || '').toLowerCase().trim();
+                const requesterIdentifier = (t.requested_by || '').toLowerCase().trim();
+
+                const isRequester = Boolean(
+                  requesterIdentifier && (
+                    requesterIdentifier === userEmail ||
+                    requesterIdentifier === userName ||
+                    userEmail.includes(requesterIdentifier) ||
+                    requesterIdentifier.includes(userEmail)
+                  )
+                );
+
+                const isDestinationStaff = Boolean(assignedWhId && String(t.to_warehouse_id) === String(assignedWhId));
+                const isOriginSender = Boolean(assignedWhId && String(t.from_warehouse_id) === String(assignedWhId));
+
+                // The origin admin/sender fulfilled the shipment; inward receipt belongs strictly to destination or requester
+                const canReceiveGoods = isInTransit && (isDestinationStaff || isRequester);
+
                 return (
                   <div
                     key={t.id}
@@ -2005,14 +2032,14 @@ export default function WarehousesPage() {
                       background: '#ffffff',
                       borderRadius: '14px',
                       border: '1px solid #e2e8f0',
-                      padding: '1.15rem 1.35rem',
-                      boxShadow: '0 1px 4px rgba(15, 23, 42, 0.03)'
+                      padding: '1.25rem 1.4rem',
+                      boxShadow: '0 1px 4px rgba(15, 23, 42, 0.04)'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.85rem' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 800, fontFamily: 'monospace', color: 'var(--primary)', fontSize: '0.9rem' }}>
+                          <span style={{ fontWeight: 800, fontFamily: 'monospace', color: 'var(--primary)', fontSize: '0.925rem' }}>
                             {t.transfer_number}
                           </span>
                           {isPending && (
@@ -2032,7 +2059,7 @@ export default function WarehousesPage() {
                           )}
                           {isCompleted && (
                             <span style={{ fontSize: '0.725rem', fontWeight: 700, background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: '9999px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <CheckCheck size={11} /> Completed
+                              <CheckCheck size={11} /> Completed & Stocked
                             </span>
                           )}
                           {isRejected && (
@@ -2090,15 +2117,45 @@ export default function WarehousesPage() {
                           </button>
                         )}
 
-                        {/* Receive at Destination Hub (Destination Branch User / Global Admin) */}
-                        {isInTransit && (isGlobalAdmin || String(t.to_warehouse_id) === String(assignedWhId)) && (
-                          <button
-                            onClick={() => handleReceiveTransfer(t)}
-                            className="btn btn-success btn-xs"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <CheckCheck size={12} /> Receive Goods into Stock
-                          </button>
+                        {/* Receive at Destination Hub (Destination Branch User / Requester) */}
+                        {isInTransit && (
+                          canReceiveGoods ? (
+                            <button
+                              onClick={() => handleReceiveTransfer(t)}
+                              className="btn btn-success btn-xs"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                fontWeight: 700,
+                                background: '#059669',
+                                borderColor: '#059669',
+                                color: '#ffffff',
+                                padding: '5px 12px',
+                                boxShadow: '0 2px 4px rgba(5, 150, 105, 0.2)'
+                              }}
+                            >
+                              <CheckCheck size={13} /> Receive Goods into Stock
+                            </button>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: '0.74rem',
+                                fontWeight: 600,
+                                background: '#f8fafc',
+                                color: '#475569',
+                                border: '1px solid #cbd5e1',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                              }}
+                            >
+                              <Clock size={12} style={{ color: 'var(--primary)' }} />
+                              Awaiting Inward Receipt at {t.toWarehouse?.name || 'Destination Hub'} ({t.requested_by || 'Requester'})
+                            </span>
+                          )
                         )}
 
                         {/* Delete Transfer Option */}
@@ -2164,15 +2221,150 @@ export default function WarehousesPage() {
                       </div>
                     </div>
 
-                    {/* Logistics Fleet Details if In Transit */}
-                    {(t.vehicle_no || t.carrier_name || t.driver_name) && (
-                      <div style={{ marginTop: '0.65rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.75rem', color: '#475569' }}>
-                        {t.vehicle_no && <span><strong>Vehicle:</strong> {t.vehicle_no}</span>}
+                    {/* Logistics Fleet Details if In Transit or Dispatched */}
+                    {(t.vehicle_no || t.carrier_name || t.driver_name || t.tracking_number) && (
+                      <div style={{ marginTop: '0.65rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.75rem', color: '#475569', background: '#ffffff', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
                         {t.carrier_name && <span><strong>Carrier:</strong> {t.carrier_name}</span>}
+                        {t.vehicle_no && <span><strong>Vehicle:</strong> {t.vehicle_no}</span>}
                         {t.driver_name && <span><strong>Driver:</strong> {t.driver_name} {t.driver_phone ? `(${t.driver_phone})` : ''}</span>}
-                        {t.tracking_number && <span><strong>Tracking / LR:</strong> {t.tracking_number}</span>}
+                        {t.tracking_number && <span><strong>Tracking / LR:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary)' }}>{t.tracking_number}</span></span>}
+                        {t.estimated_arrival && <span><strong>ETA:</strong> {t.estimated_arrival}</span>}
                       </div>
                     )}
+
+                    {/* 4-Stage Requisition Lifecycle Journey Stepper */}
+                    <div
+                      style={{
+                        marginTop: '0.85rem',
+                        padding: '0.75rem 0.95rem',
+                        background: '#fcfbfb',
+                        borderRadius: '10px',
+                        border: '1px solid #f1eef1'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.55rem' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#44403c', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Layers size={13} style={{ color: 'var(--primary)' }} /> Requisition & Transit Telemetry
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: '#78716c', fontWeight: 600 }}>
+                          {isInTransit ? 'Active Shipment En Route' : (isCompleted ? 'Shipment Fully Stocked' : (isRejected ? 'Requisition Cancelled' : 'Order Processing'))}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.55rem' }}>
+                        {/* Stage 1: Request Created */}
+                        <div style={{
+                          background: '#ffffff',
+                          padding: '0.55rem 0.7rem',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          borderLeft: '3px solid #10b981'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.725rem', fontWeight: 700, color: '#0f172a' }}>
+                            <CheckCircle2 size={13} color="#10b981" /> 1. Requisition Raised
+                          </div>
+                          <div style={{ fontSize: '0.675rem', color: '#64748b', marginTop: '2px' }}>
+                            By <strong>{t.requested_by || 'Requester'}</strong>
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '1px' }}>
+                            {formattedDate}
+                          </div>
+                        </div>
+
+                        {/* Stage 2: Origin Review & Approval */}
+                        <div style={{
+                          background: '#ffffff',
+                          padding: '0.55rem 0.7rem',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          borderLeft: `3px solid ${isRejected ? '#ef4444' : (isPending ? '#f59e0b' : '#10b981')}`
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.725rem', fontWeight: 700, color: '#0f172a' }}>
+                            {isRejected ? (
+                              <XCircle size={13} color="#ef4444" />
+                            ) : isPending ? (
+                              <Clock size={13} color="#f59e0b" />
+                            ) : (
+                              <CheckCircle2 size={13} color="#10b981" />
+                            )}
+                            2. Origin Approval
+                          </div>
+                          <div style={{ fontSize: '0.675rem', color: '#64748b', marginTop: '2px' }}>
+                            {isRejected
+                              ? 'Declined by Origin Hub'
+                              : isPending
+                              ? 'Awaiting Origin Review'
+                              : `Approved by ${t.approved_by || 'Origin Hub'}`}
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '1px' }}>
+                            {t.fromWarehouse?.name || 'Origin Hub'}
+                          </div>
+                        </div>
+
+                        {/* Stage 3: Fleet Transit */}
+                        <div style={{
+                          background: '#ffffff',
+                          padding: '0.55rem 0.7rem',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          borderLeft: `3px solid ${isPending || isRejected ? '#cbd5e1' : (isApproved ? 'var(--primary)' : '#10b981')}`
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.725rem', fontWeight: 700, color: '#0f172a' }}>
+                            {isInTransit || isCompleted ? (
+                              <CheckCircle2 size={13} color="#10b981" />
+                            ) : isApproved ? (
+                              <Truck size={13} color="var(--primary)" />
+                            ) : (
+                              <Clock size={13} color="#94a3b8" />
+                            )}
+                            3. Logistics & Transit
+                          </div>
+                          <div style={{ fontSize: '0.675rem', color: '#64748b', marginTop: '2px' }}>
+                            {isInTransit
+                              ? `En Route via ${t.carrier_name || 'Fleet'}`
+                              : isCompleted
+                              ? `Delivered (${t.carrier_name || 'Fleet'})`
+                              : isApproved
+                              ? 'Ready for Fleet Dispatch'
+                              : 'Pending Requisition Approval'}
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '1px' }}>
+                            {t.tracking_number ? `LR: ${t.tracking_number}` : (t.vehicle_no ? `Vehicle: ${t.vehicle_no}` : 'Tracking: Standard')}
+                          </div>
+                        </div>
+
+                        {/* Stage 4: Destination Inward Receipt */}
+                        <div style={{
+                          background: '#ffffff',
+                          padding: '0.55rem 0.7rem',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          borderLeft: `3px solid ${isCompleted ? '#10b981' : (isInTransit ? '#8b5cf6' : '#cbd5e1')}`
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.725rem', fontWeight: 700, color: '#0f172a' }}>
+                            {isCompleted ? (
+                              <CheckCheck size={13} color="#10b981" />
+                            ) : isInTransit ? (
+                              <PackageCheck size={13} color="#8b5cf6" />
+                            ) : (
+                              <Clock size={13} color="#94a3b8" />
+                            )}
+                            4. Destination Inward
+                          </div>
+                          <div style={{ fontSize: '0.675rem', color: '#64748b', marginTop: '2px' }}>
+                            {isCompleted
+                              ? `Stock Received by ${t.received_by || 'Staff'}`
+                              : isInTransit
+                              ? 'Inward Receipt Pending'
+                              : 'Awaiting Transit Arrival'}
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '1px' }}>
+                            {t.toWarehouse?.name || 'Destination Hub'}
+                            {t.received_at ? ` • ${new Date(t.received_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 );
               })}

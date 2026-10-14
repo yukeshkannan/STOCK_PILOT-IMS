@@ -3,6 +3,50 @@ const { Warehouse, StockTransfer, StockTransferItem, sequelize } = require('../m
 const { TRANSFER_STATUS, STOCK_MOVEMENT_TYPES, eventBus, EVENTS, getNextSequenceNumber } = require('@stockpilot/common');
 
 const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5009';
+
+async function dispatchTransferNotification(tenantId, notifData) {
+  try {
+    await axios.post(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/internal`, {
+      tenantId: Number(tenantId),
+      ...notifData
+    }, {
+      headers: {
+        'x-tenant-id': String(tenantId),
+        'x-user-role': 'ADMIN',
+        'x-is-super-admin': 'true',
+        'Content-Type': 'application/json'
+      },
+      timeout: 3000
+    });
+    return;
+  } catch (err) {
+    // Proceed to direct DB fallback
+  }
+
+  try {
+    const { createDatabaseConnection } = require('@stockpilot/common');
+    const notifDb = createDatabaseConnection('notification_db');
+    await notifDb.query(`
+      INSERT INTO notifications (tenant_id, title, message, type, category, action_type, action_id, action_status, link, is_read, created_at, updated_at)
+      VALUES (:tenantId, :title, :message, :type, :category, :actionType, :actionId, :actionStatus, :link, 0, NOW(), NOW())
+    `, {
+      replacements: {
+        tenantId: Number(tenantId),
+        title: notifData.title,
+        message: notifData.message,
+        type: notifData.type || 'TRANSFER',
+        category: notifData.category || 'TRANSACTIONS',
+        actionType: notifData.actionType || null,
+        actionId: notifData.actionId ? String(notifData.actionId) : null,
+        actionStatus: notifData.actionStatus || null,
+        link: notifData.link || '/warehouses?tab=transfers'
+      }
+    });
+  } catch (e) {
+    console.warn('[WarehouseNotification] Direct DB notice:', e.message);
+  }
+}
 
 class WarehouseService {
   async getWarehouses(tenantId) {
@@ -325,6 +369,18 @@ class WarehouseService {
         itemsCount: items.length
       });
 
+      await dispatchTransferNotification(tenantId, {
+        title: `Transfer Request: #${transferNumber}`,
+        message: `Transfer Request raised: ${fromWh.name} to ${toWh.name} (${items.length} SKUs). Requested by ${requestedBy || 'Staff'}. Requires authorization.`,
+        type: 'TRANSFER',
+        category: 'REQUESTS',
+        actionType: 'TRANSFER_APPROVE',
+        actionId: transfer.id,
+        actionStatus: 'PENDING',
+        metadata: { transferId: transfer.id, transferNumber },
+        link: '/warehouses?tab=transfers'
+      });
+
       return this.getTransferById(tenantId, transfer.id);
     } catch (err) {
       await transaction.rollback();
@@ -373,6 +429,18 @@ class WarehouseService {
       tenantId,
       transferId: transfer.id,
       transferNumber: transfer.transfer_number
+    });
+
+    await dispatchTransferNotification(tenantId, {
+      title: `Stock Transfer Approved: #${transfer.transfer_number}`,
+      message: `Transfer #${transfer.transfer_number} (${transfer.fromWarehouse?.name || 'Origin Hub'} to ${transfer.toWarehouse?.name || 'Destination Hub'}) has been approved by ${approvedBy || 'Manager'}. Ready for fleet dispatch.`,
+      type: 'TRANSFER',
+      category: 'TRANSACTIONS',
+      actionType: 'TRANSFER_APPROVE',
+      actionId: transfer.id,
+      actionStatus: 'APPROVED',
+      metadata: { transferId: transfer.id, transferNumber: transfer.transfer_number },
+      link: '/warehouses?tab=transfers'
     });
 
     return this.getTransferById(tenantId, transfer.id);
@@ -427,6 +495,15 @@ class WarehouseService {
       toWarehouse: transfer.toWarehouse ? transfer.toWarehouse.name : '',
       vehicleNo: updatePayload.vehicle_no || transfer.vehicle_no,
       driverName: updatePayload.driver_name || transfer.driver_name
+    });
+
+    await dispatchTransferNotification(tenantId, {
+      title: `Stock Transfer Dispatched: #${transfer.transfer_number}`,
+      message: `Transfer #${transfer.transfer_number} is now IN TRANSIT from ${transfer.fromWarehouse?.name || 'Origin Hub'} to ${transfer.toWarehouse?.name || 'Destination Hub'}. Carrier: ${dispatchData.carrierName || transfer.carrier_name || 'In-House'} (${dispatchData.vehicleNo || transfer.vehicle_no || 'Fleet'}). Tracking/LR: ${dispatchData.trackingNumber || transfer.tracking_number || 'N/A'}. Awaiting arrival at destination.`,
+      type: 'TRANSFER',
+      category: 'TRANSACTIONS',
+      metadata: { transferId: transfer.id, transferNumber: transfer.transfer_number },
+      link: '/warehouses?tab=transfers'
     });
 
     return this.getTransferById(tenantId, transfer.id);
@@ -501,6 +578,15 @@ class WarehouseService {
       toWarehouse: transfer.toWarehouse ? transfer.toWarehouse.name : ''
     });
 
+    await dispatchTransferNotification(tenantId, {
+      title: `Stock Transfer Received: #${transfer.transfer_number}`,
+      message: `Transfer #${transfer.transfer_number} has arrived safely and received into live inventory at ${transfer.toWarehouse?.name || 'Destination Hub'} by ${receiveData.receivedBy || 'Staff'}.`,
+      type: 'TRANSFER',
+      category: 'TRANSACTIONS',
+      metadata: { transferId: transfer.id, transferNumber: transfer.transfer_number },
+      link: '/warehouses?tab=transfers'
+    });
+
     return this.getTransferById(tenantId, transfer.id);
   }
 
@@ -516,6 +602,19 @@ class WarehouseService {
       transferId: transfer.id,
       transferNumber: transfer.transfer_number
     });
+
+    await dispatchTransferNotification(tenantId, {
+      title: `Stock Transfer Declined: #${transfer.transfer_number}`,
+      message: `Transfer #${transfer.transfer_number} (${transfer.fromWarehouse?.name || 'Origin'} to ${transfer.toWarehouse?.name || 'Destination'}) was declined.`,
+      type: 'TRANSFER',
+      category: 'TRANSACTIONS',
+      actionType: 'TRANSFER_APPROVE',
+      actionId: transfer.id,
+      actionStatus: 'REJECTED',
+      metadata: { transferId: transfer.id, transferNumber: transfer.transfer_number },
+      link: '/warehouses?tab=transfers'
+    });
+
     return transfer;
   }
 

@@ -344,10 +344,10 @@ class NotificationService {
           console.warn('[NotificationLiveSync] Purchase returns sync note:', e.message);
         }
 
-        // D. Dynamic Live Pending Transfers Sync
+        // D. Dynamic Live Inter-Hub Transfers Sync
         try {
           const trfJson = await fetchService(
-            '/api/v1/warehouses/transfers?status=PENDING&limit=50',
+            '/api/v1/transfers?limit=50',
             WAREHOUSE_SERVICE_URL,
             'http://warehouse-service:5005',
             headers
@@ -355,6 +355,11 @@ class NotificationService {
           const trfList = extractList(trfJson, 'transfers');
           if (Array.isArray(trfList) && trfList.length > 0) {
             for (const trf of trfList) {
+              const fromName = trf.fromWarehouse?.name || trf.source_warehouse_name || 'Origin Hub';
+              const toName = trf.toWarehouse?.name || trf.destination_warehouse_name || 'Destination Hub';
+              const itemsCount = trf.items?.length || 1;
+
+              // 1. Pending Approval Alert
               if (trf.status === 'PENDING') {
                 const existing = await Notification.findOne({
                   where: {
@@ -364,19 +369,88 @@ class NotificationService {
                   }
                 });
                 if (!existing) {
-                  const itemsCount = trf.items?.length || 1;
                   await this.createNotification({
                     tenantId: tId,
-                    title: `Transfer Request #${trf.transfer_number}`,
-                    message: `Stock transfer request raised from ${trf.source_warehouse_name || 'Main Warehouse'} to ${trf.destination_warehouse_name || 'Branch'} (${itemsCount} line items). Requires manager sign-off.`,
+                    title: `Transfer Request: #${trf.transfer_number}`,
+                    message: `Inter-Hub Requisition: ${fromName} ➔ ${toName} (${itemsCount} SKUs). Requested by ${trf.requested_by || 'Branch Staff'}. Awaiting authorization.`,
                     type: 'TRANSFER',
                     category: 'REQUESTS',
                     actionType: 'TRANSFER_APPROVE',
                     actionId: trf.id,
-                    metadata: { transferId: trf.id, transferNumber: trf.transfer_number },
+                    actionStatus: 'PENDING',
+                    metadata: { transferId: trf.id, transferNumber: trf.transfer_number, fromWarehouseId: trf.from_warehouse_id, toWarehouseId: trf.to_warehouse_id, requestedBy: trf.requested_by },
                     link: '/warehouses?tab=transfers'
                   });
                 }
+              } else if (trf.status === 'APPROVED') {
+                await Notification.update({
+                  action_status: 'APPROVED',
+                  is_read: true
+                }, {
+                  where: {
+                    tenant_id: tId,
+                    action_type: 'TRANSFER_APPROVE',
+                    action_id: String(trf.id),
+                    action_status: 'PENDING'
+                  }
+                });
+              } else if (trf.status === 'IN_TRANSIT') {
+                await Notification.update({
+                  action_status: 'IN_TRANSIT',
+                  is_read: true
+                }, {
+                  where: {
+                    tenant_id: tId,
+                    action_type: 'TRANSFER_APPROVE',
+                    action_id: String(trf.id),
+                    action_status: 'PENDING'
+                  }
+                });
+
+                const existingTransit = await Notification.findOne({
+                  where: {
+                    tenant_id: tId,
+                    action_type: 'TRANSFER_RECEIVE',
+                    action_id: String(trf.id)
+                  }
+                });
+                if (!existingTransit) {
+                  await this.createNotification({
+                    tenantId: tId,
+                    title: `Transfer In Transit: #${trf.transfer_number}`,
+                    message: `Shipment #${trf.transfer_number} is IN TRANSIT from ${fromName} to ${toName}. Carrier: ${trf.carrier_name || 'Fleet'} (${trf.vehicle_no || 'Standard'}). Awaiting inward stock verification.`,
+                    type: 'TRANSFER',
+                    category: 'REQUESTS',
+                    actionType: 'TRANSFER_RECEIVE',
+                    actionId: trf.id,
+                    actionStatus: 'IN_TRANSIT',
+                    metadata: { transferId: trf.id, transferNumber: trf.transfer_number, toWarehouseId: trf.to_warehouse_id, fromWarehouseId: trf.from_warehouse_id, requestedBy: trf.requested_by },
+                    link: '/warehouses?tab=transfers'
+                  });
+                }
+              } else if (trf.status === 'COMPLETED') {
+                await Notification.update({
+                  action_status: 'COMPLETED',
+                  is_read: true
+                }, {
+                  where: {
+                    tenant_id: tId,
+                    action_id: String(trf.id),
+                    [Op.or]: [{ action_type: 'TRANSFER_APPROVE' }, { action_type: 'TRANSFER_RECEIVE' }]
+                  }
+                });
+              } else if (trf.status === 'REJECTED') {
+                await Notification.update({
+                  action_status: 'REJECTED',
+                  is_read: true
+                }, {
+                  where: {
+                    tenant_id: tId,
+                    action_type: 'TRANSFER_APPROVE',
+                    action_id: String(trf.id),
+                    action_status: 'PENDING'
+                  }
+                });
               }
             }
           }
@@ -675,7 +749,7 @@ class NotificationService {
     // 1. Warehouse Transfer Actions
     if (notif.action_type === 'TRANSFER_APPROVE') {
       if (actionUpper === 'APPROVE') {
-        await httpPatch(WAREHOUSE_SERVICE_URL, 'http://warehouse-service:5005', `/api/v1/warehouses/transfers/${notif.action_id}/approve`, {}, headers);
+        await httpPatch(WAREHOUSE_SERVICE_URL, 'http://warehouse-service:5005', `/api/v1/transfers/${notif.action_id}/approve`, {}, headers);
         await notif.update({ action_status: 'APPROVED', is_read: true });
         
         await this.createNotification({
@@ -687,7 +761,7 @@ class NotificationService {
           link: '/warehouses?tab=transfers'
         });
       } else if (actionUpper === 'REJECT') {
-        await httpPatch(WAREHOUSE_SERVICE_URL, 'http://warehouse-service:5005', `/api/v1/warehouses/transfers/${notif.action_id}/reject`, { reason: 'Rejected from Notification Center' }, headers);
+        await httpPatch(WAREHOUSE_SERVICE_URL, 'http://warehouse-service:5005', `/api/v1/transfers/${notif.action_id}/reject`, { reason: 'Rejected from Notification Center' }, headers);
         await notif.update({ action_status: 'REJECTED', is_read: true });
         
         await this.createNotification({
@@ -698,8 +772,39 @@ class NotificationService {
           category: 'TRANSACTIONS',
           link: '/warehouses?tab=transfers'
         });
+      } else if (actionUpper === 'RECEIVE') {
+        await httpPatch(WAREHOUSE_SERVICE_URL, 'http://warehouse-service:5005', `/api/v1/transfers/${notif.action_id}/receive`, { receivedBy: user?.name || user?.email || 'Staff' }, headers);
+        await notif.update({ action_status: 'COMPLETED', is_read: true });
+        
+        await this.createNotification({
+          tenantId,
+          title: `Transfer Received: #${notif.action_id}`,
+          message: `Stock Transfer #${notif.action_id} was successfully received into destination inventory by ${user?.name || 'Staff'}.`,
+          type: 'TRANSFER',
+          category: 'TRANSACTIONS',
+          link: '/warehouses?tab=transfers'
+        });
       } else {
         throw { statusCode: 400, message: `Invalid action '${action}' for transfer` };
+      }
+    }
+
+    // 1b. Warehouse Transfer Inward Receipt Action
+    else if (notif.action_type === 'TRANSFER_RECEIVE') {
+      if (actionUpper === 'RECEIVE') {
+        await httpPatch(WAREHOUSE_SERVICE_URL, 'http://warehouse-service:5005', `/api/v1/transfers/${notif.action_id}/receive`, { receivedBy: user?.name || user?.email || 'Staff' }, headers);
+        await notif.update({ action_status: 'COMPLETED', is_read: true });
+        
+        await this.createNotification({
+          tenantId,
+          title: `Transfer Received: #${notif.action_id}`,
+          message: `Stock Transfer #${notif.action_id} was successfully received into destination inventory by ${user?.name || 'Staff'}.`,
+          type: 'TRANSFER',
+          category: 'TRANSACTIONS',
+          link: '/warehouses?tab=transfers'
+        });
+      } else {
+        throw { statusCode: 400, message: `Invalid action '${action}' for transfer inward receipt` };
       }
     }
 
