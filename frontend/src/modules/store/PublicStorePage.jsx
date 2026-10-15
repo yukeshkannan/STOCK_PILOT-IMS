@@ -15,6 +15,7 @@ import {
   Phone,
   MapPin,
   ArrowRight,
+  Menu,
   X,
   CreditCard,
   Banknote,
@@ -86,6 +87,7 @@ export default function PublicStorePage() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [sortBy, setSortBy] = useState('DEFAULT');
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Testimonials Carousel index (3 per view)
   const [testimonialIndex, setTestimonialIndex] = useState(0);
@@ -1818,9 +1820,10 @@ export default function PublicStorePage() {
         '--store-text-main': textColor
       }}
     >
-      {/* 1. Header & Navbar (Customer-Facing with Dynamic Navigation Links) */}
+      {/* 1. Header & Navbar (Customer-Facing with 3-Zone Architecture & Responsive Drawer) */}
       <header className="clean-store-header">
         <div className="clean-header-container">
+          {/* ZONE 1 (LEFT): Brand Identity & Store Name */}
           <div className="clean-brand-section">
             <div className="clean-brand-avatar" style={{ background: branding.logoUrl ? 'transparent' : primaryColor }}>
               {branding.logoUrl ? (
@@ -1850,37 +1853,9 @@ export default function PublicStorePage() {
             </div>
           </div>
 
-          {/* Search bar in Navbar */}
-          {navbarConfig.showSearch !== false && (
-            <div className="clean-nav-search-bar">
-              <Search size={15} color="#94a3b8" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search catalog..."
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    scrollToCatalog();
-                  }
-                }}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="clean-nav-search-clear"
-                  aria-label="Clear search"
-                >
-                  <X size={13} />
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Dynamic Navigation Menu */}
+          {/* ZONE 2 (CENTER): Desktop Single-Row Navigation Menu */}
           {navLinks && navLinks.length > 0 && (
-            <nav className="clean-nav-menu">
+            <nav className="clean-nav-menu desktop-only">
               {navLinks
                 .filter((link) => link.enabled !== false)
                 .map((link) => (
@@ -1908,7 +1883,36 @@ export default function PublicStorePage() {
             </nav>
           )}
 
+          {/* ZONE 3 (RIGHT): Search & Header Action Pills */}
           <div className="clean-header-actions">
+            {/* Search bar in Navbar (Compact & expandable) */}
+            {navbarConfig.showSearch !== false && (
+              <div className="clean-nav-search-bar">
+                <Search size={15} color="#94a3b8" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search catalog..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      scrollToCatalog();
+                    }
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="clean-nav-search-clear"
+                    aria-label="Clear search"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Live Order Tracking Trigger */}
             <button
               type="button"
@@ -1981,8 +1985,136 @@ export default function PublicStorePage() {
                 )}
               </button>
             )}
+
+            {/* Mobile / Tablet Menu Hamburger Toggle */}
+            <button
+              type="button"
+              className="btn-clean-mobile-toggle"
+              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+              aria-label={isMobileMenuOpen ? "Close Menu" : "Open Navigation Menu"}
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile / Tablet Navigation Drawer */}
+        {isMobileMenuOpen && (
+          <div className="clean-mobile-nav-drawer animate-popover">
+            {navbarConfig.showSearch !== false && (
+              <div className="mobile-drawer-search">
+                <Search size={16} color="#94a3b8" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search store catalog..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setIsMobileMenuOpen(false);
+                      scrollToCatalog();
+                    }
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="clean-nav-search-clear"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="mobile-drawer-links">
+              {navLinks && navLinks
+                .filter((link) => link.enabled !== false)
+                .map((link) => (
+                  <a
+                    key={link.id || link.label}
+                    href={link.url || '#'}
+                    onClick={(e) => {
+                      setIsMobileMenuOpen(false);
+                      if (link.url?.startsWith('#')) {
+                        e.preventDefault();
+                        if (link.url === '#home') {
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                          return;
+                        }
+                        const target = document.querySelector(link.url);
+                        if (target) {
+                          target.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }
+                    }}
+                    className="mobile-drawer-link"
+                  >
+                    <span>{link.label}</span>
+                    <ArrowRight size={14} />
+                  </a>
+                ))}
+            </div>
+
+            <div className="mobile-drawer-actions">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsTrackingModalOpen(true);
+                }}
+                className="mobile-drawer-action-btn"
+              >
+                <Truck size={16} />
+                <span>Track Order Status</span>
+              </button>
+
+              {navbarConfig.showCustomerAuth !== false && (
+                customerUser ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleFetchCustomerOrders(customerUser.phone);
+                      setIsCustomerAccountOpen(true);
+                    }}
+                    className="mobile-drawer-action-btn"
+                  >
+                    <User size={16} />
+                    <span>My Account ({customerUser.name?.split(' ')[0] || 'Orders'})</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setAuthModalMode('LOGIN');
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="mobile-drawer-action-btn"
+                  >
+                    <User size={16} />
+                    <span>Sign In to Account</span>
+                  </button>
+                )
+              )}
+
+              {navbarConfig.showWhatsApp !== false && whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="mobile-drawer-action-btn whatsapp"
+                >
+                  <WhatsAppBrandIcon size={17} color="#25D366" />
+                  <span>Chat on WhatsApp</span>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Dynamic Modular Storefront Sections (Ordered by Drag & Drop) */}

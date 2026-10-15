@@ -1931,6 +1931,7 @@ export default function StorefrontBuilderPage() {
               >
                 <Plus size={15} /> <span>Add New Modular Block</span>
               </button>
+              <div style={{ height: '80px', flexShrink: 0 }} />
             </div>
           )}
 
@@ -1984,6 +1985,7 @@ export default function StorefrontBuilderPage() {
                     </div>
                   );
                 })}
+                <div style={{ height: '80px', flexShrink: 0 }} />
               </div>
             </div>
           )}
@@ -2093,6 +2095,7 @@ export default function StorefrontBuilderPage() {
                   </div>
                 </div>
               </div>
+              <div style={{ height: '80px', flexShrink: 0 }} />
             </div>
           )}
 
@@ -3737,6 +3740,15 @@ export default function StorefrontBuilderPage() {
                           </div>
                         ))}
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={addReviewItem}
+                        className="btn btn-secondary btn-sm"
+                        style={{ width: '100%', marginTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 700 }}
+                      >
+                        <Plus size={14} /> <span>Add Another Review</span>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -3867,6 +3879,9 @@ export default function StorefrontBuilderPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Scroll Buffer for comfortable editing */}
+                <div className="inspector-scroll-buffer" style={{ height: '100px', flexShrink: 0 }} />
               </div>
             </div>
           )}
