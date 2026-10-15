@@ -135,13 +135,26 @@ async function getStockOverview(tenantId, { lowStockOnly = false, search = '', l
  */
 async function getSalesSummary(tenantId, { period = 'today' } = {}) {
   try {
-    let dateFilter = `AND DATE(sale_date) = DATE('now')`;
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const replacements = { tenantId };
+    let dateFilter = `AND DATE(sale_date) = :targetDate`;
+    replacements.targetDate = todayStr;
+
     if (period === 'yesterday') {
-      dateFilter = `AND DATE(sale_date) = DATE('now', '-1 day')`;
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      dateFilter = `AND DATE(sale_date) = :targetDate`;
+      replacements.targetDate = yesterday.toISOString().split('T')[0];
     } else if (period === 'this_week' || period === 'week') {
-      dateFilter = `AND DATE(sale_date) >= DATE('now', '-7 days')`;
+      const past7 = new Date(now);
+      past7.setDate(now.getDate() - 7);
+      dateFilter = `AND DATE(sale_date) >= :startDate`;
+      replacements.startDate = past7.toISOString().split('T')[0];
     } else if (period === 'this_month' || period === 'month') {
-      dateFilter = `AND DATE(sale_date) >= DATE('now', 'start of month')`;
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      dateFilter = `AND DATE(sale_date) >= :startDate`;
+      replacements.startDate = monthStart.toISOString().split('T')[0];
     } else if (period === 'all') {
       dateFilter = '';
     }
@@ -155,7 +168,7 @@ async function getSalesSummary(tenantId, { period = 'today' } = {}) {
         COALESCE(AVG(grand_total), 0) as average_ticket_size
        FROM sales 
        WHERE tenant_id = :tenantId AND status = 'COMPLETED' ${dateFilter}`,
-      { replacements: { tenantId }, type: salesSequelize.QueryTypes.SELECT }
+      { replacements, type: salesSequelize.QueryTypes.SELECT }
     );
 
     // Recent top sales
@@ -164,7 +177,7 @@ async function getSalesSummary(tenantId, { period = 'today' } = {}) {
        FROM sales 
        WHERE tenant_id = :tenantId AND status = 'COMPLETED' ${dateFilter}
        ORDER BY id DESC LIMIT 5`,
-      { replacements: { tenantId }, type: salesSequelize.QueryTypes.SELECT }
+      { replacements, type: salesSequelize.QueryTypes.SELECT }
     );
 
     return {
@@ -190,13 +203,16 @@ async function getSalesSummary(tenantId, { period = 'today' } = {}) {
  */
 async function getFinancialSnapshot(tenantId) {
   try {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+
     const [expenseStats] = await financeSequelize.query(
       `SELECT 
         COUNT(*) as expense_count,
         COALESCE(SUM(amount), 0) as total_expenses
        FROM expenses 
-       WHERE tenant_id = :tenantId AND DATE(expense_date) >= DATE('now', 'start of month')`,
-      { replacements: { tenantId }, type: financeSequelize.QueryTypes.SELECT }
+       WHERE tenant_id = :tenantId AND DATE(expense_date) >= :monthStart`,
+      { replacements: { tenantId, monthStart }, type: financeSequelize.QueryTypes.SELECT }
     );
 
     const [paymentStats] = await financeSequelize.query(
@@ -204,8 +220,8 @@ async function getFinancialSnapshot(tenantId) {
         COALESCE(SUM(CASE WHEN type = 'RECEIPT' THEN amount ELSE 0 END), 0) as total_receipts,
         COALESCE(SUM(CASE WHEN type = 'PAYMENT' THEN amount ELSE 0 END), 0) as total_payouts
        FROM payments 
-       WHERE tenant_id = :tenantId AND DATE(payment_date) >= DATE('now', 'start of month')`,
-      { replacements: { tenantId }, type: financeSequelize.QueryTypes.SELECT }
+       WHERE tenant_id = :tenantId AND DATE(payment_date) >= :monthStart`,
+      { replacements: { tenantId, monthStart }, type: financeSequelize.QueryTypes.SELECT }
     );
 
     return {
@@ -274,9 +290,10 @@ async function searchProducts(tenantId, { query = '', limit = 15 } = {}) {
  */
 async function createSupportTicket(tenantId, userId, { subject, description, priority = 'MEDIUM', category = 'GENERAL' } = {}) {
   try {
+    const nowIso = new Date().toISOString();
     const [result] = await tenantSequelize.query(
       `INSERT INTO tickets (tenant_id, user_id, subject, description, priority, category, status, created_at, updated_at)
-       VALUES (:tenantId, :userId, :subject, :description, :priority, :category, 'OPEN', datetime('now'), datetime('now'))`,
+       VALUES (:tenantId, :userId, :subject, :description, :priority, :category, 'OPEN', :nowIso, :nowIso)`,
       {
         replacements: {
           tenantId,
@@ -284,7 +301,8 @@ async function createSupportTicket(tenantId, userId, { subject, description, pri
           subject: subject || 'AI Assistant Auto-Logged Query',
           description: description || 'Issue raised via AI Copilot',
           priority: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(priority) ? priority : 'MEDIUM',
-          category: category || 'TECHNICAL'
+          category: category || 'TECHNICAL',
+          nowIso
         }
       }
     );

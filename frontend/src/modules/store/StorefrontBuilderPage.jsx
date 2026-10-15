@@ -688,6 +688,22 @@ export default function StorefrontBuilderPage() {
   const [isFullscreenStudio, setIsFullscreenStudio] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [canvasZoom, setCanvasZoom] = useState(100);
+  const canvasViewportRef = useRef(null);
+
+  const handleFitZoom = () => {
+    if (!canvasViewportRef.current) {
+      setCanvasZoom(85);
+      return;
+    }
+    const availableWidth = canvasViewportRef.current.clientWidth - 40;
+    const targetWidth = previewDevice === 'desktop' ? 1080 : previewDevice === 'tablet' ? 768 : 390;
+    if (availableWidth < targetWidth) {
+      const calcZoom = Math.max(50, Math.min(100, Math.floor((availableWidth / targetWidth) * 100)));
+      setCanvasZoom(calcZoom);
+    } else {
+      setCanvasZoom(100);
+    }
+  };
 
   // Drag and Drop State
   const [activeHeroSlideIndex, setActiveHeroSlideIndex] = useState(0);
@@ -3898,12 +3914,12 @@ export default function StorefrontBuilderPage() {
               <span className="stage-device-badge">
                 Preview Mode: <strong>{previewDevice.toUpperCase()}</strong>
               </span>
-              {previewDevice === 'desktop' && (
+              {(previewDevice === 'desktop' || previewDevice === 'tablet') && (
                 <div className="canvas-zoom-control-pill">
                   <button
                     type="button"
                     className="btn-zoom-step"
-                    onClick={() => setCanvasZoom((z) => Math.max(60, z - 10))}
+                    onClick={() => setCanvasZoom((z) => Math.max(50, z - 10))}
                     title="Zoom Out"
                   >
                     -
@@ -3926,8 +3942,9 @@ export default function StorefrontBuilderPage() {
                   </button>
                   <button
                     type="button"
-                    className={`btn-zoom-preset ${canvasZoom === 85 ? 'active' : ''}`}
-                    onClick={() => setCanvasZoom(85)}
+                    className={`btn-zoom-preset ${canvasZoom !== 100 ? 'active' : ''}`}
+                    onClick={handleFitZoom}
+                    title="Auto fit to studio width"
                   >
                     Fit
                   </button>
@@ -3936,15 +3953,15 @@ export default function StorefrontBuilderPage() {
             </div>
           </div>
 
-          <div className="canvas-scroll-viewport">
+          <div className="canvas-scroll-viewport" ref={canvasViewportRef}>
             <div
               className={`canvas-device-frame device-frame-${previewDevice}`}
               style={
-                previewDevice === 'desktop' && canvasZoom !== 100
+                canvasZoom !== 100
                   ? {
                       transform: `scale(${canvasZoom / 100})`,
                       transformOrigin: 'top center',
-                      marginBottom: canvasZoom < 100 ? `-${(100 - canvasZoom) * 5}px` : undefined
+                      marginBottom: canvasZoom < 100 ? `-${(100 - canvasZoom) * 4}px` : undefined
                     }
                   : undefined
               }
