@@ -1579,13 +1579,77 @@
   text-decoration: none;
 }
 
-/* Hero Section in Mobile Preview */
+/* Hero Section in Mobile Preview (Clean Vertical Stack, Never Side-by-Side) */
 .device-frame-mobile .clean-hero-split-pattern {
+  display: flex !important;
   flex-direction: column !important;
-  padding: 2.25rem 1rem !important;
+  grid-template-columns: 1fr !important;
+  padding: 2rem 1.25rem !important;
   min-height: auto !important;
-  text-align: center;
-  gap: 1.5rem !important;
+  text-align: center !important;
+  gap: 1.75rem !important;
+}
+
+.device-frame-mobile .hero-split-left-content {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.device-frame-mobile .hero-split-left-content .clean-hero-giant-title {
+  font-size: 1.85rem !important;
+  line-height: 1.2 !important;
+  margin-bottom: 0.5rem !important;
+  text-align: center !important;
+}
+
+.device-frame-mobile .hero-split-left-content .clean-hero-description {
+  font-size: 0.9rem !important;
+  line-height: 1.5 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  max-width: 100% !important;
+  text-align: center !important;
+}
+
+.device-frame-mobile .clean-hero-actions-row {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  gap: 0.75rem !important;
+}
+
+.device-frame-mobile .btn-hero-primary,
+.device-frame-mobile .btn-hero-whatsapp {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  justify-content: center !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.92rem !important;
+}
+
+.device-frame-mobile .hero-split-right-visual {
+  width: 100% !important;
+  justify-content: center !important;
+  margin-top: 0.5rem !important;
+}
+
+.device-frame-mobile .hero-product-showcase-frame {
+  width: 100% !important;
+  max-width: 320px !important;
+  height: 220px !important;
+  border-radius: 18px !important;
+  margin: 0 auto !important;
+}
+
+.device-frame-mobile .hero-floating-badge-card {
+  left: 10px !important;
+  right: 10px !important;
+  bottom: 10px !important;
+  padding: 0.6rem 0.85rem !important;
+  border-radius: 12px !important;
 }
 
 .device-frame-mobile .clean-hero-content {
@@ -1805,17 +1869,71 @@
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 1.25rem !important;
-  padding: 0.5rem 1.25rem !important;
+  gap: 0.85rem !important;
+  padding: 0.6rem 1rem !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  overflow: visible !important;
+}
+
+.device-frame-desktop .clean-brand-section {
+  flex-shrink: 0 !important;
+  gap: 0.65rem !important;
+}
+
+.device-frame-desktop .clean-brand-avatar {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.device-frame-desktop .clean-store-title {
+  font-size: 1.15rem !important;
 }
 
 .device-frame-desktop .clean-nav-menu {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 1.1rem !important;
+  gap: 0.75rem !important;
   flex-wrap: nowrap !important;
   white-space: nowrap !important;
+  flex-shrink: 1 !important;
+}
+
+.device-frame-desktop .clean-nav-link {
+  font-size: 0.8rem !important;
+  padding: 0.3rem 0.5rem !important;
+}
+
+.device-frame-desktop .clean-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  flex-shrink: 0 !important;
+}
+
+.device-frame-desktop .preview-nav-search-bar {
+  width: 140px !important;
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.76rem !important;
+  flex-shrink: 1 !important;
+}
+
+.device-frame-desktop .btn-clean-customer-auth {
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.78rem !important;
+  gap: 0.35rem !important;
+}
+
+.device-frame-desktop .btn-clean-whatsapp-quick {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.device-frame-desktop .btn-clean-cart {
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.78rem !important;
+  gap: 0.35rem !important;
 }
 
 .device-frame-desktop .btn-clean-mobile-hamburger {

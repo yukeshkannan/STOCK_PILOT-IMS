@@ -705,6 +705,14 @@ export default function StorefrontBuilderPage() {
     }
   };
 
+  // Auto-fit zoom on mount and when previewDevice / panel collapses
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleFitZoom();
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [previewDevice, isPanelCollapsed, isFullscreenStudio]);
+
   // Drag and Drop State
   const [activeHeroSlideIndex, setActiveHeroSlideIndex] = useState(0);
   const [draggedSectionIndex, setDraggedSectionIndex] = useState(null);
