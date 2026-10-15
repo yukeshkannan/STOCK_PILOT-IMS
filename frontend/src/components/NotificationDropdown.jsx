@@ -229,34 +229,33 @@ export default function NotificationDropdown() {
               position: 'absolute',
               right: 0,
               top: 'calc(100% + 8px)',
-              width: '390px',
-              maxWidth: '92vw',
+              width: '425px',
+              maxWidth: '94vw',
               background: '#ffffff',
               border: '1px solid #e2e8f0',
-              borderRadius: '14px',
-              boxShadow: '0 20px 40px -6px rgba(15, 23, 42, 0.16), 0 4px 12px -2px rgba(15, 23, 42, 0.06)',
+              borderRadius: '16px',
+              boxShadow: '0 20px 45px -8px rgba(15, 23, 42, 0.16), 0 4px 16px -2px rgba(15, 23, 42, 0.06)',
               zIndex: 95,
-              maxHeight: '520px',
+              maxHeight: '540px',
               display: 'flex',
               flexDirection: 'column',
-              animation: 'fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1)'
+              animation: 'fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+              overflow: 'hidden'
             }}
           >
             {/* Header */}
             <div
               style={{
-                padding: '0.85rem 1rem',
+                padding: '0.9rem 1.1rem',
                 borderBottom: '1px solid #f1f5f9',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                background: '#fafbfc',
-                borderTopLeftRadius: '14px',
-                borderTopRightRadius: '14px'
+                background: '#fafbfc'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.94rem', color: '#0f172a', letterSpacing: '-0.01em' }}>
                   Notifications
                 </span>
                 {unreadCount > 0 && (
@@ -265,7 +264,7 @@ export default function NotificationDropdown() {
                       background: 'rgba(152, 42, 134, 0.12)',
                       color: '#982A86',
                       fontWeight: 800,
-                      padding: '0.15rem 0.45rem',
+                      padding: '0.15rem 0.5rem',
                       borderRadius: '999px',
                       fontSize: '0.68rem'
                     }}
@@ -275,7 +274,7 @@ export default function NotificationDropdown() {
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 {/* Sound Toggle */}
                 <button
                   type="button"
@@ -304,7 +303,7 @@ export default function NotificationDropdown() {
                       background: 'none',
                       border: 'none',
                       color: 'var(--primary)',
-                      fontSize: '0.75rem',
+                      fontSize: '0.74rem',
                       fontWeight: 700,
                       cursor: 'pointer',
                       display: 'flex',
@@ -318,15 +317,19 @@ export default function NotificationDropdown() {
               </div>
             </div>
 
-            {/* Quick Category Filter Tabs */}
+            {/* Quick Category Filter Tabs (Zero ugly scrollbars) */}
             <div
+              className="notification-tabs-bar"
               style={{
                 display: 'flex',
-                padding: '0.4rem 0.65rem',
-                gap: '0.35rem',
+                padding: '0.5rem 0.75rem',
+                gap: '0.4rem',
                 borderBottom: '1px solid #f1f5f9',
                 background: '#ffffff',
-                overflowX: 'auto'
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch'
               }}
             >
               {[
@@ -339,8 +342,8 @@ export default function NotificationDropdown() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   style={{
-                    padding: '0.28rem 0.6rem',
-                    borderRadius: '6px',
+                    padding: '0.32rem 0.65rem',
+                    borderRadius: '8px',
                     border: 'none',
                     background: activeTab === tab.id ? '#982A86' : '#f8fafc',
                     color: activeTab === tab.id ? '#ffffff' : '#64748b',
@@ -360,8 +363,8 @@ export default function NotificationDropdown() {
                       style={{
                         background: activeTab === tab.id ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
                         color: activeTab === tab.id ? '#ffffff' : '#475569',
-                        padding: '0 4px',
-                        borderRadius: '4px',
+                        padding: '0 5px',
+                        borderRadius: '999px',
                         fontSize: '0.62rem'
                       }}
                     >
@@ -372,8 +375,8 @@ export default function NotificationDropdown() {
               ))}
             </div>
 
-            {/* Notification Items List */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+            {/* Notification Items List with Custom Sleek Scrollbar */}
+            <div className="notification-items-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0.65rem 0.75rem' }}>
               {filteredNotifications.length === 0 ? (
                 <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                   <Bell size={28} style={{ opacity: 0.35, margin: '0 auto 0.5rem' }} />
@@ -384,12 +387,15 @@ export default function NotificationDropdown() {
                   <div
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
+                    className="notification-item-card"
                     style={{
                       padding: '0.75rem 0.85rem',
-                      borderRadius: '10px',
-                      marginBottom: '0.4rem',
-                      background: n.is_read ? 'transparent' : '#fdf8fd',
-                      border: n.is_read ? '1px solid #f1f5f9' : '1px solid #f3c7ec',
+                      borderRadius: '12px',
+                      marginBottom: '0.45rem',
+                      background: n.is_read ? '#ffffff' : '#fcfaff',
+                      border: n.is_read ? '1px solid #f1f5f9' : '1px solid #e9d5ff',
+                      borderLeft: n.is_read ? '1px solid #f1f5f9' : '3.5px solid #982A86',
+                      boxShadow: n.is_read ? 'none' : '0 2px 6px -1px rgba(152, 42, 134, 0.08)',
                       cursor: 'pointer',
                       display: 'flex',
                       gap: '0.75rem',
@@ -400,13 +406,14 @@ export default function NotificationDropdown() {
                     <div
                       style={{
                         marginTop: '2px',
-                        padding: '0.35rem',
+                        padding: '0.4rem',
                         background: n.is_read ? '#f8fafc' : '#fdf2fb',
-                        borderRadius: '8px',
+                        borderRadius: '10px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        height: 'fit-content'
+                        height: 'fit-content',
+                        flexShrink: 0
                       }}
                     >
                       {getIcon(n.type, n.category)}
@@ -420,11 +427,22 @@ export default function NotificationDropdown() {
                           color: '#0f172a',
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center',
+                          alignItems: 'flex-start',
                           gap: '0.5rem'
                         }}
                       >
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            fontSize: '0.825rem',
+                            color: '#0f172a',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            lineHeight: 1.35
+                          }}
+                        >
                           {n.title}
                         </span>
                         {!n.is_read && (
@@ -436,7 +454,8 @@ export default function NotificationDropdown() {
                               background: '#fdf2fb',
                               padding: '1px 5px',
                               borderRadius: '4px',
-                              flexShrink: 0
+                              flexShrink: 0,
+                              marginTop: '2px'
                             }}
                           >
                             NEW
@@ -449,7 +468,11 @@ export default function NotificationDropdown() {
                           fontSize: '0.76rem',
                           color: '#475569',
                           marginTop: '3px',
-                          lineHeight: 1.35
+                          lineHeight: 1.4,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
                         }}
                       >
                         {n.message}
@@ -471,8 +494,21 @@ export default function NotificationDropdown() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           {n.action_status === 'COMPLETED' ? (
-                            <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <CheckCheck size={13} /> Stock Received
+                            <span
+                              style={{
+                                fontSize: '0.7rem',
+                                color: '#059669',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: '#ecfdf5',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                border: '1px solid #a7f3d0'
+                              }}
+                            >
+                              <CheckCheck size={12} /> Stock Received
                             </span>
                           ) : (
                             (() => {
@@ -488,17 +524,18 @@ export default function NotificationDropdown() {
                                     onClick={(e) => handleExecuteAction(e, n, 'RECEIVE')}
                                     disabled={actionLoadingId === n.id}
                                     style={{
-                                      padding: '0.22rem 0.55rem',
-                                      borderRadius: '5px',
+                                      padding: '0.26rem 0.65rem',
+                                      borderRadius: '6px',
                                       border: 'none',
-                                      background: '#059669',
+                                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                                       color: '#ffffff',
                                       fontSize: '0.7rem',
                                       fontWeight: 700,
                                       cursor: 'pointer',
                                       display: 'flex',
                                       alignItems: 'center',
-                                      gap: '3px'
+                                      gap: '4px',
+                                      boxShadow: '0 2px 6px rgba(5, 150, 105, 0.25)'
                                     }}
                                   >
                                     {actionLoadingId === n.id ? (
@@ -521,13 +558,17 @@ export default function NotificationDropdown() {
                           <span
                             onClick={() => handleNotificationClick(n)}
                             style={{
-                              color: 'var(--primary)',
+                              color: '#982A86',
                               fontWeight: 700,
                               fontSize: '0.7rem',
                               cursor: 'pointer',
-                              display: 'flex',
+                              display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '2px'
+                              gap: '3px',
+                              padding: '2px 8px',
+                              background: 'rgba(152, 42, 134, 0.06)',
+                              borderRadius: '6px',
+                              transition: 'all 0.15s ease'
                             }}
                           >
                             Details <ArrowRight size={11} />
@@ -548,12 +589,38 @@ export default function NotificationDropdown() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           {n.action_status === 'APPROVED' ? (
-                            <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <Check size={13} /> Approved
+                            <span
+                              style={{
+                                fontSize: '0.7rem',
+                                color: '#10b981',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                background: '#ecfdf5',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                border: '1px solid #a7f3d0'
+                              }}
+                            >
+                              <Check size={12} /> Approved
                             </span>
                           ) : n.action_status === 'REJECTED' ? (
-                            <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <X size={13} /> Rejected
+                            <span
+                              style={{
+                                fontSize: '0.7rem',
+                                color: '#ef4444',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                background: '#fef2f2',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                border: '1px solid #fecaca'
+                              }}
+                            >
+                              <X size={12} /> Rejected
                             </span>
                           ) : n.action_status === 'PROCESSED' ? (
                             <span style={{ fontSize: '0.72rem', color: '#3b82f6', fontWeight: 700 }}>
@@ -565,8 +632,8 @@ export default function NotificationDropdown() {
                                 onClick={(e) => handleExecuteAction(e, n, 'APPROVE')}
                                 disabled={actionLoadingId === n.id}
                                 style={{
-                                  padding: '0.22rem 0.55rem',
-                                  borderRadius: '5px',
+                                  padding: '0.24rem 0.6rem',
+                                  borderRadius: '6px',
                                   border: 'none',
                                   background: '#10b981',
                                   color: '#ffffff',
@@ -590,8 +657,8 @@ export default function NotificationDropdown() {
                                 onClick={(e) => handleExecuteAction(e, n, 'REJECT')}
                                 disabled={actionLoadingId === n.id}
                                 style={{
-                                  padding: '0.22rem 0.55rem',
-                                  borderRadius: '5px',
+                                  padding: '0.24rem 0.6rem',
+                                  borderRadius: '6px',
                                   border: '1px solid #cbd5e1',
                                   background: '#ffffff',
                                   color: '#64748b',
@@ -611,13 +678,17 @@ export default function NotificationDropdown() {
                           <span
                             onClick={() => handleNotificationClick(n)}
                             style={{
-                              color: 'var(--primary)',
+                              color: '#982A86',
                               fontWeight: 700,
                               fontSize: '0.7rem',
                               cursor: 'pointer',
-                              display: 'flex',
+                              display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '2px'
+                              gap: '3px',
+                              padding: '2px 8px',
+                              background: 'rgba(152, 42, 134, 0.06)',
+                              borderRadius: '6px',
+                              transition: 'all 0.15s ease'
                             }}
                           >
                             Details <ArrowRight size={11} />
@@ -639,13 +710,16 @@ export default function NotificationDropdown() {
                           <span
                             onClick={() => handleNotificationClick(n)}
                             style={{
-                              color: 'var(--primary)',
+                              color: '#982A86',
                               fontWeight: 700,
                               fontSize: '0.7rem',
                               cursor: 'pointer',
-                              display: 'flex',
+                              display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '2px'
+                              gap: '3px',
+                              padding: '2px 8px',
+                              background: 'rgba(152, 42, 134, 0.06)',
+                              borderRadius: '6px'
                             }}
                           >
                             View Stock <ArrowRight size={11} />
@@ -659,20 +733,30 @@ export default function NotificationDropdown() {
                           style={{
                             fontSize: '0.675rem',
                             color: '#94a3b8',
-                            marginTop: '5px',
+                            marginTop: '6px',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center'
                           }}
                         >
-                          <span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <Clock size={11} />
                             {new Date(n.created_at || n.createdAt).toLocaleTimeString([], {
                               hour: '2-digit',
                               minute: '2-digit'
                             })}
                           </span>
-                          <span style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.7rem' }}>
-                            View details →
+                          <span
+                            style={{
+                              color: '#982A86',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '2px'
+                            }}
+                          >
+                            View details <ArrowRight size={11} />
                           </span>
                         </div>
                       )}
@@ -685,25 +769,26 @@ export default function NotificationDropdown() {
             {/* Dropdown Footer */}
             <div
               style={{
-                padding: '0.7rem 1rem',
+                padding: '0.75rem 1rem',
                 borderTop: '1px solid #f1f5f9',
                 textAlign: 'center',
-                background: '#fafbfc',
-                borderBottomLeftRadius: '14px',
-                borderBottomRightRadius: '14px'
+                background: '#fafbfc'
               }}
             >
               <Link
                 to={user?.isSuperAdmin ? '/admin/notifications' : '/notifications'}
                 onClick={() => setIsOpen(false)}
                 style={{
-                  fontSize: '0.82rem',
-                  color: 'var(--primary)',
+                  fontSize: '0.8rem',
+                  color: '#982A86',
                   fontWeight: 700,
                   textDecoration: 'none',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '5px',
+                  padding: '4px 12px',
+                  borderRadius: '6px',
+                  transition: 'background 0.15s ease'
                 }}
               >
                 Open Notification Center <ArrowRight size={13} />

@@ -307,9 +307,19 @@ export default function PublicStorePage() {
     return list;
   }, [storeData, searchQuery, selectedCategory, sortBy]);
 
+  // Strict stock evaluator - prevents showing 'In Stock' if current stock is 0
+  const isProductInStock = (prod) => {
+    if (!prod) return false;
+    if (prod.inStock === false) return false;
+    if (prod.availableStock !== undefined && Number(prod.availableStock) <= 0) return false;
+    if (prod.inStock === true) return true;
+    if (prod.availableStock !== undefined && Number(prod.availableStock) > 0) return true;
+    return false;
+  };
+
   // Cart Actions
   const addToCart = (product) => {
-    const isAvailable = product.inStock !== false && (product.availableStock === undefined || Number(product.availableStock) > 0);
+    const isAvailable = isProductInStock(product);
     if (!isAvailable) {
       toast.error(`"${product.name}" is currently out of stock.`, { autoClose: 2000 });
       return;
@@ -318,6 +328,10 @@ export default function PublicStorePage() {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
+        if (product.availableStock !== undefined && existing.quantity >= Number(product.availableStock)) {
+          toast.warning(`Cannot add more than available stock (${product.availableStock} available).`);
+          return prev;
+        }
         return prev.map((item) =>
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
@@ -336,7 +350,7 @@ export default function PublicStorePage() {
           taxRate: parsedTax,
           unit: product.unit || 'PCS',
           quantity: 1,
-          availableStock: product.availableStock || 999,
+          availableStock: product.availableStock !== undefined ? Number(product.availableStock) : 999,
           imageUrl: product.image_url
         }
       ];
@@ -350,6 +364,10 @@ export default function PublicStorePage() {
         .map((item) => {
           if (item.id === productId) {
             const newQty = item.quantity + delta;
+            if (delta > 0 && item.availableStock !== undefined && newQty > item.availableStock) {
+              toast.warning(`Maximum available stock is ${item.availableStock}`);
+              return item;
+            }
             return newQty > 0 ? { ...item, quantity: newQty } : null;
           }
           return item;
@@ -1238,7 +1256,7 @@ export default function PublicStorePage() {
               <div className="clean-product-grid">
                 {filteredProducts.map((prod) => {
                   const cartItem = cart.find((item) => item.id === prod.id);
-                  const inStock = prod.inStock !== false && (prod.availableStock === undefined || prod.availableStock > 0);
+                  const inStock = isProductInStock(prod);
                   const price = parseFloat(prod.selling_price || 0);
 
                   return (
@@ -1360,7 +1378,7 @@ export default function PublicStorePage() {
                 <div className="clean-carousel-track">
                   {carouselProducts.map((prod) => {
                     const cartItem = cart.find((item) => item.id === prod.id);
-                    const inStock = prod.inStock !== false && (prod.availableStock === undefined || prod.availableStock > 0);
+                    const inStock = isProductInStock(prod);
                     const price = parseFloat(prod.selling_price || 0);
 
                     return (
@@ -2874,7 +2892,7 @@ export default function PublicStorePage() {
                 </p>
 
                 {(() => {
-                  const qvInStock = quickViewProduct.inStock !== false && (quickViewProduct.availableStock === undefined || Number(quickViewProduct.availableStock) > 0);
+                  const qvInStock = isProductInStock(quickViewProduct);
                   return (
                     <div className="clean-modal-actions">
                       <span className={`clean-stock-tag ${qvInStock ? 'in-stock' : 'out-stock'}`} style={{ marginBottom: '0.75rem', display: 'inline-flex' }}>
