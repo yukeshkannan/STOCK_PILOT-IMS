@@ -16,6 +16,9 @@ import {
   MapPin,
   ArrowRight,
   Menu,
+  Lock,
+  Eye,
+  EyeOff,
   X,
   CreditCard,
   Banknote,
@@ -128,8 +131,11 @@ export default function PublicStorePage() {
     phone: '',
     email: '',
     password: '',
-    address: ''
+    confirmPassword: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [isCustomerAccountOpen, setIsCustomerAccountOpen] = useState(false);
   const [customerOrders, setCustomerOrders] = useState([]);
@@ -140,16 +146,6 @@ export default function PublicStorePage() {
   const [trackingOrderData, setTrackingOrderData] = useState(null);
   const [trackingInvoiceInput, setTrackingInvoiceInput] = useState(urlInvoiceNumber || '');
   const [isTrackingLoading, setIsTrackingLoading] = useState(false);
-
-  // Fast Checkout (GoKwik / 1-Click) OTP State
-  const [fastCheckoutStep, setFastCheckoutStep] = useState('PHONE'); // 'PHONE' | 'OTP' | 'VERIFIED'
-  const [phoneInput, setPhoneInput] = useState('');
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '']);
-  const [otpSending, setOtpSending] = useState(false);
-  const [otpVerifying, setOtpVerifying] = useState(false);
-  const [otpTimer, setOtpTimer] = useState(0);
-  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
-  const [isExistingCustomer, setIsExistingCustomer] = useState(false);
 
   // Restore customer session from localStorage
   useEffect(() => {
@@ -162,7 +158,6 @@ export default function PublicStorePage() {
         const u = JSON.parse(savedUserStr);
         setCustomerUser(u);
         setCustomerToken(savedToken);
-        setIsPhoneVerified(true);
         setCustomer((prev) => ({
           ...prev,
           name: u.name || prev.name,
@@ -170,24 +165,6 @@ export default function PublicStorePage() {
           email: u.email || prev.email,
           address: u.address || prev.address
         }));
-      } else {
-        const legacySession = localStorage.getItem(`stockpilot_customer_${codeKey}`);
-        if (legacySession) {
-          const parsed = JSON.parse(legacySession);
-          if (parsed?.phone) {
-            setIsPhoneVerified(true);
-            setFastCheckoutStep('VERIFIED');
-            setPhoneInput(parsed.phone);
-            setIsExistingCustomer(Boolean(parsed.isExisting));
-            setCustomer((prev) => ({
-              ...prev,
-              name: parsed.name || prev.name,
-              phone: parsed.phone,
-              email: parsed.email || prev.email,
-              address: parsed.address || prev.address
-            }));
-          }
-        }
       }
     } catch (e) {}
   }, [companyCode]);
@@ -198,19 +175,6 @@ export default function PublicStorePage() {
       handleTrackOrder(urlInvoiceNumber);
     }
   }, [urlInvoiceNumber, companyCode]);
-
-  // OTP Countdown timer
-  useEffect(() => {
-    let interval = null;
-    if (otpTimer > 0) {
-      interval = setInterval(() => {
-        setOtpTimer((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [otpTimer]);
 
   // 1-Second Countdown Timer for Flash Sale Blocks
   const [countdown, setCountdown] = useState({ days: 2, hours: 14, minutes: 35, seconds: 48 });
@@ -450,119 +414,40 @@ export default function PublicStorePage() {
     }
   };
 
-  // Fast Checkout OTP Handlers
-  const handleSendOtp = async (e) => {
-    if (e) e.preventDefault();
-    const cleanPhone = phoneInput.replace(/\D/g, '').slice(-10);
-    if (cleanPhone.length !== 10) {
-      toast.warn('Please enter a valid 10-digit mobile number');
-      return;
-    }
-
-    try {
-      setOtpSending(true);
-      const res = await api.post('/sales/public/otp/send', {
-        companyCode: companyCode.toUpperCase(),
-        phone: cleanPhone
-      });
-      const data = res?.data || res;
-      setFastCheckoutStep('OTP');
-      setOtpTimer(30);
-      setOtpDigits(['', '', '', '']);
-      if (data?.smsSent) {
-        toast.success(`OTP sent to +91 ${cleanPhone}`, { icon: '📱' });
-      } else {
-        toast.info(data?.message || `4-digit OTP sent to +91 ${cleanPhone}`);
-      }
-    } catch (err) {
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to send OTP. Please try again.');
-    } finally {
-      setOtpSending(false);
-    }
-  };
-
-  const handleVerifyOtp = async (overrideCode) => {
-    const codeToVerify = overrideCode || otpDigits.join('');
-    if (codeToVerify.length !== 4) {
-      toast.warn('Please enter the complete 4-digit OTP');
-      return;
-    }
-
-    const cleanPhone = phoneInput.replace(/\D/g, '').slice(-10);
-
-    try {
-      setOtpVerifying(true);
-      const res = await api.post('/sales/public/otp/verify', {
-        companyCode: companyCode.toUpperCase(),
-        phone: cleanPhone,
-        otp: codeToVerify
-      });
-      const data = res?.data || res;
-      setIsPhoneVerified(true);
-      setFastCheckoutStep('VERIFIED');
-      setIsExistingCustomer(Boolean(data?.isExisting));
-
-      const customerProfile = data?.customer;
-      const updatedCustomer = {
-        name: customerProfile?.name || customer.name || '',
-        phone: cleanPhone,
-        email: customerProfile?.email || customer.email || '',
-        address: customerProfile?.address || customer.address || '',
-        deliveryType: customer.deliveryType,
-        paymentMethod: customer.paymentMethod
-      };
-
-      setCustomer((prev) => ({
-        ...prev,
-        ...updatedCustomer
-      }));
-
-      // Cache session in localStorage
-      try {
-        localStorage.setItem(`stockpilot_customer_${companyCode.toUpperCase()}`, JSON.stringify({
-          phone: cleanPhone,
-          name: updatedCustomer.name,
-          email: updatedCustomer.email,
-          address: updatedCustomer.address,
-          isExisting: Boolean(data?.isExisting)
-        }));
-      } catch (e) {}
-
-      if (data?.isExisting && customerProfile?.name) {
-        toast.success(`Welcome back, ${customerProfile.name}! Details pre-filled 🎉`);
-      } else {
-        toast.success('Mobile number verified! Proceed to confirm details ✅');
-      }
-    } catch (err) {
-      toast.error(err?.response?.data?.message || err?.message || 'Invalid or expired OTP');
-    } finally {
-      setOtpVerifying(false);
-    }
-  };
-
-  const handleResetPhone = () => {
-    try {
-      localStorage.removeItem(`stockpilot_customer_${companyCode.toUpperCase()}`);
-    } catch (e) {}
-    setIsPhoneVerified(false);
-    setFastCheckoutStep('PHONE');
-    setPhoneInput('');
-    setOtpDigits(['', '', '', '']);
-    setActiveOtp(null);
-  };
-
   // Customer Authentication Handlers
   const handleCustomerRegister = async (e) => {
     if (e) e.preventDefault();
-    if (!authFormData.name || !authFormData.phone || !authFormData.password) {
-      toast.warn('Please fill in Name, Mobile Number, and Password');
+    setAuthError('');
+
+    if (!authFormData.name?.trim() || !authFormData.phone?.trim() || !authFormData.password) {
+      const msg = 'Please fill in Full Name, Mobile Number, and Password';
+      setAuthError(msg);
+      toast.warn(msg);
       return;
     }
+
+    if (authFormData.password !== authFormData.confirmPassword) {
+      const msg = 'Passwords do not match. Please verify both password fields.';
+      setAuthError(msg);
+      toast.error(msg);
+      return;
+    }
+
+    if (authFormData.password.length < 6) {
+      const msg = 'Password must be at least 6 characters long';
+      setAuthError(msg);
+      toast.warn(msg);
+      return;
+    }
+
     const cleanPhone = authFormData.phone.replace(/\D/g, '').slice(-10);
     if (cleanPhone.length !== 10) {
-      toast.warn('Please enter a valid 10-digit mobile number');
+      const msg = 'Please enter a valid 10-digit mobile number';
+      setAuthError(msg);
+      toast.warn(msg);
       return;
     }
+
     try {
       setAuthLoading(true);
       const res = await api.post('/sales/public/customer/register', {
@@ -571,7 +456,7 @@ export default function PublicStorePage() {
         phone: cleanPhone,
         email: authFormData.email?.trim() || null,
         password: authFormData.password,
-        address: authFormData.address?.trim() || ''
+        address: ''
       });
       const data = res?.data || res;
       setCustomerUser(data.customer);
@@ -581,9 +466,7 @@ export default function PublicStorePage() {
         localStorage.setItem(`stockpilot_customer_token_${codeKey}`, data.token);
         localStorage.setItem(`stockpilot_customer_user_${codeKey}`, JSON.stringify(data.customer));
       } catch (e) {}
-      setIsPhoneVerified(true);
-      setFastCheckoutStep('VERIFIED');
-      setPhoneInput(data.customer.phone);
+
       setCustomer((prev) => ({
         ...prev,
         name: data.customer.name,
@@ -592,9 +475,12 @@ export default function PublicStorePage() {
         address: data.customer.address || prev.address
       }));
       setIsAuthModalOpen(false);
-      toast.success(`Welcome to ${storeTitle}, ${data.customer.name}!`);
+      setAuthFormData({ name: '', phone: '', email: '', password: '', confirmPassword: '' });
+      toast.success(`Account created successfully! Welcome to ${storeTitle}, ${data.customer.name}!`);
     } catch (err) {
-      toast.error(err?.response?.data?.message || err?.message || 'Registration failed');
+      const errorMsg = err?.response?.data?.message || err?.message || 'Registration failed. Mobile may already be registered.';
+      setAuthError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setAuthLoading(false);
     }
@@ -602,10 +488,15 @@ export default function PublicStorePage() {
 
   const handleCustomerLogin = async (e) => {
     if (e) e.preventDefault();
-    if (!authFormData.phone || !authFormData.password) {
-      toast.warn('Please enter your Mobile / Email and Password');
+    setAuthError('');
+
+    if (!authFormData.phone?.trim() || !authFormData.password) {
+      const msg = 'Please enter your Mobile Number / Email and Password';
+      setAuthError(msg);
+      toast.warn(msg);
       return;
     }
+
     try {
       setAuthLoading(true);
       const res = await api.post('/sales/public/customer/login', {
@@ -621,9 +512,7 @@ export default function PublicStorePage() {
         localStorage.setItem(`stockpilot_customer_token_${codeKey}`, data.token);
         localStorage.setItem(`stockpilot_customer_user_${codeKey}`, JSON.stringify(data.customer));
       } catch (e) {}
-      setIsPhoneVerified(true);
-      setFastCheckoutStep('VERIFIED');
-      setPhoneInput(data.customer.phone);
+
       setCustomer((prev) => ({
         ...prev,
         name: data.customer.name,
@@ -632,9 +521,12 @@ export default function PublicStorePage() {
         address: data.customer.address || prev.address
       }));
       setIsAuthModalOpen(false);
+      setAuthFormData({ name: '', phone: '', email: '', password: '', confirmPassword: '' });
       toast.success(`Welcome back, ${data.customer.name}!`);
     } catch (err) {
-      toast.error(err?.response?.data?.message || err?.message || 'Login failed. Please check credentials.');
+      const errorMsg = err?.response?.data?.message || err?.message || 'Invalid credentials. Please verify your phone/email and password.';
+      setAuthError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setAuthLoading(false);
     }
@@ -649,9 +541,6 @@ export default function PublicStorePage() {
     } catch (e) {}
     setCustomerUser(null);
     setCustomerToken('');
-    setIsPhoneVerified(false);
-    setFastCheckoutStep('PHONE');
-    setPhoneInput('');
     setIsCustomerAccountOpen(false);
     toast.info('Logged out from store account');
   };
@@ -694,58 +583,23 @@ export default function PublicStorePage() {
     }
   };
 
-  const handleOtpDigitChange = (index, val) => {
-    const cleanVal = val.replace(/\D/g, '').slice(-1);
-    const newDigits = [...otpDigits];
-    newDigits[index] = cleanVal;
-    setOtpDigits(newDigits);
-
-    if (cleanVal && index < 3) {
-      const nextInput = document.getElementById(`otp-input-${index + 1}`);
-      if (nextInput) nextInput.focus();
-    }
-
-    if (cleanVal && index === 3 && newDigits.every((d) => d !== '')) {
-      handleVerifyOtp(newDigits.join(''));
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      const prevInput = document.getElementById(`otp-input-${index - 1}`);
-      if (prevInput) prevInput.focus();
-    }
-  };
-
-  const handleOtpPaste = (e) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
-    if (pastedData) {
-      const arr = pastedData.split('');
-      while (arr.length < 4) arr.push('');
-      setOtpDigits(arr);
-      if (pastedData.length === 4) {
-        handleVerifyOtp(pastedData);
-      }
-    }
-  };
-
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (cart.length === 0) {
       toast.warn('Your bag is empty.');
       return;
     }
-    if (!isPhoneVerified) {
-      toast.warn('Please verify your mobile number with OTP to checkout.');
+    const cleanPhone = (customer.phone || '').replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      toast.warn('Please provide a valid 10-digit mobile number for order dispatch updates.');
       return;
     }
-    if (!customer.name.trim()) {
+    if (!customer.name?.trim()) {
       toast.warn('Please provide your Full Name.');
       return;
     }
-    if (customer.deliveryType === 'DELIVERY' && !customer.address.trim()) {
-      toast.warn('Please provide your Delivery Address.');
+    if (customer.deliveryType === 'DELIVERY' && !customer.address?.trim()) {
+      toast.warn('Please provide your complete Delivery Address.');
       return;
     }
 
@@ -1913,18 +1767,20 @@ export default function PublicStorePage() {
               </div>
             )}
 
-            {/* Live Order Tracking Trigger */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsTrackingModalOpen(true);
-              }}
-              className="btn-clean-track-nav"
-              title="Track Order Status"
-            >
-              <Truck size={16} />
-              <span>Track</span>
-            </button>
+            {/* Live Order Tracking Trigger - Only shown for signed-in customers */}
+            {customerUser && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTrackingModalOpen(true);
+                }}
+                className="btn-clean-track-nav"
+                title="Track Order Status"
+              >
+                <Truck size={16} />
+                <span>Track</span>
+              </button>
+            )}
 
             {/* Customer Auth / My Account Button */}
             {navbarConfig.showCustomerAuth !== false && (
@@ -2058,17 +1914,19 @@ export default function PublicStorePage() {
             </div>
 
             <div className="mobile-drawer-actions">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  setIsTrackingModalOpen(true);
-                }}
-                className="mobile-drawer-action-btn"
-              >
-                <Truck size={16} />
-                <span>Track Order Status</span>
-              </button>
+              {customerUser && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setIsTrackingModalOpen(true);
+                  }}
+                  className="mobile-drawer-action-btn"
+                >
+                  <Truck size={16} />
+                  <span>Track Order Status</span>
+                </button>
+              )}
 
               {navbarConfig.showCustomerAuth !== false && (
                 customerUser ? (
@@ -2421,239 +2279,129 @@ export default function PublicStorePage() {
                   </div>
                 </div>
 
-                {/* ⚡ StockPilot Fast 1-Click Checkout (GoKwik Style) */}
+                {/* Frictionless Clean Checkout Form */}
                 <form onSubmit={handlePlaceOrder} className="clean-checkout-form">
-                  <div className="fast-checkout-container">
-                    <div className="fast-checkout-header-clean">
-                      <h4 className="fast-checkout-main-title">Customer Verification</h4>
-                      <div className="fast-checkout-trust">
+                  <div className="checkout-contact-section">
+                    <div className="checkout-section-header">
+                      <div className="checkout-section-title-wrap">
+                        <h4 className="checkout-section-main-title">Customer &amp; Delivery Details</h4>
+                        <p className="checkout-section-sub">Quick order details for instant dispatch &amp; tracking</p>
+                      </div>
+                      <div className="checkout-trust-badge">
                         <ShieldCheck size={14} className="text-emerald" />
-                        <span>Secure Checkout</span>
+                        <span>Instant Checkout</span>
                       </div>
                     </div>
 
-                    {!isPhoneVerified ? (
-                      <div className="fast-checkout-auth-card">
-                        {fastCheckoutStep === 'PHONE' ? (
-                          <div className="fast-phone-step">
-                            <div className="fast-step-title-wrap">
-                              <h4 className="fast-step-title">Enter Mobile Number</h4>
-                              <p className="fast-step-sub">We will verify your order &amp; auto-fill your delivery address.</p>
-                            </div>
-
-                            <div className="fast-phone-form-row">
-                              <div className="fast-phone-input-wrap">
-                                <span className="fast-country-prefix">🇮🇳 +91</span>
-                                <input
-                                  type="tel"
-                                  maxLength={10}
-                                  placeholder="10-digit mobile number"
-                                  value={phoneInput}
-                                  onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      handleSendOtp();
-                                    }
-                                  }}
-                                  className="fast-phone-input"
-                                  autoFocus
-                                />
-                                {phoneInput.length === 10 && (
-                                  <span className="fast-phone-valid-check">
-                                    <CheckCircle2 size={16} color="#10b981" />
-                                  </span>
-                                )}
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={handleSendOtp}
-                                disabled={otpSending || phoneInput.length !== 10}
-                                className="btn-fast-continue"
-                              >
-                                {otpSending ? (
-                                  <>
-                                    <Loader2 size={15} className="clean-spin" />
-                                    <span>Sending...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span>Get OTP</span>
-                                    <ArrowRight size={15} />
-                                  </>
-                                )}
-                              </button>
-                            </div>
+                    {customerUser ? (
+                      /* Logged In Customer Badge */
+                      <div className="checkout-logged-user-card">
+                        <div className="checkout-logged-avatar">
+                          {customerUser.name ? customerUser.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div className="checkout-logged-meta">
+                          <div className="checkout-logged-row">
+                            <strong className="checkout-logged-name">{customerUser.name}</strong>
+                            <span className="checkout-logged-tag">
+                              <CheckCircle2 size={12} /> Logged In
+                            </span>
                           </div>
-                        ) : (
-                          <div className="fast-otp-step">
-                            <div className="fast-otp-header">
-                              <div>
-                                <h4 className="fast-step-title">Enter Verification Code</h4>
-                                <p className="fast-step-sub">
-                                  Enter 4-digit code sent to <strong>+91 {phoneInput}</strong>
-                                </p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setFastCheckoutStep('PHONE');
-                                  setOtpDigits(['', '', '', '']);
-                                }}
-                                className="btn-edit-phone"
-                              >
-                                Edit
-                              </button>
-                            </div>
-
-                            {/* 4-digit OTP Inputs */}
-                            <div className="fast-otp-grid">
-                              {otpDigits.map((digit, idx) => (
-                                <input
-                                  key={idx}
-                                  id={`otp-input-${idx}`}
-                                  type="text"
-                                  inputMode="numeric"
-                                  maxLength={1}
-                                  value={digit}
-                                  onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
-                                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                                  onPaste={idx === 0 ? handleOtpPaste : undefined}
-                                  className={`fast-otp-box ${digit ? 'filled' : ''}`}
-                                  autoFocus={idx === 0}
-                                />
-                              ))}
-                            </div>
-
-
-                            <div className="fast-otp-actions">
-                              <button
-                                type="button"
-                                disabled={otpVerifying || otpDigits.join('').length !== 4}
-                                onClick={() => handleVerifyOtp()}
-                                className="btn-fast-verify"
-                              >
-                                {otpVerifying ? (
-                                  <>
-                                    <Loader2 size={15} className="clean-spin" />
-                                    <span>Verifying...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <CheckCircle2 size={15} />
-                                    <span>Verify &amp; Continue</span>
-                                  </>
-                                )}
-                              </button>
-
-                              <div className="fast-resend-row">
-                                {otpTimer > 0 ? (
-                                  <span className="fast-timer-text">
-                                    Resend code in <strong>00:{otpTimer < 10 ? `0${otpTimer}` : otpTimer}</strong>
-                                  </span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={handleSendOtp}
-                                    disabled={otpSending}
-                                    className="btn-resend-otp"
-                                  >
-                                    Resend OTP
-                                  </button>
-                                )}
-                              </div>
-                            </div>
+                          <div className="checkout-logged-details">
+                            <span>+91 {customerUser.phone}</span>
+                            {customerUser.email && <span>• {customerUser.email}</span>}
                           </div>
-                        )}
+                        </div>
                       </div>
                     ) : (
-                      /* Verified Customer Details State */
-                      <div className="fast-verified-card">
-                        <div className="fast-verified-header">
-                          <div className="fast-verified-user-info">
-                            <div className="fast-verified-avatar">
-                              <CheckCircle2 size={18} color="#10b981" />
-                            </div>
-                            <div>
-                              <div className="fast-verified-title">
-                                <span>+91 {customer.phone}</span>
-                                <span className="fast-verified-tag">VERIFIED</span>
-                              </div>
-                              {isExistingCustomer && customer.name && (
-                                <p className="fast-verified-welcome">Welcome back, {customer.name}!</p>
-                              )}
-                            </div>
+                      /* Guest Customer Inputs */
+                      <div className="checkout-guest-container">
+                        <div className="checkout-guest-login-bar">
+                          <span>Already a customer?</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAuthModalMode('LOGIN');
+                              setIsAuthModalOpen(true);
+                            }}
+                            className="btn-guest-login-link"
+                          >
+                            Sign In for 1-click order
+                          </button>
+                        </div>
+
+                        <div className="clean-input-group">
+                          <label>Full Name <span className="req-star">*</span></label>
+                          <div className="input-with-icon">
+                            <User size={15} className="input-icon" />
+                            <input
+                              type="text"
+                              placeholder="e.g. Ramesh Kumar"
+                              required
+                              value={customer.name}
+                              onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                            />
                           </div>
-                          <button
-                            type="button"
-                            onClick={handleResetPhone}
-                            className="btn-change-number"
-                            title="Change mobile number"
-                          >
-                            Change
-                          </button>
                         </div>
 
-                        {/* Delivery Mode Tabs */}
-                        <div className="clean-delivery-toggle">
-                          <button
-                            type="button"
-                            onClick={() => setCustomer({ ...customer, deliveryType: 'DELIVERY' })}
-                            className={`clean-toggle-btn ${customer.deliveryType === 'DELIVERY' ? 'active' : ''}`}
-                          >
-                            <Truck size={14} /> Doorstep Delivery
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setCustomer({ ...customer, deliveryType: 'PICKUP' })}
-                            className={`clean-toggle-btn ${customer.deliveryType === 'PICKUP' ? 'active' : ''}`}
-                          >
-                            <Store size={14} /> Store Pickup
-                          </button>
-                        </div>
-
-                        {/* Name & Email */}
                         <div className="clean-form-grid">
                           <div className="clean-input-group">
-                            <label>Full Name *</label>
-                            <div className="input-with-icon">
-                              <User size={14} className="input-icon" />
+                            <label>Mobile Number <span className="req-star">*</span></label>
+                            <div className="input-with-icon input-phone-wrap">
+                              <span className="input-prefix-tag">🇮🇳 +91</span>
                               <input
-                                type="text"
-                                placeholder="e.g. Ramesh"
+                                type="tel"
+                                maxLength={10}
+                                placeholder="10-digit number"
                                 required
-                                value={customer.name}
-                                onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                                value={customer.phone}
+                                onChange={(e) => setCustomer({ ...customer, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                               />
                             </div>
                           </div>
                           <div className="clean-input-group">
-                            <label>Email Address (Optional)</label>
+                            <label>Email Address <span className="opt-tag">(Optional)</span></label>
                             <div className="input-with-icon">
-                              <Mail size={14} className="input-icon" />
+                              <Mail size={15} className="input-icon" />
                               <input
                                 type="email"
-                                placeholder="For digital tax invoice"
+                                placeholder="For order invoice"
                                 value={customer.email}
                                 onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
                               />
                             </div>
                           </div>
                         </div>
+                      </div>
+                    )}
 
-                        {customer.deliveryType === 'DELIVERY' && (
-                          <div className="clean-input-group">
-                            <label>Delivery Address *</label>
-                            <textarea
-                              rows={2}
-                              placeholder="Flat/House no, Street, Area, City & Pincode"
-                              required
-                              value={customer.address}
-                              onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                            />
-                          </div>
-                        )}
+                    {/* Delivery Mode Tabs */}
+                    <div className="clean-delivery-toggle">
+                      <button
+                        type="button"
+                        onClick={() => setCustomer({ ...customer, deliveryType: 'DELIVERY' })}
+                        className={`clean-toggle-btn ${customer.deliveryType === 'DELIVERY' ? 'active' : ''}`}
+                      >
+                        <Truck size={14} /> Doorstep Delivery
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCustomer({ ...customer, deliveryType: 'PICKUP' })}
+                        className={`clean-toggle-btn ${customer.deliveryType === 'PICKUP' ? 'active' : ''}`}
+                      >
+                        <Store size={14} /> Store Pickup
+                      </button>
+                    </div>
+
+                    {customer.deliveryType === 'DELIVERY' && (
+                      <div className="clean-input-group checkout-address-group">
+                        <label>Delivery Address <span className="req-star">*</span></label>
+                        <textarea
+                          rows={2}
+                          placeholder="Flat / House No, Street name, Area, City & Pincode"
+                          required
+                          value={customer.address}
+                          onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                        />
                       </div>
                     )}
                   </div>
@@ -2971,105 +2719,172 @@ export default function PublicStorePage() {
           <div className="clean-customer-auth-modal" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
-              onClick={() => setIsAuthModalOpen(false)}
+              onClick={() => {
+                setIsAuthModalOpen(false);
+                setAuthError('');
+              }}
               className="clean-btn-modal-close"
-              aria-label="Close"
+              aria-label="Close modal"
             >
               <X size={18} />
             </button>
 
             <div className="customer-auth-header">
               <div className="customer-auth-brand-badge" style={{ background: `${primaryColor}15`, color: primaryColor }}>
-                <Store size={22} />
+                <Store size={24} />
               </div>
-              <h3>{authModalMode === 'LOGIN' ? `Sign In to ${storeTitle}` : `Join ${storeTitle}`}</h3>
-              <p>
+              <h3 className="auth-header-title">
+                {authModalMode === 'LOGIN' ? `Welcome Back` : `Create Your Account`}
+              </h3>
+              <p className="auth-header-sub">
                 {authModalMode === 'LOGIN'
-                  ? 'Access your orders, saved addresses, and express checkout.'
-                  : 'Create an account to track shipments and save delivery addresses.'}
+                  ? `Sign in to track your orders, access fast checkout, and reorder from ${storeTitle}.`
+                  : `Join ${storeTitle} to save delivery addresses and access live order tracking.`}
               </p>
             </div>
 
-            {/* Mode Switch Tabs */}
-            <div className="customer-auth-tabs">
+            {/* Segmented Pill Switcher */}
+            <div className="auth-mode-pill-switcher">
               <button
                 type="button"
-                className={`auth-tab-btn ${authModalMode === 'LOGIN' ? 'active' : ''}`}
-                onClick={() => setAuthModalMode('LOGIN')}
-                style={authModalMode === 'LOGIN' ? { borderBottomColor: primaryColor, color: primaryColor } : {}}
+                className={`auth-tab-pill ${authModalMode === 'LOGIN' ? 'active' : ''}`}
+                onClick={() => {
+                  setAuthModalMode('LOGIN');
+                  setAuthError('');
+                }}
               >
                 Sign In
               </button>
               <button
                 type="button"
-                className={`auth-tab-btn ${authModalMode === 'REGISTER' ? 'active' : ''}`}
-                onClick={() => setAuthModalMode('REGISTER')}
-                style={authModalMode === 'REGISTER' ? { borderBottomColor: primaryColor, color: primaryColor } : {}}
+                className={`auth-tab-pill ${authModalMode === 'REGISTER' ? 'active' : ''}`}
+                onClick={() => {
+                  setAuthModalMode('REGISTER');
+                  setAuthError('');
+                }}
               >
                 Create Account
               </button>
             </div>
+
+            {authError && (
+              <div className="auth-error-banner">
+                <span className="auth-error-icon">!</span>
+                <span>{authError}</span>
+              </div>
+            )}
 
             <form
               onSubmit={authModalMode === 'LOGIN' ? handleCustomerLogin : handleCustomerRegister}
               className="customer-auth-form"
             >
               {authModalMode === 'REGISTER' && (
-                <div className="auth-input-group">
-                  <label>Full Name *</label>
+                <div className="auth-field-group">
+                  <label>Full Name <span className="req-star">*</span></label>
+                  <div className="auth-field-input-wrap">
+                    <User size={16} className="auth-field-icon" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Kumar"
+                      value={authFormData.name}
+                      onChange={(e) => setAuthFormData({ ...authFormData, name: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="auth-field-group">
+                <label>
+                  {authModalMode === 'LOGIN' ? 'Mobile Number or Email' : 'Mobile Number'}{' '}
+                  <span className="req-star">*</span>
+                </label>
+                <div className="auth-field-input-wrap">
+                  {authModalMode === 'LOGIN' ? (
+                    <User size={16} className="auth-field-icon" />
+                  ) : (
+                    <span className="auth-prefix-tag">🇮🇳 +91</span>
+                  )}
                   <input
-                    type="text"
+                    type={authModalMode === 'LOGIN' ? 'text' : 'tel'}
                     required
-                    placeholder="e.g. Priya Sharma"
-                    value={authFormData.name}
-                    onChange={(e) => setAuthFormData({ ...authFormData, name: e.target.value })}
+                    maxLength={authModalMode === 'LOGIN' ? 60 : 10}
+                    placeholder={
+                      authModalMode === 'LOGIN'
+                        ? '10-digit mobile or email address'
+                        : '10-digit mobile number'
+                    }
+                    value={authFormData.phone}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (authModalMode === 'REGISTER') {
+                        setAuthFormData({ ...authFormData, phone: val.replace(/\D/g, '').slice(0, 10) });
+                      } else {
+                        setAuthFormData({ ...authFormData, phone: val });
+                      }
+                    }}
                   />
                 </div>
-              )}
-
-              <div className="auth-input-group">
-                <label>{authModalMode === 'LOGIN' ? 'Mobile Number or Email *' : '10-Digit Mobile Number *'}</label>
-                <input
-                  type="text"
-                  required
-                  placeholder={authModalMode === 'LOGIN' ? 'e.g. 9876543210 or name@gmail.com' : 'e.g. 9876543210'}
-                  value={authFormData.phone}
-                  onChange={(e) => setAuthFormData({ ...authFormData, phone: e.target.value })}
-                />
               </div>
 
               {authModalMode === 'REGISTER' && (
-                <div className="auth-input-group">
-                  <label>Email Address (Optional)</label>
+                <div className="auth-field-group">
+                  <label>Email Address <span className="opt-tag">(Optional)</span></label>
+                  <div className="auth-field-input-wrap">
+                    <Mail size={16} className="auth-field-icon" />
+                    <input
+                      type="email"
+                      placeholder="name@example.com (for tax invoice)"
+                      value={authFormData.email}
+                      onChange={(e) => setAuthFormData({ ...authFormData, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="auth-field-group">
+                <label>Password <span className="req-star">*</span></label>
+                <div className="auth-field-input-wrap">
+                  <Lock size={16} className="auth-field-icon" />
                   <input
-                    type="email"
-                    placeholder="name@example.com"
-                    value={authFormData.email}
-                    onChange={(e) => setAuthFormData({ ...authFormData, email: e.target.value })}
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder={authModalMode === 'REGISTER' ? 'At least 6 characters' : 'Enter your password'}
+                    value={authFormData.password}
+                    onChange={(e) => setAuthFormData({ ...authFormData, password: e.target.value })}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="btn-auth-pw-toggle"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
-              )}
-
-              <div className="auth-input-group">
-                <label>Password *</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter password"
-                  value={authFormData.password}
-                  onChange={(e) => setAuthFormData({ ...authFormData, password: e.target.value })}
-                />
               </div>
 
               {authModalMode === 'REGISTER' && (
-                <div className="auth-input-group">
-                  <label>Delivery Address (Optional)</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Flat / House No, Street, City, Pincode"
-                    value={authFormData.address}
-                    onChange={(e) => setAuthFormData({ ...authFormData, address: e.target.value })}
-                  />
+                <div className="auth-field-group">
+                  <label>Confirm Password <span className="req-star">*</span></label>
+                  <div className="auth-field-input-wrap">
+                    <Lock size={16} className="auth-field-icon" />
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Re-enter your password"
+                      value={authFormData.confirmPassword}
+                      onChange={(e) => setAuthFormData({ ...authFormData, confirmPassword: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="btn-auth-pw-toggle"
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -3081,24 +2896,28 @@ export default function PublicStorePage() {
               >
                 {authLoading ? (
                   <>
-                    <Loader2 size={16} className="spinner" />
+                    <Loader2 size={16} className="clean-spin" />
                     <span>Please wait...</span>
                   </>
                 ) : (
-                  <span>{authModalMode === 'LOGIN' ? 'Sign In' : 'Create Account & Continue'}</span>
+                  <span>{authModalMode === 'LOGIN' ? 'Sign In to Account' : 'Create My Account'}</span>
                 )}
               </button>
 
               <div className="auth-footer-toggle">
                 {authModalMode === 'LOGIN' ? (
                   <p>
-                    Don’t have an account?{' '}
+                    New to {storeTitle}?{' '}
                     <button
                       type="button"
-                      onClick={() => setAuthModalMode('REGISTER')}
+                      onClick={() => {
+                        setAuthModalMode('REGISTER');
+                        setAuthError('');
+                      }}
+                      className="auth-link-highlight"
                       style={{ color: primaryColor }}
                     >
-                      Create one now
+                      Create an account
                     </button>
                   </p>
                 ) : (
@@ -3106,10 +2925,14 @@ export default function PublicStorePage() {
                     Already have an account?{' '}
                     <button
                       type="button"
-                      onClick={() => setAuthModalMode('LOGIN')}
+                      onClick={() => {
+                        setAuthModalMode('LOGIN');
+                        setAuthError('');
+                      }}
+                      className="auth-link-highlight"
                       style={{ color: primaryColor }}
                     >
-                      Sign In
+                      Sign in here
                     </button>
                   </p>
                 )}

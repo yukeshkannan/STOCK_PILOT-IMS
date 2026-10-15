@@ -1384,9 +1384,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  flex: 1;
+  gap: 1.15rem;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .clean-nav-link {
@@ -1397,11 +1398,30 @@
   border-radius: 6px;
   transition: all 0.15s ease;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .clean-nav-link:hover {
   color: var(--store-primary, #982A86);
   background: rgba(152, 42, 134, 0.08);
+}
+
+.device-frame-mobile .clean-nav-menu,
+.device-frame-mobile .preview-nav-search-bar {
+  display: none !important;
+}
+
+.device-frame-mobile .clean-header-container {
+  padding: 0.25rem 0.25rem;
+  gap: 0.5rem;
+}
+
+.device-frame-tablet .clean-nav-menu {
+  gap: 0.65rem;
+}
+
+.device-frame-tablet .preview-nav-search-bar {
+  display: none !important;
 }
 
 .clean-header-actions {

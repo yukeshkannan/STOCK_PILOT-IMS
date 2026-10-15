@@ -59,7 +59,8 @@ import {
   PanelLeftOpen,
   Coffee,
   Activity,
-  User
+  User,
+  Menu
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { WhatsAppBrandIcon } from './PublicStorePage';
@@ -4015,20 +4016,22 @@ export default function StorefrontBuilderPage() {
                       </div>
                     </div>
 
-                    {config.navbar?.showSearch !== false && (
-                      <div className="preview-nav-search-bar" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-surface-elevated, #f1f5f9)', padding: '0.35rem 0.75rem', borderRadius: '20px', border: '1px solid var(--border-color, #e2e8f0)', fontSize: '0.78rem', color: '#64748b' }}>
-                        <Search size={13} color="#94a3b8" />
-                        <span>Search products...</span>
-                      </div>
-                    )}
-
+                    {/* Center: Desktop Nav Menu (Single row, nowrap) */}
                     <nav className="clean-nav-menu">
                       {(config.navbar?.navLinks || DEFAULT_NAV_LINKS).filter((l) => l.enabled !== false).map((l) => (
                         <span key={l.id || l.label} className="clean-nav-link">{l.label}</span>
                       ))}
                     </nav>
 
+                    {/* Right: Search & Action Pills */}
                     <div className="clean-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {config.navbar?.showSearch !== false && (
+                        <div className="preview-nav-search-bar" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-surface-elevated, #f1f5f9)', padding: '0.35rem 0.75rem', borderRadius: '20px', border: '1px solid var(--border-color, #e2e8f0)', fontSize: '0.78rem', color: '#64748b' }}>
+                          <Search size={13} color="#94a3b8" />
+                          <span>Search products...</span>
+                        </div>
+                      )}
+
                       {config.navbar?.showCustomerAuth !== false && (
                         <button type="button" className="btn-clean-customer-auth" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid var(--border-color, #cbd5e1)', background: 'transparent', fontSize: '0.78rem', fontWeight: 600, color: 'inherit' }}>
                           <User size={13} />
@@ -4046,6 +4049,12 @@ export default function StorefrontBuilderPage() {
                           <span>Bag</span>
                           <span className="clean-cart-pill">0</span>
                         </button>
+                      )}
+
+                      {previewDevice === 'mobile' && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '6px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#0f172a' }}>
+                          <Menu size={16} />
+                        </div>
                       )}
                     </div>
                   </div>
