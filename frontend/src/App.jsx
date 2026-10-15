@@ -95,6 +95,8 @@ export default function App() {
       <Routes>
         {/* Public Tenant Mini E-Commerce Storefront */}
         <Route path="/store/:companyCode" element={<PublicStorePage />} />
+        <Route path="/store/:companyCode/track" element={<PublicStorePage />} />
+        <Route path="/store/:companyCode/track/:invoiceNumber" element={<PublicStorePage />} />
 
         {/* Public Customer E-Bill & PDF Viewer (Zudio-style) */}
         <Route path="/e-bill/:invoiceNumber" element={<PublicInvoicePage />} />

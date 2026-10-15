@@ -99,3 +99,36 @@ Used for eventual consistency, background jobs, and decoupled cross-service trig
 - **In-Memory Cache**: Redis 7 Alpine.
 - **Frontend Framework**: React 18, Vite, Redux Toolkit, Lucide Icons.
 - **Containerization**: Docker, Docker Compose.
+
+---
+
+## 6. Multi-Tenant Storefront Builder & Public Domain Architecture
+
+### 1. Dynamic Modular Storefront Engine
+Tenants configure custom e-commerce storefronts using a Shopify/Wix-inspired visual workbench:
+- **Storage**: `tenants.store_config` stored as `LONGTEXT` in `tenant_db` (preventing silent 64KB truncation).
+- **Navigation Controls**: Configurable header features (`showSearch`, `showCustomerAuth`, `showCart`, `showWhatsApp`, `showPhone`, custom menu links).
+- **Hero Patterns**:
+  - `SPLIT`: High-conversion 2-column layout (headline & CTA on left, glass showcase with verified badge on right).
+  - `CAROUSEL`: Multi-slide promotional carousel with slide-by-slide titles, images, links, controls, and pagination.
+  - `CINEMATIC`: Fullscreen brand hero with dark gradient overlay and bold typography.
+- **12 Enterprise Modular Blocks**: Flash sale countdowns, product carousels, category tiles, product grids, lookbooks, brand narratives, reviews, FAQ accordions, and contact locators.
+
+### 2. Multi-Tenant URL & Domain Routing Strategy
+StockPilot supports three tiers of storefront domain resolution:
+1. **Path-Based (Current / Default)**: `app.stockpilot.store/store/:companyCode`
+   - Zero-configuration required; client extracts `:companyCode` from route params.
+2. **Subdomain-Based (Enterprise Multi-Tenant)**: `zara.stockpilot.store`
+   - Nginx / Cloudflare wildcard DNS (`*.stockpilot.store`).
+   - Gateway / Frontend extracts tenant subdomain (`req.headers.host.split('.')[0]`), resolving tenant automatically without exposing URL paths.
+3. **Custom Domain CNAME**: `shop.zarafashion.com`
+   - Tenant creates CNAME record pointing to `cname.stockpilot.store`.
+   - SSL certificates auto-provisioned via Let's Encrypt / Cloudflare for SaaS.
+   - Database mapping: `tenants.custom_domain` -> `company_code`.
+
+### 3. Customer Authentication & Live Order Tracking
+- **Tenant-Scoped Customer Accounts**: Customers register and log in to a specific tenant's storefront (`/api/v1/sales/public/customer/*`), preventing cross-store data leakage.
+- **6-Stage Visual Stepper**:
+  `PLACED` -> `CONFIRMED` -> `PACKED` -> `SHIPPED` -> `OUT_FOR_DELIVERY` -> `DELIVERED`.
+- Real-time courier tracking (AWB, carrier name) and instant WhatsApp support integration.
+

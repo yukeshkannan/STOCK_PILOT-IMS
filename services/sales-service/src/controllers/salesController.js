@@ -85,6 +85,58 @@ class SalesController {
     }
   }
 
+  async registerCustomer(req, res, next) {
+    try {
+      const result = await salesService.registerCustomer(req.body);
+      return ApiResponse.created(res, result, 'Customer registered successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async loginCustomer(req, res, next) {
+    try {
+      const result = await salesService.loginCustomer(req.body);
+      return ApiResponse.success(res, result, 'Customer login successful');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateCustomerProfile(req, res, next) {
+    try {
+      const result = await salesService.updateCustomerProfile(req.body);
+      return ApiResponse.success(res, result, 'Profile updated successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getCustomerOrders(req, res, next) {
+    try {
+      const orders = await salesService.getCustomerOrders({
+        companyCode: req.query.companyCode,
+        phone: req.query.phone,
+        customerId: req.query.customerId
+      });
+      return ApiResponse.success(res, orders, 'Customer orders retrieved');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async trackStorefrontOrder(req, res, next) {
+    try {
+      const invoiceNumber = req.params.invoiceNumber;
+      const companyCode = req.query.companyCode;
+      const phone = req.query.phone;
+      const tracking = await salesService.trackStorefrontOrder({ companyCode, invoiceNumber, phone });
+      return ApiResponse.success(res, tracking, 'Order tracking details retrieved');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async sendInvoiceEmail(req, res, next) {
     try {
       const result = await salesService.sendInvoiceEmail(req.user.tenantId, req.params.id, {

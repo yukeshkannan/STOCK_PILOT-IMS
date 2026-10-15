@@ -60,6 +60,7 @@ CREATE INDEX idx_tenant_created ON sales_invoices(tenant_id, created_at DESC);
   - `company_name`: VARCHAR(255)
   - `status`: ENUM (`ACTIVE`, `SUSPENDED`, `TRIAL`)
   - `plan`: ENUM (`FREE`, `STANDARD`, `ENTERPRISE`)
+  - `store_config`: LONGTEXT (JSON store builder configuration with navbar toggles, multi-slide hero carousel, branding palettes, and dynamic modular sections without 64KB truncation)
 - **`roles`**:
   - `id`: INT (PK)
   - `tenant_id`: INT
@@ -138,8 +139,16 @@ CREATE INDEX idx_tenant_created ON sales_invoices(tenant_id, created_at DESC);
 - **`purchase_order_items`**: `id`, `purchase_order_id`, `product_id`, `quantity`, `unit_cost`, `total`
 
 ### 💰 7. `sales_db` (Invoicing & POS)
-- **`customers`**: `id`, `tenant_id`, `name`, `phone`, `email`, `outstanding_balance`
-- **`sales_invoices`**:
+- **`customers`**:
+  - `id`: INT (PK)
+  - `tenant_id`: INT
+  - `name`: VARCHAR(255)
+  - `phone`: VARCHAR(50)
+  - `email`: VARCHAR(255)
+  - `password_hash`: VARCHAR(255) (Bcrypt hash for tenant-scoped customer accounts)
+  - `saved_addresses`: TEXT (JSON array of customer delivery addresses)
+  - `outstanding_balance`: DECIMAL(12,2)
+- **`sales` / `sales_invoices`**:
   - `id`: INT (PK)
   - `tenant_id`: INT
   - `invoice_number`: VARCHAR(100)
@@ -148,6 +157,10 @@ CREATE INDEX idx_tenant_created ON sales_invoices(tenant_id, created_at DESC);
   - `tax_total`: DECIMAL(12,2)
   - `discount_total`: DECIMAL(12,2)
   - `grand_total`: DECIMAL(12,2)
+  - `order_status`: VARCHAR(50) (`PLACED`, `CONFIRMED`, `PACKED`, `SHIPPED`, `OUT_FOR_DELIVERY`, `DELIVERED`, `CANCELLED`)
+  - `delivery_address`: TEXT (Destination address for logistics)
+  - `courier_name`: VARCHAR(100) (Carrier name, e.g. Delhivery, BlueDart, Dunzo)
+  - `tracking_number`: VARCHAR(100) (Air Waybill / AWB tracking identifier)
   - `payment_status`: ENUM (`PAID`, `PARTIAL`, `UNPAID`)
   - `payment_method`: ENUM (`CASH`, `UPI`, `CARD`, `CREDIT`)
 - **`sales_invoice_items`**: `id`, `invoice_id`, `product_id`, `warehouse_id`, `quantity`, `unit_price`, `total`

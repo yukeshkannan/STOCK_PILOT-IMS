@@ -55,7 +55,7 @@ const Tenant = sequelize.define('Tenant', {
     defaultValue: 'TRIAL'
   },
   store_config: {
-    type: DataTypes.TEXT,
+    type: DataTypes.TEXT('long'),
     allowNull: true
   }
 }, {

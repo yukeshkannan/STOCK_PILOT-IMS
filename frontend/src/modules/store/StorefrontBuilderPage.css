@@ -2543,4 +2543,318 @@
   color: #ffffff !important;
 }
 
+/* ==========================================================================
+   Hero Design Pattern Selector & New Hero Styles
+   ========================================================================== */
+.hero-pattern-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.pattern-select-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0.6rem 0.4rem;
+  background: var(--bg-surface-elevated, #f8fafc);
+  border: 1.5px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pattern-select-card:hover {
+  border-color: #982A86;
+  background: rgba(152, 42, 134, 0.04);
+}
+
+.pattern-select-card.active {
+  border-color: #982A86;
+  background: rgba(152, 42, 134, 0.08);
+  box-shadow: 0 0 0 1px #982A86;
+}
+
+.pattern-card-preview {
+  width: 100%;
+  height: 48px;
+  border-radius: 6px;
+  background: #0f172a;
+  margin-bottom: 0.45rem;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.split-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  gap: 4px;
+}
+
+.split-preview .mock-col-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+}
+
+.split-preview .mock-col-text span {
+  display: block;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 2px;
+}
+
+.split-preview .mock-col-text span:first-child { width: 40%; background: #982A86; }
+.split-preview .mock-col-text span:nth-child(2) { width: 85%; }
+.split-preview .mock-col-text span:last-child { width: 60%; }
+
+.split-preview .mock-col-img {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  height: 100%;
+}
+
+.carousel-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.carousel-preview .mock-slide-track {
+  display: flex;
+  gap: 4px;
+}
+
+.carousel-preview .mock-slide-track span {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.carousel-preview .mock-slide-track span:nth-child(2) {
+  background: #982A86;
+  transform: scale(1.15);
+}
+
+.carousel-preview .mock-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.carousel-preview .mock-dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.carousel-preview .mock-dots span:nth-child(2) {
+  background: #982A86;
+}
+
+.cinematic-preview .mock-full-img {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(152, 42, 134, 0.4), #0f172a);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.cinematic-preview .mock-full-img span {
+  height: 3px;
+  border-radius: 2px;
+  background: #ffffff;
+}
+
+.cinematic-preview .mock-full-img span:first-child { width: 65%; }
+.cinematic-preview .mock-full-img span:last-child { width: 45%; background: rgba(255, 255, 255, 0.6); }
+
+.pattern-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: block;
+}
+
+.pattern-desc {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  display: block;
+  margin-top: 0.15rem;
+}
+
+/* Split Pattern Canvas Styles */
+.clean-hero-split-pattern {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: center;
+  gap: 2.5rem;
+  padding: 4rem 3rem;
+  background: var(--store-bg, #ffffff);
+  color: var(--store-text-main, #0f172a);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-split-left-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hero-split-right-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.hero-product-showcase-frame {
+  width: 100%;
+  max-width: 440px;
+  height: 340px;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
+  border: 4px solid var(--store-card, #ffffff);
+}
+
+.hero-product-showcase-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-floating-badge-card {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+  right: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.hero-floating-badge-card strong {
+  display: block;
+  font-size: 0.82rem;
+  color: #0f172a;
+}
+
+.hero-floating-badge-card span {
+  display: block;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.btn-hero-secondary {
+  padding: 0.8rem 1.6rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-color, #cbd5e1);
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-hero-secondary:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Carousel Pattern Canvas Styles */
+.clean-hero-carousel-pattern {
+  position: relative;
+  min-height: 480px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.hero-carousel-controls-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  pointer-events: none;
+}
+
+.btn-carousel-arrow {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+}
+
+.btn-carousel-arrow:hover {
+  background: #982A86;
+  border-color: #982A86;
+  transform: scale(1.08);
+}
+
+.hero-carousel-dots {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.hero-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hero-dot.active {
+  background: #982A86;
+  width: 26px;
+  border-radius: 6px;
+}
+
 

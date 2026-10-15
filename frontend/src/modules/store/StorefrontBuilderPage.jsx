@@ -58,7 +58,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Coffee,
-  Activity
+  Activity,
+  User
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { WhatsAppBrandIcon } from './PublicStorePage';
@@ -685,6 +686,7 @@ export default function StorefrontBuilderPage() {
   const [canvasZoom, setCanvasZoom] = useState(100);
 
   // Drag and Drop State
+  const [activeHeroSlideIndex, setActiveHeroSlideIndex] = useState(0);
   const [draggedSectionIndex, setDraggedSectionIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [insertAtIndex, setInsertAtIndex] = useState(null);
@@ -1212,6 +1214,55 @@ export default function StorefrontBuilderPage() {
         [field]: value
       }
     }));
+  };
+
+  const updateNavbarSetting = (field, value) => {
+    setConfig((prev) => ({
+      ...prev,
+      navbar: {
+        ...(prev.navbar || {}),
+        [field]: value
+      }
+    }));
+  };
+
+  const addHeroSlide = () => {
+    if (!selectedSection) return;
+    const currentSlides = selectedSection.data?.slides || [];
+    const newSlide = {
+      id: `slide-${Date.now()}`,
+      badge: 'Special Promotion',
+      title: 'New Season Handpicked Arrivals',
+      subtitle: 'Verified stock with doorstep express delivery and 100% genuine guarantee.',
+      ctaText: 'Explore Catalog',
+      ctaUrl: '#catalog',
+      imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
+    };
+    updateSelectedSectionData('slides', [...currentSlides, newSlide]);
+    toast.success('Added new slide to hero carousel');
+  };
+
+  const updateHeroSlide = (slideIndex, field, value) => {
+    if (!selectedSection) return;
+    const currentSlides = [...(selectedSection.data?.slides || [])];
+    if (currentSlides[slideIndex]) {
+      currentSlides[slideIndex] = {
+        ...currentSlides[slideIndex],
+        [field]: value
+      };
+      updateSelectedSectionData('slides', currentSlides);
+    }
+  };
+
+  const deleteHeroSlide = (slideIndex) => {
+    if (!selectedSection) return;
+    const currentSlides = (selectedSection.data?.slides || []).filter((_, i) => i !== slideIndex);
+    if (currentSlides.length === 0) {
+      toast.warn('Carousel must have at least one slide.');
+      return;
+    }
+    updateSelectedSectionData('slides', currentSlides);
+    toast.info('Removed carousel slide');
   };
 
   const updateNavbarLink = (id, field, value) => {
@@ -2147,6 +2198,99 @@ export default function StorefrontBuilderPage() {
                       )}
                     </div>
 
+                    {/* Header Features & Navigation Toggles */}
+                    <div className="builder-field-card">
+                      <div className="builder-card-header">
+                        <SlidersHorizontal size={15} color={primaryColor} />
+                        <span className="builder-card-title">Header Features & Controls</span>
+                      </div>
+                      <p className="builder-field-hint" style={{ margin: '0 0 0.75rem 0' }}>
+                        Toggle features visible on your store's top navigation bar.
+                      </p>
+
+                      <div className="builder-toggle-stack" style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                        {/* Search Bar Toggle */}
+                        <div className="builder-toggle-row">
+                          <div className="toggle-info-col">
+                            <span className="builder-toggle-label">Instant Product Search Bar</span>
+                            <span className="builder-field-hint">Search input with live auto-filtering</span>
+                          </div>
+                          <label className="builder-switch-wrapper">
+                            <input
+                              type="checkbox"
+                              checked={config.navbar?.showSearch !== false}
+                              onChange={(e) => updateNavbarSetting('showSearch', e.target.checked)}
+                            />
+                            <span className="builder-switch-slider" />
+                          </label>
+                        </div>
+
+                        {/* Customer Login & Sign Up Toggle */}
+                        <div className="builder-toggle-row">
+                          <div className="toggle-info-col">
+                            <span className="builder-toggle-label">Customer Sign In / Sign Up</span>
+                            <span className="builder-field-hint">Customer portal button with registration & my orders</span>
+                          </div>
+                          <label className="builder-switch-wrapper">
+                            <input
+                              type="checkbox"
+                              checked={config.navbar?.showCustomerAuth !== false}
+                              onChange={(e) => updateNavbarSetting('showCustomerAuth', e.target.checked)}
+                            />
+                            <span className="builder-switch-slider" />
+                          </label>
+                        </div>
+
+                        {/* Shopping Bag / Cart Toggle */}
+                        <div className="builder-toggle-row">
+                          <div className="toggle-info-col">
+                            <span className="builder-toggle-label">Shopping Cart / Bag Drawer</span>
+                            <span className="builder-field-hint">Cart drawer button with live badge counter</span>
+                          </div>
+                          <label className="builder-switch-wrapper">
+                            <input
+                              type="checkbox"
+                              checked={config.navbar?.showCart !== false}
+                              onChange={(e) => updateNavbarSetting('showCart', e.target.checked)}
+                            />
+                            <span className="builder-switch-slider" />
+                          </label>
+                        </div>
+
+                        {/* WhatsApp Quick Connect Toggle */}
+                        <div className="builder-toggle-row">
+                          <div className="toggle-info-col">
+                            <span className="builder-toggle-label">Direct WhatsApp Connect</span>
+                            <span className="builder-field-hint">Quick WhatsApp inquiry button on header</span>
+                          </div>
+                          <label className="builder-switch-wrapper">
+                            <input
+                              type="checkbox"
+                              checked={config.navbar?.showWhatsApp !== false}
+                              onChange={(e) => updateNavbarSetting('showWhatsApp', e.target.checked)}
+                            />
+                            <span className="builder-switch-slider" />
+                          </label>
+                        </div>
+
+                        {/* Phone Hotline Toggle */}
+                        <div className="builder-toggle-row">
+                          <div className="toggle-info-col">
+                            <span className="builder-toggle-label">Support Phone Hotline</span>
+                            <span className="builder-field-hint">Displays clickable phone number in header utility strip</span>
+                          </div>
+                          <label className="builder-switch-wrapper">
+                            <input
+                              type="checkbox"
+                              checked={config.navbar?.showPhone !== false}
+                              onChange={(e) => updateNavbarSetting('showPhone', e.target.checked)}
+                            />
+                            <span className="builder-switch-slider" />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Announcement Notification Bar Card */}
                     <div className="builder-field-card">
                       <div className="builder-toggle-row">
@@ -2614,90 +2758,294 @@ export default function StorefrontBuilderPage() {
                 {/* 1. HERO_BANNER */}
                 {selectedSection.type === 'HERO_BANNER' && (
                   <div className="inspector-fields-stack">
+                    {/* Design Pattern Selector Card */}
                     <div className="builder-field-card">
-                      <div className="builder-input-group">
-                        <label className="builder-field-label">
-                          <span>Badge Label</span>
-                          <span className="builder-field-hint">Top pill badge</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="builder-input"
-                          value={selectedSection.data?.badge || ''}
-                          onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
-                          placeholder="Official Online Store"
-                        />
+                      <div className="builder-card-header">
+                        <Palette size={15} color={primaryColor} />
+                        <span className="builder-card-title">Hero Design Pattern</span>
                       </div>
+                      <p className="builder-field-hint" style={{ margin: '0 0 0.75rem 0' }}>
+                        Select the layout pattern matching your brand's storefront aesthetic.
+                      </p>
 
-                      <div className="builder-input-group">
-                        <label className="builder-field-label">
-                          <span>Hero Headline</span>
-                          <span className="builder-field-hint">Main hero title</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="builder-input"
-                          value={selectedSection.data?.title || ''}
-                          onChange={(e) => updateSelectedSectionData('title', e.target.value)}
-                          placeholder="Welcome to Our Store"
-                        />
+                      <div className="hero-pattern-selector-grid">
+                        <button
+                          type="button"
+                          className={`pattern-select-card ${(selectedSection.data?.pattern || 'SPLIT') === 'SPLIT' ? 'active' : ''}`}
+                          onClick={() => updateSelectedSectionData('pattern', 'SPLIT')}
+                        >
+                          <div className="pattern-card-preview split-preview">
+                            <div className="mock-col-text"><span /><span /><span /></div>
+                            <div className="mock-col-img" />
+                          </div>
+                          <span className="pattern-name">Split Showcase</span>
+                          <span className="pattern-desc">Story left + product right</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`pattern-select-card ${selectedSection.data?.pattern === 'CAROUSEL' ? 'active' : ''}`}
+                          onClick={() => {
+                            updateSelectedSectionData('pattern', 'CAROUSEL');
+                            if (!selectedSection.data?.slides || selectedSection.data.slides.length === 0) {
+                              updateSelectedSectionData('slides', [
+                                {
+                                  id: 'slide-1',
+                                  badge: 'New Season Arrival',
+                                  title: selectedSection.data?.title || 'Welcome to Our Online Store',
+                                  subtitle: selectedSection.data?.subtitle || 'Shop the freshest arrivals, exclusive offers, and verified products delivered quickly.',
+                                  ctaText: 'Shop New Arrivals',
+                                  ctaUrl: '#catalog',
+                                  imageUrl: selectedSection.data?.imageUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
+                                },
+                                {
+                                  id: 'slide-2',
+                                  badge: 'Direct Manufacturer Warranty',
+                                  title: 'Express Doorstep Delivery Across India',
+                                  subtitle: '100% authentic inventory sealed and dispatched with official GST invoice.',
+                                  ctaText: 'Explore Collection',
+                                  ctaUrl: '#catalog',
+                                  imageUrl: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=1600&q=80'
+                                }
+                              ]);
+                            }
+                          }}
+                        >
+                          <div className="pattern-card-preview carousel-preview">
+                            <div className="mock-slide-track"><span /><span /><span /></div>
+                            <div className="mock-dots"><span /><span /><span /></div>
+                          </div>
+                          <span className="pattern-name">Dynamic Carousel</span>
+                          <span className="pattern-desc">Multi-slide slider</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`pattern-select-card ${selectedSection.data?.pattern === 'CINEMATIC' ? 'active' : ''}`}
+                          onClick={() => updateSelectedSectionData('pattern', 'CINEMATIC')}
+                        >
+                          <div className="pattern-card-preview cinematic-preview">
+                            <div className="mock-full-img"><span /><span /></div>
+                          </div>
+                          <span className="pattern-name">Cinematic Hero</span>
+                          <span className="pattern-desc">Full-bleed wallpaper</span>
+                        </button>
                       </div>
+                    </div>
 
-                      <div className="builder-input-group">
-                        <label className="builder-field-label">
-                          <span>Subtitle Description</span>
-                          <span className="builder-field-hint">Story & promo description</span>
-                        </label>
-                        <textarea
-                          className="builder-textarea"
-                          rows={3}
-                          value={selectedSection.data?.subtitle || ''}
-                          onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
-                          placeholder="Shop the freshest arrivals and verified products..."
-                        />
+                    {/* DYNAMIC CAROUSEL SLIDES MANAGER */}
+                    {selectedSection.data?.pattern === 'CAROUSEL' ? (
+                      <div className="builder-field-card">
+                        <div className="builder-card-header" style={{ justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <SlidersHorizontal size={15} color={primaryColor} />
+                            <span className="builder-card-title">Carousel Slides ({(selectedSection.data?.slides || []).length})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={addHeroSlide}
+                            className="btn btn-secondary btn-xs btn-add-link"
+                          >
+                            <Plus size={12} /> <span>Add Slide</span>
+                          </button>
+                        </div>
+
+                        <div className="slides-editor-stack" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.75rem' }}>
+                          {(selectedSection.data?.slides || []).map((slide, sIdx) => (
+                            <div key={slide.id || sIdx} className="slide-editor-card" style={{ padding: '0.85rem', background: 'var(--bg-surface-elevated, #f8fafc)', borderRadius: '10px', border: '1px solid var(--border-color, #e2e8f0)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.82rem', color: primaryColor }}>Slide #{sIdx + 1}</span>
+                                {(selectedSection.data?.slides || []).length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteHeroSlide(sIdx)}
+                                    className="btn-icon-action delete"
+                                    title="Delete Slide"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <div className="builder-input-group">
+                                  <label className="builder-field-label"><span>Pill Badge</span></label>
+                                  <input
+                                    type="text"
+                                    className="builder-input input-sm"
+                                    value={slide.badge || ''}
+                                    onChange={(e) => updateHeroSlide(sIdx, 'badge', e.target.value)}
+                                    placeholder="E.g. New Launch"
+                                  />
+                                </div>
+
+                                <div className="builder-input-group">
+                                  <label className="builder-field-label"><span>Slide Headline</span></label>
+                                  <input
+                                    type="text"
+                                    className="builder-input input-sm"
+                                    value={slide.title || ''}
+                                    onChange={(e) => updateHeroSlide(sIdx, 'title', e.target.value)}
+                                    placeholder="Slide Main Title"
+                                  />
+                                </div>
+
+                                <div className="builder-input-group">
+                                  <label className="builder-field-label"><span>Slide Subtitle</span></label>
+                                  <textarea
+                                    className="builder-textarea input-sm"
+                                    rows={2}
+                                    value={slide.subtitle || ''}
+                                    onChange={(e) => updateHeroSlide(sIdx, 'subtitle', e.target.value)}
+                                    placeholder="Short description of this offer or collection"
+                                  />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                  <div className="builder-input-group">
+                                    <label className="builder-field-label"><span>Button Text</span></label>
+                                    <input
+                                      type="text"
+                                      className="builder-input input-sm"
+                                      value={slide.ctaText || ''}
+                                      onChange={(e) => updateHeroSlide(sIdx, 'ctaText', e.target.value)}
+                                      placeholder="Shop Now"
+                                    />
+                                  </div>
+                                  <div className="builder-input-group">
+                                    <label className="builder-field-label"><span>Button Link</span></label>
+                                    <input
+                                      type="text"
+                                      className="builder-input input-sm"
+                                      value={slide.ctaUrl || ''}
+                                      onChange={(e) => updateHeroSlide(sIdx, 'ctaUrl', e.target.value)}
+                                      placeholder="#catalog"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="builder-input-group">
+                                  <label className="builder-field-label"><span>Slide Image URL</span></label>
+                                  <input
+                                    type="url"
+                                    className="builder-input input-sm"
+                                    value={slide.imageUrl || ''}
+                                    onChange={(e) => updateHeroSlide(sIdx, 'imageUrl', e.target.value)}
+                                    placeholder="https://images.unsplash.com/..."
+                                  />
+                                </div>
+
+                                {slide.imageUrl && (
+                                  <div className="builder-img-preview-box" style={{ height: '70px', marginTop: '0.2rem' }}>
+                                    <img src={slide.imageUrl} alt="Slide Preview" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-
-                      <div className="builder-input-group">
-                        <label className="builder-field-label">
-                          <span>CTA Button Text</span>
-                          <span className="builder-field-hint">Call to action</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="builder-input"
-                          value={selectedSection.data?.ctaText || ''}
-                          onChange={(e) => updateSelectedSectionData('ctaText', e.target.value)}
-                          placeholder="Explore Catalog"
-                        />
-                      </div>
-
-                      <div className="builder-input-group">
-                        <label className="builder-field-label">
-                          <span>Hero Background Image URL</span>
-                          <span className="builder-field-hint">High resolution wallpaper</span>
-                        </label>
-                        <input
-                          type="url"
-                          className="builder-input"
-                          value={selectedSection.data?.imageUrl || ''}
-                          onChange={(e) => updateSelectedSectionData('imageUrl', e.target.value)}
-                          placeholder="https://images.unsplash.com/..."
-                        />
-                      </div>
-
-                      {selectedSection.data?.imageUrl && (
-                        <div className="builder-img-preview-box">
-                          <img
-                            src={selectedSection.data.imageUrl}
-                            alt="Hero Preview"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    ) : (
+                      /* SINGLE HERO (SPLIT OR CINEMATIC) FORM */
+                      <div className="builder-field-card">
+                        <div className="builder-input-group">
+                          <label className="builder-field-label">
+                            <span>Badge Label</span>
+                            <span className="builder-field-hint">Top pill badge</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="builder-input"
+                            value={selectedSection.data?.badge || ''}
+                            onChange={(e) => updateSelectedSectionData('badge', e.target.value)}
+                            placeholder="Official Online Store"
                           />
-                          <div className="img-preview-overlay">
-                            <span>Live Hero Preview</span>
+                        </div>
+
+                        <div className="builder-input-group">
+                          <label className="builder-field-label">
+                            <span>Hero Headline</span>
+                            <span className="builder-field-hint">Main hero title</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="builder-input"
+                            value={selectedSection.data?.title || ''}
+                            onChange={(e) => updateSelectedSectionData('title', e.target.value)}
+                            placeholder="Welcome to Our Store"
+                          />
+                        </div>
+
+                        <div className="builder-input-group">
+                          <label className="builder-field-label">
+                            <span>Subtitle Description</span>
+                            <span className="builder-field-hint">Story & promo description</span>
+                          </label>
+                          <textarea
+                            className="builder-textarea"
+                            rows={3}
+                            value={selectedSection.data?.subtitle || ''}
+                            onChange={(e) => updateSelectedSectionData('subtitle', e.target.value)}
+                            placeholder="Shop the freshest arrivals and verified products..."
+                          />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                          <div className="builder-input-group">
+                            <label className="builder-field-label">
+                              <span>Primary CTA Button</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="builder-input"
+                              value={selectedSection.data?.ctaText || ''}
+                              onChange={(e) => updateSelectedSectionData('ctaText', e.target.value)}
+                              placeholder="Explore Catalog"
+                            />
+                          </div>
+
+                          <div className="builder-input-group">
+                            <label className="builder-field-label">
+                              <span>Secondary CTA Button</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="builder-input"
+                              value={selectedSection.data?.secondaryCtaText || ''}
+                              onChange={(e) => updateSelectedSectionData('secondaryCtaText', e.target.value)}
+                              placeholder="Contact Store"
+                            />
                           </div>
                         </div>
-                      )}
-                    </div>
+
+                        <div className="builder-input-group">
+                          <label className="builder-field-label">
+                            <span>Hero Image URL</span>
+                            <span className="builder-field-hint">High resolution product or wallpaper</span>
+                          </label>
+                          <input
+                            type="url"
+                            className="builder-input"
+                            value={selectedSection.data?.imageUrl || ''}
+                            onChange={(e) => updateSelectedSectionData('imageUrl', e.target.value)}
+                            placeholder="https://images.unsplash.com/..."
+                          />
+                        </div>
+
+                        {selectedSection.data?.imageUrl && (
+                          <div className="builder-img-preview-box">
+                            <img
+                              src={selectedSection.data.imageUrl}
+                              alt="Hero Preview"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                            <div className="img-preview-overlay">
+                              <span>Live Hero Preview</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -3652,18 +4000,38 @@ export default function StorefrontBuilderPage() {
                       </div>
                     </div>
 
+                    {config.navbar?.showSearch !== false && (
+                      <div className="preview-nav-search-bar" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-surface-elevated, #f1f5f9)', padding: '0.35rem 0.75rem', borderRadius: '20px', border: '1px solid var(--border-color, #e2e8f0)', fontSize: '0.78rem', color: '#64748b' }}>
+                        <Search size={13} color="#94a3b8" />
+                        <span>Search products...</span>
+                      </div>
+                    )}
+
                     <nav className="clean-nav-menu">
                       {(config.navbar?.navLinks || DEFAULT_NAV_LINKS).filter((l) => l.enabled !== false).map((l) => (
                         <span key={l.id || l.label} className="clean-nav-link">{l.label}</span>
                       ))}
                     </nav>
 
-                    <div className="clean-header-actions">
-                      <button type="button" className="btn-clean-cart">
-                        <ShoppingBag size={17} />
-                        <span>Bag</span>
-                        <span className="clean-cart-pill">0</span>
-                      </button>
+                    <div className="clean-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {config.navbar?.showCustomerAuth !== false && (
+                        <button type="button" className="btn-clean-customer-auth" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid var(--border-color, #cbd5e1)', background: 'transparent', fontSize: '0.78rem', fontWeight: 600, color: 'inherit' }}>
+                          <User size={13} />
+                          <span>Sign In</span>
+                        </button>
+                      )}
+                      {config.navbar?.showWhatsApp !== false && config.contact?.whatsappNumber && (
+                        <button type="button" className="btn-clean-whatsapp-quick" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: '#25D36615', border: 'none', cursor: 'pointer' }} title="WhatsApp Inquiry">
+                          <WhatsAppBrandIcon size={16} color="#25D366" />
+                        </button>
+                      )}
+                      {config.navbar?.showCart !== false && (
+                        <button type="button" className="btn-clean-cart">
+                          <ShoppingBag size={16} />
+                          <span>Bag</span>
+                          <span className="clean-cart-pill">0</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </header>
@@ -3754,30 +4122,157 @@ export default function StorefrontBuilderPage() {
 
                         {/* SECTION BODY */}
                         {sec.type === 'HERO_BANNER' && (
-                          <section
-                            className="clean-hero-fullscreen"
-                            style={{
-                              backgroundImage: sData.imageUrl
-                                ? `linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.88)), url('${sData.imageUrl}')`
-                                : `linear-gradient(135deg, ${primaryColor}22 0%, #0f172a 100%)`
-                            }}
-                          >
-                            <div className="clean-hero-content-wrapper">
-                              {sData.badge && (
-                                <div className="clean-hero-badge-pill" style={{ color: '#34d399' }}>
-                                  <span className="badge-bullet" />
-                                  {sData.badge}
+                          (() => {
+                            const pattern = sData.pattern || 'SPLIT';
+                            if (pattern === 'CAROUSEL') {
+                              const slides = sData.slides && sData.slides.length > 0 ? sData.slides : [
+                                {
+                                  id: 'slide-1',
+                                  badge: sData.badge || 'New Season Arrival',
+                                  title: sData.title || 'Welcome to Our Store',
+                                  subtitle: sData.subtitle || 'Shop the freshest arrivals, exclusive offers, and verified products delivered quickly.',
+                                  ctaText: sData.ctaText || 'Explore Catalog',
+                                  imageUrl: sData.imageUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
+                                }
+                              ];
+                              const currentSlide = slides[activeHeroSlideIndex % slides.length] || slides[0];
+                              return (
+                                <section
+                                  className="clean-hero-carousel-pattern"
+                                  style={{
+                                    backgroundImage: currentSlide.imageUrl
+                                      ? `linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.88)), url('${currentSlide.imageUrl}')`
+                                      : `linear-gradient(135deg, ${primaryColor}22 0%, #0f172a 100%)`
+                                  }}
+                                >
+                                  <div className="clean-hero-content-wrapper">
+                                    {currentSlide.badge && (
+                                      <div className="clean-hero-badge-pill" style={{ color: '#34d399' }}>
+                                        <span className="badge-bullet" />
+                                        {currentSlide.badge}
+                                      </div>
+                                    )}
+                                    <h2 className="clean-hero-giant-title">{currentSlide.title}</h2>
+                                    <p className="clean-hero-description">{currentSlide.subtitle}</p>
+                                    <div className="clean-hero-actions-row">
+                                      <button type="button" className="btn-hero-primary" style={{ background: primaryColor }}>
+                                        {currentSlide.ctaText || 'Explore Catalog'} <ArrowRight size={17} />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {slides.length > 1 && (
+                                    <div className="hero-carousel-controls-overlay" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        type="button"
+                                        className="btn-carousel-arrow prev"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setActiveHeroSlideIndex((prev) => (prev > 0 ? prev - 1 : slides.length - 1));
+                                        }}
+                                      >
+                                        <ChevronLeft size={18} />
+                                      </button>
+                                      <div className="hero-carousel-dots">
+                                        {slides.map((_, sIdx) => (
+                                          <button
+                                            key={sIdx}
+                                            type="button"
+                                            className={`hero-dot ${(sIdx === (activeHeroSlideIndex % slides.length)) ? 'active' : ''}`}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setActiveHeroSlideIndex(sIdx);
+                                            }}
+                                          />
+                                        ))}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="btn-carousel-arrow next"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setActiveHeroSlideIndex((prev) => (prev < slides.length - 1 ? prev + 1 : 0));
+                                        }}
+                                      >
+                                        <ChevronRight size={18} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </section>
+                              );
+                            }
+
+                            if (pattern === 'SPLIT') {
+                              return (
+                                <section className="clean-hero-split-pattern">
+                                  <div className="hero-split-left-content">
+                                    {sData.badge && (
+                                      <div className="clean-hero-badge-pill" style={{ color: primaryColor, background: `${primaryColor}15` }}>
+                                        <span className="badge-bullet" style={{ background: primaryColor }} />
+                                        {sData.badge}
+                                      </div>
+                                    )}
+                                    <h2 className="clean-hero-giant-title">{sData.title || 'Welcome to Our Store'}</h2>
+                                    <p className="clean-hero-description">{sData.subtitle || 'Fresh catalog items verified in stock with express doorstep delivery'}</p>
+                                    <div className="clean-hero-actions-row">
+                                      <button type="button" className="btn-hero-primary" style={{ background: primaryColor }}>
+                                        {sData.ctaText || 'Explore Catalog'} <ArrowRight size={17} />
+                                      </button>
+                                      {sData.secondaryCtaText && (
+                                        <button type="button" className="btn-hero-secondary">
+                                          {sData.secondaryCtaText}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="hero-split-right-visual">
+                                    <div className="hero-product-showcase-frame">
+                                      <img
+                                        src={sData.imageUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80'}
+                                        alt="Showcase"
+                                        onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=1200&q=80'; }}
+                                      />
+                                      <div className="hero-floating-badge-card">
+                                        <ShieldCheck size={20} color="#10b981" />
+                                        <div>
+                                          <strong>100% Genuine Certified</strong>
+                                          <span>Direct Warehouse Dispatch</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </section>
+                              );
+                            }
+
+                            // Pattern CINEMATIC (default fallback)
+                            return (
+                              <section
+                                className="clean-hero-fullscreen"
+                                style={{
+                                  backgroundImage: sData.imageUrl
+                                    ? `linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.88)), url('${sData.imageUrl}')`
+                                    : `linear-gradient(135deg, ${primaryColor}22 0%, #0f172a 100%)`
+                                }}
+                              >
+                                <div className="clean-hero-content-wrapper">
+                                  {sData.badge && (
+                                    <div className="clean-hero-badge-pill" style={{ color: '#34d399' }}>
+                                      <span className="badge-bullet" />
+                                      {sData.badge}
+                                    </div>
+                                  )}
+                                  <h2 className="clean-hero-giant-title">{sData.title || 'Welcome to Our Store'}</h2>
+                                  <p className="clean-hero-description">{sData.subtitle || 'Fresh catalog items verified in stock'}</p>
+                                  <div className="clean-hero-actions-row">
+                                    <button type="button" className="btn-hero-primary" style={{ background: primaryColor }}>
+                                      {sData.ctaText || 'Explore Catalog'} <ArrowRight size={17} />
+                                    </button>
+                                  </div>
                                 </div>
-                              )}
-                              <h2 className="clean-hero-giant-title">{sData.title || 'Welcome to Our Store'}</h2>
-                              <p className="clean-hero-description">{sData.subtitle || 'Fresh catalog items verified in stock'}</p>
-                              <div className="clean-hero-actions-row">
-                                <button type="button" className="btn-hero-primary" style={{ background: primaryColor }}>
-                                  {sData.ctaText || 'Explore Catalog'} <ArrowRight size={17} />
-                                </button>
-                              </div>
-                            </div>
-                          </section>
+                              </section>
+                            );
+                          })()
                         )}
 
                         {sec.type === 'FLASH_SALE' && (

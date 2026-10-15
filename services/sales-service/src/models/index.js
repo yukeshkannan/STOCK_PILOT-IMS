@@ -44,6 +44,14 @@ const Customer = sequelize.define('Customer', {
   status: {
     type: DataTypes.ENUM('ACTIVE', 'INACTIVE'),
     defaultValue: 'ACTIVE'
+  },
+  password_hash: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  saved_addresses: {
+    type: DataTypes.TEXT,
+    allowNull: true
   }
 }, {
   tableName: 'customers',
@@ -128,6 +136,22 @@ const Sale = sequelize.define('Sale', {
   },
   notes: {
     type: DataTypes.TEXT,
+    allowNull: true
+  },
+  order_status: {
+    type: DataTypes.STRING(50),
+    defaultValue: 'PLACED'
+  },
+  delivery_address: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  tracking_number: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  courier_name: {
+    type: DataTypes.STRING(100),
     allowNull: true
   },
   created_by: {

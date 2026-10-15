@@ -362,19 +362,49 @@ class TenantService {
       },
       navbar: {
         enabled: true,
+        showSearch: true,
+        showCustomerAuth: true,
+        showCart: true,
         showPhone: true,
         showAddress: true,
         showWhatsApp: true,
-        showCart: true
+        navLinks: [
+          { id: 'nav-1', label: 'Home', url: '#home', enabled: true },
+          { id: 'nav-2', label: 'Catalog', url: '#catalog', enabled: true },
+          { id: 'nav-3', label: 'Featured', url: '#featured', enabled: true },
+          { id: 'nav-4', label: 'Reviews', url: '#testimonials', enabled: true },
+          { id: 'nav-5', label: 'Contact', url: '#contact', enabled: true }
+        ]
       },
       hero: {
         enabled: true,
+        pattern: 'SPLIT', // 'SPLIT' | 'CAROUSEL' | 'CINEMATIC'
         badge: 'Official Online Store',
         title: `Welcome to ${tenant.company_name || 'Our Online Store'}`,
         subtitle: 'Shop the freshest arrivals, exclusive store offers, and verified products delivered quickly.',
         ctaText: 'Explore Catalog',
         secondaryCtaText: 'Contact Store',
-        imageUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=1200&q=80'
+        imageUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=1200&q=80',
+        slides: [
+          {
+            id: 'slide-1',
+            badge: 'New Season Arrival',
+            title: `Welcome to ${tenant.company_name || 'Our Online Store'}`,
+            subtitle: 'Shop the freshest arrivals, exclusive store offers, and verified products delivered quickly.',
+            ctaText: 'Shop New Arrivals',
+            ctaUrl: '#catalog',
+            imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
+          },
+          {
+            id: 'slide-2',
+            badge: 'Limited Stock Special',
+            title: 'Express Delivery On All Certified Orders',
+            subtitle: 'Direct manufacturer warranty, sealed packaging, and doorstep dispatch.',
+            ctaText: 'Explore Collection',
+            ctaUrl: '#catalog',
+            imageUrl: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=1600&q=80'
+          }
+        ]
       },
       productsSection: {
         enabled: true,
@@ -405,13 +435,103 @@ class TenantService {
         whatsappNumber: tenant.phone || '',
         whatsappMessage: `Hello! I would like to inquire about products from ${tenant.company_name || 'your store'}.`
       },
-      sections: {
-        categoriesEnabled: true,
-        featuredProductsEnabled: true,
-        trustBadgesEnabled: true,
-        testimonialsEnabled: true,
-        contactFooterEnabled: true
+      footer: {
+        enabled: true,
+        aboutText: `${tenant.company_name || 'Our store'} is committed to providing authenticated, premium products with direct inventory dispatch and seamless customer support.`,
+        copyrightText: `© ${new Date().getFullYear()} ${tenant.company_name || 'Online Store'}. All rights reserved. Powered by StockPilot.`,
+        showNewsletter: true,
+        newsletterTitle: 'Subscribe to Store VIP Drops',
+        newsletterSubtitle: 'Get early access to weekly deals, new stock alerts, and exclusive discounts.',
+        socials: {
+          instagram: '',
+          facebook: '',
+          twitter: '',
+          whatsapp: tenant.phone || ''
+        },
+        col1Title: 'Quick Links',
+        col1Links: [
+          { id: 'f-1', label: 'All Products', url: '#catalog' },
+          { id: 'f-2', label: 'Featured Deals', url: '#featured' },
+          { id: 'f-3', label: 'Customer Reviews', url: '#testimonials' },
+          { id: 'f-4', label: 'Store Location', url: '#contact' }
+        ],
+        col2Title: 'Help & Policies',
+        col2Links: [
+          { id: 'f-5', label: 'Shipping & Delivery', url: '#shipping' },
+          { id: 'f-6', label: 'Return & Refund Policy', url: '#returns' },
+          { id: 'f-7', label: 'Track Order Status', url: '#track-order' },
+          { id: 'f-8', label: 'Privacy & Terms', url: '#terms' }
+        ],
+        paymentBadges: {
+          upi: true,
+          cards: true,
+          netbanking: true,
+          cod: true
+        }
       },
+      sections: [
+        {
+          id: 'sec-hero',
+          type: 'HERO_BANNER',
+          enabled: true,
+          data: {
+            pattern: 'SPLIT',
+            badge: 'Official Online Store',
+            title: `Welcome to ${tenant.company_name || 'Our Store'}`,
+            subtitle: 'Shop the freshest arrivals, exclusive store offers, and verified products delivered quickly.',
+            ctaText: 'Explore Catalog',
+            imageUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=1200&q=80'
+          }
+        },
+        {
+          id: 'sec-trust',
+          type: 'TRUST_BADGES',
+          enabled: true,
+          data: {
+            badges: [
+              { icon: 'Zap', title: 'Express Dispatch', desc: 'Fast doorstep delivery' },
+              { icon: 'ShieldCheck', title: '100% Genuine', desc: 'Verified authorized stock' },
+              { icon: 'CreditCard', title: 'Flexible Payments', desc: 'UPI, Card & COD' },
+              { icon: 'Phone', title: 'Store Support', desc: 'Instant WhatsApp assistance' }
+            ]
+          }
+        },
+        {
+          id: 'sec-catalog',
+          type: 'PRODUCT_GRID',
+          enabled: true,
+          data: {
+            title: 'Featured Catalog',
+            subtitle: 'Browse all available products in real-time inventory',
+            showSearch: true,
+            showCategories: true,
+            showStockBadge: true
+          }
+        },
+        {
+          id: 'sec-testimonials',
+          type: 'TESTIMONIALS',
+          enabled: true,
+          data: {
+            title: 'What Our Customers Say',
+            subtitle: 'Verified reviews from direct buyers across India',
+            reviews: [
+              { id: 1, name: 'Priya Sharma', rating: 5, comment: 'Outstanding product quality and super fast delivery. The ordering experience was seamless!', role: 'Verified Buyer', location: 'Chennai' },
+              { id: 2, name: 'Rajesh Kumar', rating: 5, comment: '100% genuine stock. Direct WhatsApp updates made the whole checkout effortless.', role: 'Verified Customer', location: 'Bengaluru' },
+              { id: 3, name: 'Sneha Patel', rating: 5, comment: 'Great pricing and prompt customer assistance. We will definitely continue ordering!', role: 'Verified Buyer', location: 'Mumbai' }
+            ]
+          }
+        },
+        {
+          id: 'sec-contact',
+          type: 'CONTACT_MAP',
+          enabled: true,
+          data: {
+            title: 'Visit Our Store & Contact',
+            subtitle: 'Reach out directly for inquiries, custom orders, or customer support'
+          }
+        }
+      ],
       trustBadges: [
         { icon: 'Zap', title: 'Express Dispatch', desc: 'Fast doorstep delivery' },
         { icon: 'ShieldCheck', title: '100% Genuine', desc: 'Verified from authorized stock' },
@@ -448,9 +568,15 @@ class TenantService {
             },
             contact: { ...defaultConfig.contact, ...(parsedConfig.contact || {}) },
             announcement: { ...defaultConfig.announcement, ...(parsedConfig.announcement || {}) },
-            sections: Array.isArray(parsedConfig.sections)
+            footer: {
+              ...defaultConfig.footer,
+              ...(parsedConfig.footer || {}),
+              socials: { ...(defaultConfig.footer?.socials || {}), ...(parsedConfig.footer?.socials || {}) },
+              paymentBadges: { ...(defaultConfig.footer?.paymentBadges || {}), ...(parsedConfig.footer?.paymentBadges || {}) }
+            },
+            sections: Array.isArray(parsedConfig.sections) && parsedConfig.sections.length > 0
               ? parsedConfig.sections
-              : { ...defaultConfig.sections, ...(parsedConfig.sections || {}) },
+              : defaultConfig.sections,
             whatsapp: { ...defaultConfig.whatsapp, ...(parsedConfig.whatsapp || {}) }
           }
         : defaultConfig)
