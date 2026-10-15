@@ -23,6 +23,7 @@ import {
   CreditCard,
   Banknote,
   QrCode,
+  Globe,
   FileText,
   Loader2,
   Package,
@@ -1501,10 +1502,15 @@ export default function PublicStorePage() {
               <div className="clean-reviews-grid-3">
                 {visibleRev.map((rev, idx) => (
                   <div key={rev.id || idx} className="clean-review-card">
-                    <div className="clean-review-stars">
-                      {[...Array(rev.rating || 5)].map((_, s) => (
-                        <Star key={s} size={15} fill="#f59e0b" color="#f59e0b" />
-                      ))}
+                    <div className="clean-review-header-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                      <div className="clean-review-stars">
+                        {[...Array(rev.rating || 5)].map((_, s) => (
+                          <Star key={s} size={14} fill="#f59e0b" color="#f59e0b" />
+                        ))}
+                      </div>
+                      <span className="review-verified-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '0.15rem 0.45rem', borderRadius: '999px', border: '1px solid #a7f3d0' }}>
+                        <CheckCircle2 size={11} color="#10b981" /> Verified
+                      </span>
                     </div>
                     <p className="clean-review-comment">"{rev.comment}"</p>
                     <div className="clean-reviewer-meta">
@@ -2130,19 +2136,29 @@ export default function PublicStorePage() {
               {footerConfig.showPaymentBadges !== false && (
                 <div className="clean-footer-payment-badges-row">
                   {footerConfig.paymentBadges?.upi !== false && (
-                    <span className="payment-badge-pill">UPI</span>
+                    <span className="payment-badge-pill">
+                      <QrCode size={13} className="badge-ico" /> UPI
+                    </span>
                   )}
                   {footerConfig.paymentBadges?.cards !== false && (
-                    <span className="payment-badge-pill">RuPay / Cards</span>
+                    <span className="payment-badge-pill">
+                      <CreditCard size={13} className="badge-ico" /> Cards / RuPay
+                    </span>
                   )}
                   {footerConfig.paymentBadges?.netbanking !== false && (
-                    <span className="payment-badge-pill">Net Banking</span>
+                    <span className="payment-badge-pill">
+                      <Globe size={13} className="badge-ico" /> Net Banking
+                    </span>
                   )}
                   {footerConfig.paymentBadges?.cod !== false && (
-                    <span className="payment-badge-pill">Cash on Delivery</span>
+                    <span className="payment-badge-pill">
+                      <Banknote size={13} className="badge-ico" /> Cash on Delivery
+                    </span>
                   )}
                   {footerConfig.paymentBadges?.genuine !== false && (
-                    <span className="payment-badge-pill genuine"><ShieldCheck size={12} color="#10b981" /> 100% Genuine</span>
+                    <span className="payment-badge-pill genuine">
+                      <ShieldCheck size={14} color="#10b981" className="badge-ico" /> 100% Genuine
+                    </span>
                   )}
                 </div>
               )}

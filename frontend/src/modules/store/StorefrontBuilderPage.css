@@ -1406,22 +1406,608 @@
   background: rgba(152, 42, 134, 0.08);
 }
 
-.device-frame-mobile .clean-nav-menu,
-.device-frame-mobile .preview-nav-search-bar {
+/* ==========================================================================
+   CANVAS MULTI-DEVICE RESPONSIVE ENGINE (DESKTOP / TABLET / MOBILE)
+   ========================================================================== */
+
+/* --- 1. MOBILE DEVICE FRAME (390px) --- */
+.device-frame-mobile .clean-top-utility-strip {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.68rem;
+}
+
+.device-frame-mobile .utility-right {
   display: none !important;
 }
 
+.device-frame-mobile .utility-left {
+  justify-content: center;
+  width: 100%;
+  gap: 0.65rem;
+}
+
+.device-frame-mobile .clean-store-header {
+  padding: 0.65rem 0.85rem !important;
+}
+
 .device-frame-mobile .clean-header-container {
-  padding: 0.25rem 0.25rem;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.5rem !important;
+  padding: 0 !important;
+}
+
+.device-frame-mobile .clean-brand-section {
   gap: 0.5rem;
+  max-width: 220px;
+}
+
+.device-frame-mobile .clean-brand-avatar {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 8px !important;
+}
+
+.device-frame-mobile .clean-store-title {
+  font-size: 1.05rem !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.device-frame-mobile .clean-nav-menu,
+.device-frame-mobile .preview-nav-search-bar,
+.device-frame-mobile .btn-clean-customer-auth,
+.device-frame-mobile .btn-clean-whatsapp-quick {
+  display: none !important;
+}
+
+.device-frame-mobile .clean-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+}
+
+.device-frame-mobile .btn-clean-cart {
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.78rem !important;
+  gap: 0.3rem !important;
+}
+
+.btn-clean-mobile-hamburger {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--bg-surface-elevated, #f1f5f9);
+  border: 1px solid var(--border-color, #cbd5e1);
+  color: var(--text-primary, #0f172a);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-clean-mobile-hamburger:hover {
+  background: #e2e8f0;
+  transform: scale(1.05);
+}
+
+/* Mobile Interactive Drawer for Canvas Preview */
+.canvas-mobile-drawer-preview {
+  background: #ffffff;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 1rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  animation: modalPopIn 0.2s ease;
+}
+
+.mobile-drawer-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f1f5f9;
+  padding: 0.5rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.mobile-drawer-nav-list {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+}
+
+.mobile-drawer-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+.mobile-drawer-nav-item:last-child {
+  border-bottom: none;
+}
+
+.mobile-drawer-nav-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.btn-mobile-drawer-auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  border: none;
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-mobile-drawer-wa {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  background: #25D366;
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* Hero Section in Mobile Preview */
+.device-frame-mobile .clean-hero-split-pattern {
+  flex-direction: column !important;
+  padding: 2.25rem 1rem !important;
+  min-height: auto !important;
+  text-align: center;
+  gap: 1.5rem !important;
+}
+
+.device-frame-mobile .clean-hero-content {
+  max-width: 100% !important;
+}
+
+.device-frame-mobile .clean-hero-title {
+  font-size: 1.65rem !important;
+  line-height: 1.25 !important;
+}
+
+.device-frame-mobile .clean-hero-subtitle {
+  font-size: 0.85rem !important;
+}
+
+.device-frame-mobile .clean-hero-actions {
+  justify-content: center !important;
+  flex-wrap: wrap;
+}
+
+.device-frame-mobile .clean-hero-media-wrap {
+  width: 100% !important;
+  max-height: 240px !important;
+}
+
+/* Products Catalog in Mobile Preview */
+.device-frame-mobile .clean-catalog-section {
+  padding: 2rem 0.85rem !important;
+}
+
+.device-frame-mobile .clean-product-grid {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 0.65rem !important;
+}
+
+.device-frame-mobile .clean-card-image-wrap {
+  height: 135px !important;
+}
+
+.device-frame-mobile .clean-product-name {
+  font-size: 0.82rem !important;
+}
+
+.device-frame-mobile .clean-price {
+  font-size: 0.88rem !important;
+}
+
+.device-frame-mobile .clean-card-body {
+  padding: 0.65rem !important;
+}
+
+/* Testimonials / Customer Reviews in Mobile Preview */
+.device-frame-mobile .clean-testimonials-section {
+  padding: 2.25rem 0.85rem !important;
+}
+
+.device-frame-mobile .clean-section-header-carousel {
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  margin-bottom: 1.25rem !important;
+  gap: 0.5rem !important;
+}
+
+.device-frame-mobile .clean-section-title {
+  font-size: 1.35rem !important;
+}
+
+.device-frame-mobile .clean-reviews-grid-3 {
+  grid-template-columns: 1fr !important;
+  gap: 0.85rem !important;
+}
+
+.device-frame-mobile .clean-review-card {
+  padding: 1.15rem !important;
+  gap: 0.75rem !important;
+}
+
+.device-frame-mobile .clean-review-comment {
+  font-size: 0.84rem !important;
+  line-height: 1.45 !important;
+}
+
+/* Categories in Mobile Preview */
+.device-frame-mobile .clean-category-tiles-grid {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 0.65rem !important;
+}
+
+/* Value Props / Features in Mobile Preview */
+.device-frame-mobile .clean-features-grid-luxury,
+.device-frame-mobile .clean-trust-bar-grid {
+  grid-template-columns: 1fr !important;
+  gap: 0.75rem !important;
+}
+
+/* Lookbook & Story in Mobile Preview */
+.device-frame-mobile .clean-story-grid,
+.device-frame-mobile .clean-lookbook-grid {
+  grid-template-columns: 1fr !important;
+  gap: 1.25rem !important;
+}
+
+/* Footer in Mobile Preview */
+.device-frame-mobile .clean-store-footer-section {
+  padding: 2.25rem 1rem 1.5rem 1rem !important;
+}
+
+.device-frame-mobile .clean-footer-luxury-grid {
+  grid-template-columns: 1fr !important;
+  gap: 1.75rem !important;
+  margin-bottom: 1.75rem !important;
+  text-align: left !important;
+}
+
+.device-frame-mobile .clean-footer-brand-header {
+  gap: 0.65rem !important;
+}
+
+.device-frame-mobile .clean-footer-store-name {
+  font-size: 1.05rem !important;
+}
+
+.device-frame-mobile .clean-footer-tagline {
+  font-size: 0.74rem !important;
+}
+
+.device-frame-mobile .clean-footer-bio-text {
+  font-size: 0.8rem !important;
+}
+
+.device-frame-mobile .clean-footer-social-row {
+  gap: 0.5rem !important;
+  margin-top: 0.65rem !important;
+}
+
+.device-frame-mobile .clean-footer-bottom-luxury {
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 1.15rem !important;
+  padding-top: 1.25rem !important;
+}
+
+.device-frame-mobile .clean-footer-payment-badges-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.4rem !important;
+  width: 100% !important;
+}
+
+
+/* --- 2. TABLET DEVICE FRAME (768px) --- */
+.device-frame-tablet .clean-header-container {
+  padding: 0.5rem 1rem !important;
+  gap: 0.75rem !important;
+}
+
+.device-frame-tablet .clean-store-title {
+  font-size: 1.1rem !important;
 }
 
 .device-frame-tablet .clean-nav-menu {
-  gap: 0.65rem;
+  gap: 0.65rem !important;
+}
+
+.device-frame-tablet .clean-nav-link {
+  font-size: 0.78rem !important;
+  padding: 0.3rem 0.5rem !important;
 }
 
 .device-frame-tablet .preview-nav-search-bar {
   display: none !important;
+}
+
+.device-frame-tablet .clean-product-grid {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 1rem !important;
+}
+
+.device-frame-tablet .clean-reviews-grid-3 {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 1.15rem !important;
+}
+
+.device-frame-tablet .clean-category-tiles-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 0.85rem !important;
+}
+
+.device-frame-tablet .clean-features-grid-luxury {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 1rem !important;
+}
+
+.device-frame-tablet .clean-footer-luxury-grid {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 2rem !important;
+}
+
+.device-frame-tablet .clean-footer-bottom-luxury {
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 1rem !important;
+}
+
+
+/* --- 3. DESKTOP DEVICE FRAME (1080px) --- */
+.device-frame-desktop .clean-header-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1.25rem !important;
+  padding: 0.5rem 1.25rem !important;
+}
+
+.device-frame-desktop .clean-nav-menu {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1.1rem !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+}
+
+.device-frame-desktop .btn-clean-mobile-hamburger {
+  display: none !important;
+}
+
+.device-frame-desktop .clean-product-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 1.25rem !important;
+}
+
+.device-frame-desktop .clean-reviews-grid-3 {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 1.25rem !important;
+}
+
+.device-frame-desktop .clean-footer-luxury-grid {
+  grid-template-columns: 2fr 1fr 1.2fr 1.5fr !important;
+  gap: 2.5rem !important;
+}
+
+/* ==========================================================================
+   FOOTER MICRO-ICONS, PAYMENT BADGES & SOCIAL BUTTONS
+   ========================================================================== */
+.clean-footer-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.clean-footer-logo-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--store-primary, #982A86);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.clean-footer-logo-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.clean-footer-store-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0;
+  color: #ffffff;
+}
+
+.clean-footer-tagline {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  margin: 0.15rem 0 0 0;
+}
+
+.clean-footer-bio-text {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #94a3b8;
+  margin: 0 0 1.15rem 0;
+}
+
+.clean-footer-social-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.social-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.social-icon-btn:hover {
+  transform: translateY(-2px);
+  color: #ffffff;
+}
+
+.social-icon-btn.whatsapp:hover {
+  background: #25D366;
+  border-color: #25D366;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+}
+
+.social-icon-btn.instagram:hover {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+  border-color: #d6249f;
+  box-shadow: 0 4px 12px rgba(214, 36, 159, 0.35);
+}
+
+.social-icon-btn.facebook:hover {
+  background: #1877F2;
+  border-color: #1877F2;
+  box-shadow: 0 4px 12px rgba(24, 119, 242, 0.35);
+}
+
+.social-icon-btn.twitter:hover {
+  background: #0f172a;
+  border-color: #475569;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
+}
+
+/* Contact List in Footer */
+.clean-footer-contact-details {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.clean-footer-contact-details li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+/* WhatsApp CTA Button in Footer */
+.clean-footer-wa-action {
+  margin-top: 1rem;
+}
+
+.btn-footer-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  background: #25D366;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 3px 10px rgba(37, 211, 102, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-footer-whatsapp:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* Payment Badges with Micro-Icons */
+.clean-footer-payment-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.payment-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.payment-badge-pill .badge-ico {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.payment-badge-pill.genuine {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.payment-badge-pill.genuine .badge-ico {
+  color: #10b981;
+}
+
+.payment-badge-pill:hover {
+  border-color: var(--store-primary, #982A86);
+  transform: translateY(-1px);
 }
 
 .clean-header-actions {

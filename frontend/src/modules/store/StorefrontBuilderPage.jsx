@@ -60,7 +60,9 @@ import {
   Coffee,
   Activity,
   User,
-  Menu
+  Menu,
+  QrCode,
+  Banknote
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { WhatsAppBrandIcon } from './PublicStorePage';
@@ -675,6 +677,7 @@ export default function StorefrontBuilderPage() {
 
   // Device Switcher: 'desktop' | 'tablet' | 'mobile'
   const [previewDevice, setPreviewDevice] = useState('desktop');
+  const [previewMobileNavOpen, setPreviewMobileNavOpen] = useState(false);
 
   // 1-Click Templates Modal
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -4006,9 +4009,9 @@ export default function StorefrontBuilderPage() {
                     <div className="clean-brand-section">
                       <div className="clean-brand-avatar" style={{ background: config.branding?.logoUrl ? 'transparent' : primaryColor }}>
                         {config.branding?.logoUrl ? (
-                          <img src={config.branding.logoUrl} alt="Store" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '12px' }} />
+                          <img src={config.branding.logoUrl} alt="Store" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '10px' }} />
                         ) : (
-                          <Store size={22} />
+                          <Store size={20} />
                         )}
                       </div>
                       <div className="clean-brand-text">
@@ -4024,41 +4027,81 @@ export default function StorefrontBuilderPage() {
                     </nav>
 
                     {/* Right: Search & Action Pills */}
-                    <div className="clean-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {config.navbar?.showSearch !== false && (
-                        <div className="preview-nav-search-bar" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-surface-elevated, #f1f5f9)', padding: '0.35rem 0.75rem', borderRadius: '20px', border: '1px solid var(--border-color, #e2e8f0)', fontSize: '0.78rem', color: '#64748b' }}>
+                    <div className="clean-header-actions">
+                      {config.navbar?.showSearch !== false && previewDevice !== 'mobile' && (
+                        <div className="preview-nav-search-bar">
                           <Search size={13} color="#94a3b8" />
                           <span>Search products...</span>
                         </div>
                       )}
 
-                      {config.navbar?.showCustomerAuth !== false && (
-                        <button type="button" className="btn-clean-customer-auth" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.65rem', borderRadius: '8px', border: '1px solid var(--border-color, #cbd5e1)', background: 'transparent', fontSize: '0.78rem', fontWeight: 600, color: 'inherit' }}>
+                      {config.navbar?.showCustomerAuth !== false && previewDevice !== 'mobile' && (
+                        <button type="button" className="btn-clean-customer-auth">
                           <User size={13} />
                           <span>Sign In</span>
                         </button>
                       )}
-                      {config.navbar?.showWhatsApp !== false && config.contact?.whatsappNumber && (
-                        <button type="button" className="btn-clean-whatsapp-quick" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: '#25D36615', border: 'none', cursor: 'pointer' }} title="WhatsApp Inquiry">
+                      {config.navbar?.showWhatsApp !== false && config.contact?.whatsappNumber && previewDevice !== 'mobile' && (
+                        <button type="button" className="btn-clean-whatsapp-quick" title="WhatsApp Inquiry">
                           <WhatsAppBrandIcon size={16} color="#25D366" />
                         </button>
                       )}
                       {config.navbar?.showCart !== false && (
                         <button type="button" className="btn-clean-cart">
-                          <ShoppingBag size={16} />
+                          <ShoppingBag size={15} />
                           <span>Bag</span>
                           <span className="clean-cart-pill">0</span>
                         </button>
                       )}
 
                       {previewDevice === 'mobile' && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '6px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#0f172a' }}>
-                          <Menu size={16} />
-                        </div>
+                        <button
+                          type="button"
+                          className="btn-clean-mobile-hamburger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewMobileNavOpen((prev) => !prev);
+                          }}
+                          aria-label={previewMobileNavOpen ? 'Close Navigation' : 'Open Navigation'}
+                        >
+                          {previewMobileNavOpen ? <X size={18} /> : <Menu size={18} />}
+                        </button>
                       )}
                     </div>
                   </div>
                 </header>
+
+                {/* Interactive Mobile Navigation Drawer for Canvas Preview */}
+                {previewDevice === 'mobile' && previewMobileNavOpen && (
+                  <div className="canvas-mobile-drawer-preview" onClick={(e) => e.stopPropagation()}>
+                    {config.navbar?.showSearch !== false && (
+                      <div className="preview-nav-search-bar mobile-drawer-search-bar">
+                        <Search size={14} color="#94a3b8" />
+                        <input type="text" placeholder="Search catalog..." readOnly style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '0.82rem' }} />
+                      </div>
+                    )}
+                    <div className="mobile-drawer-nav-list">
+                      {(config.navbar?.navLinks || DEFAULT_NAV_LINKS).filter((l) => l.enabled !== false).map((l) => (
+                        <div key={l.id || l.label} className="mobile-drawer-nav-item">
+                          <span>{l.label}</span>
+                          <ChevronRight size={14} color="#94a3b8" />
+                        </div>
+                      ))}
+                    </div>
+                    {config.navbar?.showCustomerAuth !== false && (
+                      <button type="button" className="btn-mobile-drawer-auth" style={{ background: primaryColor }}>
+                        <User size={14} />
+                        <span>Sign In to Account</span>
+                      </button>
+                    )}
+                    {config.contact?.whatsappNumber && (
+                      <a href={`https://wa.me/${config.contact.whatsappNumber.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="btn-mobile-drawer-wa">
+                        <WhatsAppBrandIcon size={15} color="#ffffff" />
+                        <span>Chat on WhatsApp</span>
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 {/* MODULAR SECTIONS STACK */}
                 <div className="canvas-modular-stack">
@@ -4618,19 +4661,24 @@ export default function StorefrontBuilderPage() {
                                   { name: 'Sneha Patel', comment: 'Great pricing and prompt support!', rating: 5, location: 'Mumbai' }
                                 ]).slice(0, 3).map((rev, rIdx) => (
                                   <div key={rIdx} className="clean-review-card">
-                                    <div className="clean-review-stars">
-                                      {[...Array(rev.rating || 5)].map((_, s) => (
-                                        <Star key={s} size={15} fill="#f59e0b" color="#f59e0b" />
-                                      ))}
+                                    <div className="clean-review-header-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                                      <div className="clean-review-stars">
+                                        {[...Array(rev.rating || 5)].map((_, s) => (
+                                          <Star key={s} size={14} fill="#f59e0b" color="#f59e0b" />
+                                        ))}
+                                      </div>
+                                      <span className="review-verified-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '0.15rem 0.45rem', borderRadius: '999px', border: '1px solid #a7f3d0' }}>
+                                        <CheckCircle2 size={11} color="#10b981" /> Verified
+                                      </span>
                                     </div>
                                     <p className="clean-review-comment">"{rev.comment}"</p>
                                     <div className="clean-reviewer-meta">
                                       <div className="clean-reviewer-avatar" style={{ background: primaryColor }}>
-                                        {rev.name ? rev.name.charAt(0) : 'U'}
+                                        {rev.name ? rev.name.charAt(0).toUpperCase() : 'U'}
                                       </div>
-                                      <div>
-                                        <strong>{rev.name}</strong>
-                                        <span>{rev.location || 'Verified Buyer'}</span>
+                                      <div className="clean-reviewer-info">
+                                        <strong className="reviewer-name">{rev.name}</strong>
+                                        <span className="reviewer-loc">{rev.location || 'Verified Buyer'}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -4872,19 +4920,29 @@ export default function StorefrontBuilderPage() {
                       {config.footer?.showPaymentBadges !== false && (
                         <div className="clean-footer-payment-badges-row">
                           {config.footer?.paymentBadges?.upi !== false && (
-                            <span className="payment-badge-pill">UPI</span>
+                            <span className="payment-badge-pill">
+                              <QrCode size={13} className="badge-ico" /> UPI
+                            </span>
                           )}
                           {config.footer?.paymentBadges?.cards !== false && (
-                            <span className="payment-badge-pill">RuPay / Cards</span>
+                            <span className="payment-badge-pill">
+                              <CreditCard size={13} className="badge-ico" /> Cards / RuPay
+                            </span>
                           )}
                           {config.footer?.paymentBadges?.netbanking !== false && (
-                            <span className="payment-badge-pill">Net Banking</span>
+                            <span className="payment-badge-pill">
+                              <Globe size={13} className="badge-ico" /> Net Banking
+                            </span>
                           )}
                           {config.footer?.paymentBadges?.cod !== false && (
-                            <span className="payment-badge-pill">Cash on Delivery</span>
+                            <span className="payment-badge-pill">
+                              <Banknote size={13} className="badge-ico" /> Cash on Delivery
+                            </span>
                           )}
                           {config.footer?.paymentBadges?.genuine !== false && (
-                            <span className="payment-badge-pill genuine"><ShieldCheck size={12} color="#10b981" /> 100% Genuine</span>
+                            <span className="payment-badge-pill genuine">
+                              <ShieldCheck size={14} color="#10b981" className="badge-ico" /> 100% Genuine
+                            </span>
                           )}
                         </div>
                       )}
