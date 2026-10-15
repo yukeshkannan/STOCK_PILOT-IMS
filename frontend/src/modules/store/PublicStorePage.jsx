@@ -1745,9 +1745,9 @@ export default function PublicStorePage() {
 
           {/* ZONE 3 (RIGHT): Search & Header Action Pills */}
           <div className="clean-header-actions">
-            {/* Search bar in Navbar (Compact & expandable) */}
+            {/* Search bar in Navbar (Desktop & Tablet only) */}
             {navbarConfig.showSearch !== false && (
-              <div className="clean-nav-search-bar">
+              <div className="clean-nav-search-bar desktop-tablet-only">
                 <Search size={15} color="#94a3b8" />
                 <input
                   type="text"
@@ -1780,7 +1780,7 @@ export default function PublicStorePage() {
                 onClick={() => {
                   setIsTrackingModalOpen(true);
                 }}
-                className="btn-clean-track-nav"
+                className="btn-clean-track-nav desktop-only"
                 title="Track Order Status"
               >
                 <Truck size={16} />
@@ -1797,7 +1797,7 @@ export default function PublicStorePage() {
                     handleFetchCustomerOrders(customerUser.phone);
                     setIsCustomerAccountOpen(true);
                   }}
-                  className="btn-clean-customer-auth logged-in"
+                  className="btn-clean-customer-auth logged-in desktop-only"
                   title="My Account & Orders"
                 >
                   <div className="customer-avatar-mini" style={{ background: primaryColor }}>
@@ -1812,7 +1812,7 @@ export default function PublicStorePage() {
                     setAuthModalMode('LOGIN');
                     setIsAuthModalOpen(true);
                   }}
-                  className="btn-clean-customer-auth"
+                  className="btn-clean-customer-auth desktop-only"
                   title="Customer Sign In"
                 >
                   <User size={16} />
@@ -1826,7 +1826,7 @@ export default function PublicStorePage() {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="btn-clean-whatsapp"
+                className="btn-clean-whatsapp desktop-only"
                 title="Chat on WhatsApp"
               >
                 <WhatsAppBrandIcon size={18} color="#25D366" />

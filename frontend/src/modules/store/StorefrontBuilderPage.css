@@ -1738,25 +1738,34 @@
 
 /* --- 2. TABLET DEVICE FRAME (768px) --- */
 .device-frame-tablet .clean-header-container {
-  padding: 0.5rem 1rem !important;
-  gap: 0.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0.65rem 1.25rem !important;
+  gap: 1rem !important;
+}
+
+.device-frame-tablet .clean-brand-section {
+  flex-shrink: 0 !important;
+  max-width: 320px !important;
 }
 
 .device-frame-tablet .clean-store-title {
-  font-size: 1.1rem !important;
+  font-size: 1.15rem !important;
 }
 
 .device-frame-tablet .clean-nav-menu {
-  gap: 0.65rem !important;
-}
-
-.device-frame-tablet .clean-nav-link {
-  font-size: 0.78rem !important;
-  padding: 0.3rem 0.5rem !important;
+  display: none !important;
 }
 
 .device-frame-tablet .preview-nav-search-bar {
   display: none !important;
+}
+
+.device-frame-tablet .clean-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
 }
 
 .device-frame-tablet .clean-product-grid {

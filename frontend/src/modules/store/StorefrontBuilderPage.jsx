@@ -4036,29 +4036,31 @@ export default function StorefrontBuilderPage() {
                       </div>
                     </div>
 
-                    {/* Center: Desktop Nav Menu (Single row, nowrap) */}
-                    <nav className="clean-nav-menu">
-                      {(config.navbar?.navLinks || DEFAULT_NAV_LINKS).filter((l) => l.enabled !== false).map((l) => (
-                        <span key={l.id || l.label} className="clean-nav-link">{l.label}</span>
-                      ))}
-                    </nav>
+                    {/* Center: Desktop Nav Menu (Single row, nowrap - Desktop only) */}
+                    {previewDevice === 'desktop' && (
+                      <nav className="clean-nav-menu">
+                        {(config.navbar?.navLinks || DEFAULT_NAV_LINKS).filter((l) => l.enabled !== false).map((l) => (
+                          <span key={l.id || l.label} className="clean-nav-link">{l.label}</span>
+                        ))}
+                      </nav>
+                    )}
 
                     {/* Right: Search & Action Pills */}
                     <div className="clean-header-actions">
-                      {config.navbar?.showSearch !== false && previewDevice !== 'mobile' && (
+                      {config.navbar?.showSearch !== false && previewDevice === 'desktop' && (
                         <div className="preview-nav-search-bar">
                           <Search size={13} color="#94a3b8" />
                           <span>Search products...</span>
                         </div>
                       )}
 
-                      {config.navbar?.showCustomerAuth !== false && previewDevice !== 'mobile' && (
+                      {config.navbar?.showCustomerAuth !== false && previewDevice === 'desktop' && (
                         <button type="button" className="btn-clean-customer-auth">
                           <User size={13} />
                           <span>Sign In</span>
                         </button>
                       )}
-                      {config.navbar?.showWhatsApp !== false && config.contact?.whatsappNumber && previewDevice !== 'mobile' && (
+                      {config.navbar?.showWhatsApp !== false && config.contact?.whatsappNumber && previewDevice === 'desktop' && (
                         <button type="button" className="btn-clean-whatsapp-quick" title="WhatsApp Inquiry">
                           <WhatsAppBrandIcon size={16} color="#25D366" />
                         </button>
@@ -4071,7 +4073,7 @@ export default function StorefrontBuilderPage() {
                         </button>
                       )}
 
-                      {previewDevice === 'mobile' && (
+                      {(previewDevice === 'mobile' || previewDevice === 'tablet') && (
                         <button
                           type="button"
                           className="btn-clean-mobile-hamburger"
@@ -4088,8 +4090,8 @@ export default function StorefrontBuilderPage() {
                   </div>
                 </header>
 
-                {/* Interactive Mobile Navigation Drawer for Canvas Preview */}
-                {previewDevice === 'mobile' && previewMobileNavOpen && (
+                {/* Interactive Mobile & Tablet Navigation Drawer for Canvas Preview */}
+                {(previewDevice === 'mobile' || previewDevice === 'tablet') && previewMobileNavOpen && (
                   <div className="canvas-mobile-drawer-preview" onClick={(e) => e.stopPropagation()}>
                     {config.navbar?.showSearch !== false && (
                       <div className="preview-nav-search-bar mobile-drawer-search-bar">
