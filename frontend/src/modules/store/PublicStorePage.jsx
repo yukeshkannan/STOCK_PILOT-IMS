@@ -562,17 +562,25 @@ export default function PublicStorePage() {
   };
 
   const handleTrackOrder = async (inv) => {
-    const code = inv || trackingInvoiceInput;
-    if (!code || !code.trim()) {
+    const rawCode = inv || trackingInvoiceInput;
+    if (!rawCode || !rawCode.trim()) {
       toast.warn('Please enter an invoice number to track');
       return;
     }
+    const cleanCode = rawCode.trim().replace(/^#+/, '').trim();
     try {
       setIsTrackingLoading(true);
-      const res = await api.get(`/sales/public/order/track/${encodeURIComponent(code.trim())}?companyCode=${companyCode.toUpperCase()}`);
-      const data = res?.data || res;
-      if (data?.order) {
-        setTrackingOrderData(data.order);
+      const res = await api.get(`/sales/public/order/track/${encodeURIComponent(cleanCode)}?companyCode=${companyCode.toUpperCase()}`);
+      const rawData = res?.data || res;
+      const payload = rawData?.data || rawData;
+      if (payload?.order) {
+        setTrackingOrderData({
+          ...payload.order,
+          timeline: payload.order.timeline || payload.timeline
+        });
+        setIsTrackingModalOpen(true);
+      } else if (payload?.invoiceNumber) {
+        setTrackingOrderData(payload);
         setIsTrackingModalOpen(true);
       } else {
         toast.error('Order not found. Please check invoice number.');

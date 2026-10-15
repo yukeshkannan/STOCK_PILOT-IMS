@@ -704,21 +704,44 @@ class SalesService {
     if (companyCode) {
       try {
         tenantInfo = await this.resolveTenantByCode(companyCode);
-        tenantId = tenantInfo.tenantId;
+        tenantId = tenantInfo?.tenantId || tenantInfo?.id;
       } catch (e) {}
     }
 
-    const cleanInvoice = String(invoiceNumber).trim();
-    const where = { invoice_number: cleanInvoice };
+    const { Op } = require('sequelize');
+    const rawInvoice = String(invoiceNumber || '').trim();
+    const cleanInvoice = rawInvoice.replace(/^#+/, '').trim();
+
+    if (!cleanInvoice) {
+      throw { statusCode: 400, message: 'Invoice number is required for tracking' };
+    }
+
+    const invoiceCandidates = [
+      cleanInvoice,
+      `#${cleanInvoice}`,
+      rawInvoice
+    ];
+
+    const where = {
+      invoice_number: { [Op.in]: invoiceCandidates }
+    };
     if (tenantId) where.tenant_id = tenantId;
 
-    const sale = await Sale.findOne({
+    let sale = await Sale.findOne({
       where,
       include: [{ model: SaleItem, as: 'items' }]
     });
 
+    // Fallback: If tenantId was scoped but record not found, search globally by invoice number
+    if (!sale && tenantId) {
+      sale = await Sale.findOne({
+        where: { invoice_number: { [Op.in]: invoiceCandidates } },
+        include: [{ model: SaleItem, as: 'items' }]
+      });
+    }
+
     if (!sale) {
-      throw { statusCode: 404, message: `No order found with invoice number "${invoiceNumber}"` };
+      throw { statusCode: 404, message: `No order found with invoice number "${cleanInvoice}"` };
     }
 
     const status = sale.order_status || 'PLACED';
