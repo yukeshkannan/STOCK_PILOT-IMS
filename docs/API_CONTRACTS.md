@@ -131,6 +131,7 @@ All microservices adhere to standard JSON response envelopes to simplify client 
 | `GET` | `/api/v1/sales` | List sales invoices | `STAFF` |
 | `POST` | `/api/v1/sales` | Checkout invoice, reserve/deduct stock | `STAFF` |
 | `GET` | `/api/v1/sales/:id` | Full invoice details for printing / PDF | `STAFF` |
+| `PATCH` | `/api/v1/sales/:id/order-status` | Update fulfillment status, courier partner & tracking number | `STAFF` |
 | `POST` | `/api/v1/sales-returns` | Process item return & restock | `MANAGER` |
 | `POST` | `/api/v1/sales/public/order` | Direct storefront customer checkout | `PUBLIC` |
 | `POST` | `/api/v1/sales/public/otp/send` | Send 4-digit OTP for 1-Click Fast Checkout | `PUBLIC` |

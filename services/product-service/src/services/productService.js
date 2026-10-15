@@ -696,7 +696,7 @@ class ProductService {
         cardColor: '#ffffff',
         textColor: '#0f172a',
         logoUrl: '',
-        bannerUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
+        bannerUrl: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=1600&q=80'
       },
       announcement: {
         enabled: false,

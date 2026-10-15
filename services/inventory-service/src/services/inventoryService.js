@@ -262,22 +262,30 @@ class InventoryService {
     let allAvailable = true;
 
     for (const item of items) {
-      let stock = await Stock.findOne({
-        where: {
-          tenant_id: tenantId,
-          product_id: item.productId,
-          warehouse_id: item.warehouseId
-        }
-      });
-
-      if (!stock) {
+      let stock = null;
+      if (item.warehouseId) {
         stock = await Stock.findOne({
+          where: {
+            tenant_id: tenantId,
+            product_id: item.productId,
+            warehouse_id: item.warehouseId
+          }
+        });
+      }
+
+      // If requested warehouse doesn't exist or doesn't have sufficient stock,
+      // fallback to any warehouse under the tenant that has sufficient available stock
+      if (!stock || stock.available_stock < item.quantity) {
+        const altStock = await Stock.findOne({
           where: {
             tenant_id: tenantId,
             product_id: item.productId
           },
           order: [['available_stock', 'DESC']]
         });
+        if (altStock && (!stock || altStock.available_stock > stock.available_stock)) {
+          stock = altStock;
+        }
       }
 
       const currentAvailable = stock ? stock.available_stock : 0;
@@ -395,13 +403,16 @@ class InventoryService {
         });
       }
 
-      if (!stock) {
-        stock = await Stock.findOne({
+      if (!stock || stock.available_stock < qty) {
+        const altStock = await Stock.findOne({
           where: { tenant_id: tenantId, product_id: productId },
           order: [['available_stock', 'DESC']],
           transaction,
           lock: transaction.LOCK.UPDATE
         });
+        if (altStock && (!stock || altStock.available_stock > stock.available_stock)) {
+          stock = altStock;
+        }
       }
 
       if (!stock || stock.available_stock < qty) {

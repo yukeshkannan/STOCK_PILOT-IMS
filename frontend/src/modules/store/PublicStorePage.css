@@ -5118,3 +5118,363 @@
     border-radius: 20px;
   }
 }
+
+/* ==========================================================================
+   AMAZON-STYLE CUSTOMER ACCOUNT DROPDOWN & HUB
+   ========================================================================== */
+
+.customer-account-nav-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.customer-nav-user-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  line-height: 1.15;
+}
+
+.customer-nav-greeting {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.customer-nav-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dropdown-chevron {
+  color: #64748b;
+  transition: transform 0.2s ease;
+}
+
+.dropdown-chevron.open {
+  transform: rotate(180deg);
+}
+
+.customer-nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 12px 36px -4px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
+  padding: 0.65rem;
+  z-index: 1100;
+  animation: dropdownFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-user-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.65rem 0.85rem;
+}
+
+.dropdown-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-meta {
+  overflow: hidden;
+}
+
+.dropdown-name {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-phone {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-family: inherit;
+}
+
+.dropdown-badge {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #059669;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 0.4rem 0;
+}
+
+.dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 9px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #1e293b;
+}
+
+.dropdown-item:hover {
+  background: #f8fafc;
+}
+
+.dropdown-item .item-icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.dropdown-item strong {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dropdown-item span {
+  display: block;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.dropdown-item.dropdown-logout-item {
+  color: #dc2626;
+  margin-top: 2px;
+}
+
+.dropdown-item.dropdown-logout-item .item-icon {
+  color: #dc2626;
+}
+
+.dropdown-item.dropdown-logout-item strong {
+  color: #dc2626;
+}
+
+.dropdown-item.dropdown-logout-item:hover {
+  background: #fef2f2;
+}
+
+/* ==========================================================================
+   CUSTOMER DRAWER TABS & PROFILE EDITOR
+   ========================================================================== */
+
+.customer-drawer-nav-tabs {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 0 1rem;
+}
+
+.drawer-tab-nav-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.85rem 0.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.drawer-tab-nav-btn.active {
+  font-weight: 800;
+}
+
+.drawer-tab-pill {
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: #e2e8f0;
+  color: #334155;
+  padding: 1px 6px;
+  border-radius: 9999px;
+}
+
+.drawer-profile-form {
+  padding: 0.5rem 0.25rem;
+}
+
+.profile-form-intro {
+  margin-bottom: 1.25rem;
+}
+
+.profile-form-intro h5 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
+}
+
+.profile-form-intro p {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.form-group-clean {
+  margin-bottom: 1rem;
+}
+
+.form-group-clean label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 0.35rem;
+}
+
+.input-with-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.verified-badge-mini {
+  position: absolute;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  border: 1px solid #a7f3d0;
+}
+
+.input-hint-clean {
+  display: block;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.order-tracking-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: #0284c7;
+  background: #f0f9ff;
+  border: 1px solid #e0f2fe;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  margin-bottom: 0.65rem;
+}
+
+/* Mobile Drawer Logged-in Customer View */
+.mobile-drawer-logged-user {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.mobile-user-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mobile-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+.mobile-user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-user-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mobile-user-phone {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.mobile-user-card-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.mobile-logout-btn {
+  color: #dc2626 !important;
+  background: #fef2f2 !important;
+  border: 1px solid #fee2e2 !important;
+  font-weight: 700 !important;
+}

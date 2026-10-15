@@ -30,6 +30,8 @@ salesRouter.post('/', requirePermission(PERMISSIONS.SALE_CREATE), idempotency(),
 salesRouter.get('/:id', requirePermission(PERMISSIONS.SALE_VIEW), (req, res, next) => salesController.getSale(req, res, next));
 salesRouter.get('/:id/invoice', requirePermission(PERMISSIONS.SALE_VIEW), (req, res, next) => salesController.getInvoice(req, res, next));
 salesRouter.post('/:id/pay', (req, res, next) => salesController.recordPayment(req, res, next));
+salesRouter.patch('/:id/order-status', (req, res, next) => salesController.updateOrderStatus(req, res, next));
+salesRouter.put('/:id/order-status', (req, res, next) => salesController.updateOrderStatus(req, res, next));
 salesRouter.delete('/:id', (req, res, next) => salesController.deleteSale(req, res, next));
 
 // Sales Returns Router

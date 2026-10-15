@@ -4226,7 +4226,7 @@ export default function StorefrontBuilderPage() {
                                   title: sData.title || 'Welcome to Our Store',
                                   subtitle: sData.subtitle || 'Shop the freshest arrivals, exclusive offers, and verified products delivered quickly.',
                                   ctaText: sData.ctaText || 'Explore Catalog',
-                                  imageUrl: sData.imageUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80'
+                                  imageUrl: sData.imageUrl || 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=1600&q=80'
                                 }
                               ];
                               const currentSlide = slides[activeHeroSlideIndex % slides.length] || slides[0];
@@ -4235,7 +4235,7 @@ export default function StorefrontBuilderPage() {
                                   className="clean-hero-carousel-pattern"
                                   style={{
                                     backgroundImage: currentSlide.imageUrl
-                                      ? `linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.88)), url('${currentSlide.imageUrl}')`
+                                      ? `linear-gradient(180deg, rgba(15, 23, 42, 0.70) 0%, rgba(15, 23, 42, 0.86) 60%, rgba(15, 23, 42, 0.98) 85%, #0f172a 100%), url('${currentSlide.imageUrl}')`
                                       : `linear-gradient(135deg, ${primaryColor}22 0%, #0f172a 100%)`
                                   }}
                                 >

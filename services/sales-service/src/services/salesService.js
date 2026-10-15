@@ -379,21 +379,46 @@ class SalesService {
     const tenantInfo = await this.resolveTenantByCode(companyCode);
     const tenantId = tenantInfo.tenantId;
 
-    // Resolve primary warehouse
-    let warehouseId = 1;
-    let warehouseName = 'Main Outlet Store';
+    // Resolve fulfillment warehouse that has available stock
+    let warehouseId = null;
+    let warehouseName = null;
     try {
       const { createDatabaseConnection } = require('@stockpilot/common');
-      const whDb = createDatabaseConnection('warehouse_db');
-      const [whs] = await whDb.query(
-        'SELECT id, name FROM warehouses WHERE tenant_id = :tenantId ORDER BY is_default DESC, id ASC LIMIT 1;',
-        { replacements: { tenantId } }
-      );
-      if (whs && whs.length > 0) {
-        warehouseId = whs[0].id;
-        warehouseName = whs[0].name;
+      const invDb = createDatabaseConnection('inventory_db');
+      const firstItem = items && items[0];
+      if (firstItem && firstItem.productId) {
+        const [stocksWithQty] = await invDb.query(
+          `SELECT warehouse_id, warehouse_name, available_stock 
+           FROM stocks 
+           WHERE tenant_id = :tenantId AND product_id = :productId AND available_stock >= :qty 
+           ORDER BY available_stock DESC LIMIT 1;`,
+          { replacements: { tenantId, productId: firstItem.productId, qty: firstItem.quantity || 1 } }
+        );
+        if (stocksWithQty && stocksWithQty.length > 0) {
+          warehouseId = stocksWithQty[0].warehouse_id;
+          warehouseName = stocksWithQty[0].warehouse_name;
+        }
       }
     } catch (e) {}
+
+    // Fallback to tenant's default warehouse if not found from inventory
+    if (!warehouseId) {
+      try {
+        const { createDatabaseConnection } = require('@stockpilot/common');
+        const whDb = createDatabaseConnection('warehouse_db');
+        const [whs] = await whDb.query(
+          'SELECT id, name FROM warehouses WHERE tenant_id = :tenantId ORDER BY is_default DESC, id ASC LIMIT 1;',
+          { replacements: { tenantId } }
+        );
+        if (whs && whs.length > 0) {
+          warehouseId = whs[0].id;
+          warehouseName = whs[0].name;
+        }
+      } catch (e) {}
+    }
+
+    warehouseId = warehouseId || 1;
+    warehouseName = warehouseName || 'Main Outlet Store';
 
     // Find or create customer
     let customer = null;
@@ -448,6 +473,8 @@ class SalesService {
       paidAmount,
       isPaid,
       discountAmount: 0,
+      deliveryAddress: customerAddress || null,
+      orderStatus: 'PLACED',
       notes: `[Online Storefront Order] ${notes || ''} | Delivery Addr: ${customerAddress || 'Direct Store Pickup'}${paymentRef}${cashNote}`,
       createdBy: 'Online Customer'
     });
@@ -1452,6 +1479,46 @@ class SalesService {
       invoiceNumber: invoiceNum,
       messageId,
       dispatchedAt: new Date()
+    };
+  }
+
+  /**
+   * Update Order Fulfillment Status, Courier Name & Tracking Number (Admin feature)
+   */
+  async updateOrderStatus(tenantId, saleId, { orderStatus, trackingNumber, courierName, notes }) {
+    const sale = await Sale.findOne({
+      where: { id: saleId, tenant_id: tenantId }
+    });
+    if (!sale) {
+      throw { statusCode: 404, message: 'Sale order not found' };
+    }
+
+    const updates = {};
+    if (orderStatus) {
+      const validStatuses = ['PLACED', 'CONFIRMED', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
+      const normalizedStatus = String(orderStatus).trim().toUpperCase();
+      if (!validStatuses.includes(normalizedStatus)) {
+        throw { statusCode: 400, message: `Invalid order status. Allowed: ${validStatuses.join(', ')}` };
+      }
+      updates.order_status = normalizedStatus;
+    }
+    if (trackingNumber !== undefined) updates.tracking_number = trackingNumber ? String(trackingNumber).trim() : null;
+    if (courierName !== undefined) updates.courier_name = courierName ? String(courierName).trim() : null;
+    if (notes) {
+      const statusLabel = updates.order_status || sale.order_status || 'UPDATE';
+      updates.notes = sale.notes ? `${sale.notes}\n[Status: ${statusLabel}]: ${notes}` : `[Status: ${statusLabel}]: ${notes}`;
+    }
+
+    await sale.update(updates);
+
+    return {
+      success: true,
+      saleId: sale.id,
+      invoiceNumber: sale.invoice_number,
+      orderStatus: sale.order_status,
+      trackingNumber: sale.tracking_number,
+      courierName: sale.courier_name,
+      notes: sale.notes
     };
   }
 }

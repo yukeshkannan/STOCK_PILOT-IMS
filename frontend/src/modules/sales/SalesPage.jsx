@@ -33,7 +33,12 @@ import {
   Package,
   RotateCcw,
   FileText,
-  Eye
+  Eye,
+  Truck,
+  Clock,
+  Navigation,
+  CheckSquare,
+  Send
 } from 'lucide-react';
 
 export default function SalesPage() {
@@ -114,6 +119,93 @@ export default function SalesPage() {
       toast.error(err?.response?.data?.message || err?.message || 'Failed to record payment');
     } finally {
       setIsRecordingPayment(false);
+    }
+  };
+
+  // Order Status Update State (Admin Fulfillment Pipeline)
+  const [orderStatusModal, setOrderStatusModal] = useState(null);
+  const [orderStatusForm, setOrderStatusForm] = useState({
+    orderStatus: 'PLACED',
+    courierName: '',
+    trackingNumber: '',
+    notes: ''
+  });
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  const handleOpenStatusModal = (sale) => {
+    setOrderStatusModal(sale);
+    setOrderStatusForm({
+      orderStatus: sale.order_status || 'PLACED',
+      courierName: sale.courier_name || '',
+      trackingNumber: sale.tracking_number || '',
+      notes: ''
+    });
+  };
+
+  const handleUpdateOrderStatus = async (e) => {
+    if (e) e.preventDefault();
+    if (!orderStatusModal) return;
+
+    try {
+      setIsUpdatingStatus(true);
+      const res = await api.patch(`/sales/${orderStatusModal.id}/order-status`, orderStatusForm);
+      if (res?.success || res?.data) {
+        toast.success(`Order #${orderStatusModal.invoice_number} status updated to ${orderStatusForm.orderStatus}!`);
+        // Real-time update in sales state without full page refresh
+        setSales(prev => prev.map(s => s.id === orderStatusModal.id ? {
+          ...s,
+          order_status: orderStatusForm.orderStatus,
+          courier_name: orderStatusForm.courierName,
+          tracking_number: orderStatusForm.trackingNumber
+        } : s));
+        setOrderStatusModal(null);
+      } else {
+        toast.error(res?.message || 'Failed to update order status');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to update order status');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const getOrderStatusBadgeStyle = (status) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return { background: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe' };
+      case 'PACKED':
+        return { background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' };
+      case 'SHIPPED':
+        return { background: '#f3e8ff', color: '#7e22ce', border: '1px solid #e9d5ff' };
+      case 'OUT_FOR_DELIVERY':
+        return { background: '#ffedd5', color: '#c2410c', border: '1px solid #fed7aa' };
+      case 'DELIVERED':
+        return { background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' };
+      case 'CANCELLED':
+        return { background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' };
+      case 'PLACED':
+      default:
+        return { background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' };
+    }
+  };
+
+  const getOrderStatusIcon = (status) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return <CheckSquare size={12} />;
+      case 'PACKED':
+        return <Package size={12} />;
+      case 'SHIPPED':
+        return <Truck size={12} />;
+      case 'OUT_FOR_DELIVERY':
+        return <Navigation size={12} />;
+      case 'DELIVERED':
+        return <CheckCircle2 size={12} />;
+      case 'CANCELLED':
+        return <RotateCcw size={12} />;
+      case 'PLACED':
+      default:
+        return <Clock size={12} />;
     }
   };
 
@@ -554,14 +646,15 @@ export default function SalesPage() {
                     <th>Grand Total</th>
                     <th>Paid</th>
                     <th>Payment Method</th>
-                    <th>Status</th>
+                    <th>Payment</th>
+                    <th>Order Status</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleSales.length === 0 ? (
                     <tr>
-                      <td colSpan={9} style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8', fontSize: '0.88rem' }}>
+                      <td colSpan={10} style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8', fontSize: '0.88rem' }}>
                         <Receipt size={36} style={{ margin: '0 auto 0.5rem auto', opacity: 0.4, display: 'block' }} />
                         No sales invoices match your search. Click "POS / New Sale" to bill a customer!
                       </td>
@@ -606,8 +699,49 @@ export default function SalesPage() {
                         <td>
                           <Badge status={s.payment_status} />
                         </td>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenStatusModal(s)}
+                            style={{
+                              cursor: 'pointer',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              padding: '0.22rem 0.55rem',
+                              borderRadius: '9999px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              border: 'none',
+                              outline: 'none',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                              ...getOrderStatusBadgeStyle(s.order_status)
+                            }}
+                            title="Click to update order fulfillment & tracking status"
+                          >
+                            {getOrderStatusIcon(s.order_status)}
+                            <span>{s.order_status || 'PLACED'}</span>
+                          </button>
+                        </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}>
+                            <button
+                              onClick={() => handleOpenStatusModal(s)}
+                              className="btn btn-secondary btn-sm"
+                              style={{
+                                padding: '0.3rem 0.55rem',
+                                fontSize: '0.75rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                color: '#4f46e5',
+                                background: '#eef2ff',
+                                borderColor: '#c7d2fe'
+                              }}
+                              title="Update Order Fulfillment & Tracking Status"
+                            >
+                              <Truck size={13} /> Status
+                            </button>
                             {s.payment_status !== 'PAID' && (
                               <button
                                 onClick={() => handleOpenCollectPayment(s)}
@@ -2452,6 +2586,209 @@ export default function SalesPage() {
               >
                 <CheckCircle size={15} />
                 {isRecordingPayment ? 'Recording...' : 'Confirm & Mark as Paid'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ORDER FULFILLMENT & TRACKING STATUS UPDATE MODAL (ADMIN) */}
+      {orderStatusModal && (
+        <Modal
+          isOpen={Boolean(orderStatusModal)}
+          onClose={() => {
+            if (!isUpdatingStatus) setOrderStatusModal(null);
+          }}
+          title={`Update Fulfillment Status — #${orderStatusModal.invoice_number}`}
+          maxWidth="640px"
+        >
+          <form onSubmit={handleUpdateOrderStatus} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Header Order Brief */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '1rem 1.15rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '4px' }}>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#7c3aed', fontSize: '0.95rem' }}>
+                    {orderStatusModal.invoice_number}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>•</span>
+                  <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.85rem' }}>
+                    {orderStatusModal.customer_name}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {orderStatusModal.customer_phone && <span>📞 {orderStatusModal.customer_phone}</span>}
+                  {orderStatusModal.warehouse_name && <span>🏬 {orderStatusModal.warehouse_name}</span>}
+                </div>
+                {orderStatusModal.delivery_address && (
+                  <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <MapPin size={12} color="#0284c7" /> {orderStatusModal.delivery_address}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', display: 'block' }}>
+                  Grand Total
+                </span>
+                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a' }}>
+                  ₹{parseFloat(orderStatusModal.grand_total || 0).toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+
+            {/* Status Selection Pills */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>
+                Order Fulfillment Status <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem' }}>
+                {[
+                  { value: 'PLACED', label: 'Placed / Received', icon: Clock, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+                  { value: 'CONFIRMED', label: 'Confirmed', icon: CheckSquare, color: '#4f46e5', bg: '#eef2ff', border: '#c7d2fe' },
+                  { value: 'PACKED', label: 'Packed & Ready', icon: Package, color: '#d97706', bg: '#fef3c7', border: '#fde68a' },
+                  { value: 'SHIPPED', label: 'Dispatched / In Transit', icon: Truck, color: '#7c3aed', bg: '#f3e8ff', border: '#e9d5ff' },
+                  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', icon: Navigation, color: '#ea580c', bg: '#ffedd5', border: '#fed7aa' },
+                  { value: 'DELIVERED', label: 'Delivered', icon: CheckCircle2, color: '#16a34a', bg: '#dcfce7', border: '#bbf7d0' },
+                  { value: 'CANCELLED', label: 'Cancelled', icon: RotateCcw, color: '#dc2626', bg: '#fee2e2', border: '#fecaca' }
+                ].map((st) => {
+                  const isSelected = orderStatusForm.orderStatus === st.value;
+                  const IconComp = st.icon;
+                  return (
+                    <button
+                      key={st.value}
+                      type="button"
+                      onClick={() => setOrderStatusForm(prev => ({ ...prev, orderStatus: st.value }))}
+                      style={{
+                        padding: '0.65rem 0.5rem',
+                        borderRadius: '10px',
+                        border: isSelected ? `2px solid ${st.color}` : '1px solid #e2e8f0',
+                        background: isSelected ? st.bg : '#ffffff',
+                        color: isSelected ? st.color : '#475569',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.35rem',
+                        fontWeight: isSelected ? 700 : 500,
+                        fontSize: '0.75rem',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isSelected ? `0 2px 8px ${st.color}25` : 'none'
+                      }}
+                    >
+                      <IconComp size={16} color={isSelected ? st.color : '#64748b'} />
+                      <span>{st.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Courier & Tracking Details */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                  Courier / Logistics Partner
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Delhivery, Blue Dart, DTDC, Local Van"
+                  value={orderStatusForm.courierName}
+                  onChange={(e) => setOrderStatusForm(prev => ({ ...prev, courierName: e.target.value }))}
+                  className="form-control"
+                  style={{ height: '38px', fontSize: '0.82rem' }}
+                />
+                <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                  {['Delhivery', 'Blue Dart', 'Shadowfax', 'Local Express', 'Self-Pickup'].map((cName) => (
+                    <button
+                      key={cName}
+                      type="button"
+                      onClick={() => setOrderStatusForm(prev => ({ ...prev, courierName: cName }))}
+                      style={{
+                        fontSize: '0.68rem',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px',
+                        border: '1px solid #cbd5e1',
+                        background: '#f8fafc',
+                        color: '#475569',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {cName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                  AWB Tracking Number / Reference
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. AWB-982347101"
+                  value={orderStatusForm.trackingNumber}
+                  onChange={(e) => setOrderStatusForm(prev => ({ ...prev, trackingNumber: e.target.value }))}
+                  className="form-control"
+                  style={{ height: '38px', fontSize: '0.82rem', fontFamily: 'monospace' }}
+                />
+              </div>
+            </div>
+
+            {/* Status Update Note */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Delivery Note / Tracking Update Message
+              </label>
+              <textarea
+                rows={2}
+                placeholder="e.g. Package dispatched via Delhivery. Estimated delivery within 24-48 hours."
+                value={orderStatusForm.notes}
+                onChange={(e) => setOrderStatusForm(prev => ({ ...prev, notes: e.target.value }))}
+                className="form-control"
+                style={{ fontSize: '0.82rem', resize: 'vertical' }}
+              />
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '0.85rem', borderTop: '1px solid #f1f5f9' }}>
+              <button
+                type="button"
+                onClick={() => setOrderStatusModal(null)}
+                disabled={isUpdatingStatus}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isUpdatingStatus}
+                className="btn btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)'
+                }}
+              >
+                <Send size={15} />
+                {isUpdatingStatus ? 'Saving Status...' : 'Save & Broadcast Status'}
               </button>
             </div>
           </form>

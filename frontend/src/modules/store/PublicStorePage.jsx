@@ -52,7 +52,11 @@ import {
   Flame,
   Instagram,
   Facebook,
-  Twitter
+  Twitter,
+  LogOut,
+  Edit3,
+  UserCheck,
+  Save
 } from 'lucide-react';
 import './PublicStorePage.css';
 
@@ -81,6 +85,7 @@ export default function PublicStorePage() {
   const { companyCode, invoiceNumber: urlInvoiceNumber } = useParams();
   const catalogRef = useRef(null);
   const sortDropdownRef = useRef(null);
+  const accountDropdownRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [storeData, setStoreData] = useState(null);
@@ -138,9 +143,20 @@ export default function PublicStorePage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [isCustomerAccountOpen, setIsCustomerAccountOpen] = useState(false);
+  const [customerDrawerTab, setCustomerDrawerTab] = useState('ORDERS'); // 'ORDERS' | 'PROFILE'
   const [customerOrders, setCustomerOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: '',
+    pincode: ''
+  });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Live Order Tracking State
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
@@ -159,6 +175,14 @@ export default function PublicStorePage() {
         const u = JSON.parse(savedUserStr);
         setCustomerUser(u);
         setCustomerToken(savedToken);
+        setProfileForm({
+          name: u.name || '',
+          phone: u.phone || '',
+          email: u.email || '',
+          address: u.address || '',
+          city: u.city || '',
+          pincode: u.pincode || ''
+        });
         setCustomer((prev) => ({
           ...prev,
           name: u.name || prev.name,
@@ -216,11 +240,14 @@ export default function PublicStorePage() {
     }
   };
 
-  // Close sort dropdown when clicking outside
+  // Close sort & account dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target)) {
         setIsSortOpen(false);
+      }
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target)) {
+        setIsAccountDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -282,6 +309,12 @@ export default function PublicStorePage() {
 
   // Cart Actions
   const addToCart = (product) => {
+    const isAvailable = product.inStock !== false && (product.availableStock === undefined || Number(product.availableStock) > 0);
+    if (!isAvailable) {
+      toast.error(`"${product.name}" is currently out of stock.`, { autoClose: 2000 });
+      return;
+    }
+
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
@@ -543,7 +576,44 @@ export default function PublicStorePage() {
     setCustomerUser(null);
     setCustomerToken('');
     setIsCustomerAccountOpen(false);
+    setIsAccountDropdownOpen(false);
     toast.info('Logged out from store account');
+  };
+
+  const handleSaveCustomerProfile = async (e) => {
+    if (e) e.preventDefault();
+    if (!companyCode || !customerUser) return;
+    try {
+      setIsSavingProfile(true);
+      const res = await api.put('/sales/public/customer/profile', {
+        companyCode: companyCode.toUpperCase(),
+        customerId: customerUser.id,
+        phone: customerUser.phone,
+        name: profileForm.name,
+        email: profileForm.email,
+        address: profileForm.address
+      });
+      if (res?.success && res?.data) {
+        const updated = res.data;
+        const mergedUser = { ...customerUser, ...updated };
+        setCustomerUser(mergedUser);
+        const codeKey = companyCode.toUpperCase();
+        localStorage.setItem(`stockpilot_customer_user_${codeKey}`, JSON.stringify(mergedUser));
+        setCustomer((prev) => ({
+          ...prev,
+          name: updated.name || prev.name,
+          email: updated.email || prev.email,
+          address: updated.address || prev.address
+        }));
+        toast.success('Your profile and delivery address have been updated successfully!');
+      } else {
+        toast.error(res?.message || 'Failed to update profile');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleFetchCustomerOrders = async (targetPhone) => {
@@ -768,7 +838,7 @@ export default function PublicStorePage() {
         const heroSubtitle = sData.subtitle || tagline;
         const heroBadge = sData.badge || 'Official Online Store';
         const heroCta = sData.ctaText || 'Explore Catalog';
-        const heroImg = sData.imageUrl || heroConfig.imageUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80';
+        const heroImg = sData.imageUrl || heroConfig.imageUrl || 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=1600&q=80';
 
         if (pattern === 'CAROUSEL') {
           const slides = sData.slides && sData.slides.length > 0 ? sData.slides : (
@@ -792,7 +862,7 @@ export default function PublicStorePage() {
               className="clean-hero-carousel-pattern"
               style={{
                 backgroundImage: currentSlide.imageUrl
-                  ? `linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.88)), url('${currentSlide.imageUrl}')`
+                  ? `linear-gradient(180deg, rgba(15, 23, 42, 0.70) 0%, rgba(15, 23, 42, 0.86) 60%, rgba(15, 23, 42, 0.98) 85%, #0f172a 100%), url('${currentSlide.imageUrl}')`
                   : `linear-gradient(135deg, ${primaryColor}22 0%, #0f172a 100%)`
               }}
             >
@@ -1796,23 +1866,105 @@ export default function PublicStorePage() {
               </button>
             )}
 
-            {/* Customer Auth / My Account Button */}
+            {/* Customer Auth / My Account Dropdown (Amazon-Style Customer Hub) */}
             {navbarConfig.showCustomerAuth !== false && (
               customerUser ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleFetchCustomerOrders(customerUser.phone);
-                    setIsCustomerAccountOpen(true);
-                  }}
-                  className="btn-clean-customer-auth logged-in desktop-only"
-                  title="My Account & Orders"
-                >
-                  <div className="customer-avatar-mini" style={{ background: primaryColor }}>
-                    {customerUser.name ? customerUser.name.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <span>{customerUser.name ? customerUser.name.split(' ')[0] : 'Account'}</span>
-                </button>
+                <div className="customer-account-nav-wrap desktop-only" ref={accountDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsAccountDropdownOpen((prev) => !prev)}
+                    className="btn-clean-customer-auth logged-in"
+                    title="Account & Orders Menu"
+                  >
+                    <div className="customer-avatar-mini" style={{ background: primaryColor }}>
+                      {customerUser.name ? customerUser.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div className="customer-nav-user-text">
+                      <span className="customer-nav-greeting">Hello,</span>
+                      <span className="customer-nav-name">{customerUser.name ? customerUser.name.split(' ')[0] : 'Account'}</span>
+                    </div>
+                    <ChevronDown size={14} className={`dropdown-chevron ${isAccountDropdownOpen ? 'open' : ''}`} />
+                  </button>
+
+                  {isAccountDropdownOpen && (
+                    <div className="customer-nav-dropdown-menu">
+                      <div className="dropdown-user-header">
+                        <div className="dropdown-avatar" style={{ background: primaryColor }}>
+                          {customerUser.name ? customerUser.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div className="dropdown-meta">
+                          <div className="dropdown-name">{customerUser.name}</div>
+                          <div className="dropdown-phone">+91 {customerUser.phone}</div>
+                          <span className="dropdown-badge">Verified Customer</span>
+                        </div>
+                      </div>
+
+                      <div className="dropdown-divider" />
+
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setIsAccountDropdownOpen(false);
+                          setCustomerDrawerTab('ORDERS');
+                          handleFetchCustomerOrders(customerUser.phone);
+                          setIsCustomerAccountOpen(true);
+                        }}
+                      >
+                        <Package size={16} className="item-icon" />
+                        <div>
+                          <strong>My Orders & Tracking</strong>
+                          <span>View live fulfillment & digital receipts</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setIsAccountDropdownOpen(false);
+                          setCustomerDrawerTab('PROFILE');
+                          setIsCustomerAccountOpen(true);
+                        }}
+                      >
+                        <UserCheck size={16} className="item-icon" />
+                        <div>
+                          <strong>Profile & Delivery Address</strong>
+                          <span>Update name, email & address</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="dropdown-item"
+                        onClick={() => {
+                          setIsAccountDropdownOpen(false);
+                          setIsTrackingModalOpen(true);
+                        }}
+                      >
+                        <Truck size={16} className="item-icon" />
+                        <div>
+                          <strong>Track Order by Invoice #</strong>
+                          <span>Track status for any past bill</span>
+                        </div>
+                      </button>
+
+                      <div className="dropdown-divider" />
+
+                      <button
+                        type="button"
+                        className="dropdown-item dropdown-logout-item"
+                        onClick={() => {
+                          setIsAccountDropdownOpen(false);
+                          handleCustomerLogout();
+                        }}
+                      >
+                        <LogOut size={16} className="item-icon" />
+                        <strong>Log Out from Store</strong>
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <button
                   type="button"
@@ -1944,18 +2096,55 @@ export default function PublicStorePage() {
 
               {navbarConfig.showCustomerAuth !== false && (
                 customerUser ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      handleFetchCustomerOrders(customerUser.phone);
-                      setIsCustomerAccountOpen(true);
-                    }}
-                    className="mobile-drawer-action-btn"
-                  >
-                    <User size={16} />
-                    <span>My Account ({customerUser.name?.split(' ')[0] || 'Orders'})</span>
-                  </button>
+                  <div className="mobile-drawer-logged-user">
+                    <div className="mobile-user-card-header">
+                      <div className="mobile-user-avatar" style={{ background: primaryColor }}>
+                        {customerUser.name ? customerUser.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div className="mobile-user-details">
+                        <strong className="mobile-user-name">{customerUser.name}</strong>
+                        <span className="mobile-user-phone">+91 {customerUser.phone}</span>
+                      </div>
+                    </div>
+                    <div className="mobile-user-card-links">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          setCustomerDrawerTab('ORDERS');
+                          handleFetchCustomerOrders(customerUser.phone);
+                          setIsCustomerAccountOpen(true);
+                        }}
+                        className="mobile-drawer-action-btn"
+                      >
+                        <Package size={16} />
+                        <span>My Orders & Tracking</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          setCustomerDrawerTab('PROFILE');
+                          setIsCustomerAccountOpen(true);
+                        }}
+                        className="mobile-drawer-action-btn"
+                      >
+                        <UserCheck size={16} />
+                        <span>Edit Profile & Delivery Address</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          handleCustomerLogout();
+                        }}
+                        className="mobile-drawer-action-btn mobile-logout-btn"
+                      >
+                        <LogOut size={16} />
+                        <span>Log Out from Account</span>
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <button
                     type="button"
@@ -2684,18 +2873,38 @@ export default function PublicStorePage() {
                   {quickViewProduct.description || 'Quality retail product from verified stock.'}
                 </p>
 
-                <div className="clean-modal-actions">
-                  <button
-                    onClick={() => {
-                      addToCart(quickViewProduct);
-                      setQuickViewProduct(null);
-                    }}
-                    className="btn-clean-primary"
-                    style={{ background: primaryColor }}
-                  >
-                    <Plus size={16} /> Add to Bag
-                  </button>
-                </div>
+                {(() => {
+                  const qvInStock = quickViewProduct.inStock !== false && (quickViewProduct.availableStock === undefined || Number(quickViewProduct.availableStock) > 0);
+                  return (
+                    <div className="clean-modal-actions">
+                      <span className={`clean-stock-tag ${qvInStock ? 'in-stock' : 'out-stock'}`} style={{ marginBottom: '0.75rem', display: 'inline-flex' }}>
+                        {qvInStock ? 'In Stock — Ready to Dispatch' : 'Currently Out of Stock'}
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (!qvInStock) return;
+                          addToCart(quickViewProduct);
+                          setQuickViewProduct(null);
+                        }}
+                        disabled={!qvInStock}
+                        className="btn-clean-primary"
+                        style={{
+                          background: qvInStock ? primaryColor : '#94a3b8',
+                          cursor: qvInStock ? 'pointer' : 'not-allowed',
+                          opacity: qvInStock ? 1 : 0.65
+                        }}
+                      >
+                        {qvInStock ? (
+                          <>
+                            <Plus size={16} /> Add to Bag
+                          </>
+                        ) : (
+                          <span>Out of Stock</span>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -2977,7 +3186,7 @@ export default function PublicStorePage() {
                 </div>
                 <div>
                   <h4>{customerUser?.name || 'Customer Account'}</h4>
-                  <p>{customerUser?.phone || customer.phone || 'Verified Customer'}</p>
+                  <p>+91 {customerUser?.phone || customer.phone || 'Verified Customer'}</p>
                   {customerUser?.email && <span className="drawer-user-email">{customerUser.email}</span>}
                 </div>
               </div>
@@ -2991,135 +3200,268 @@ export default function PublicStorePage() {
               </button>
             </div>
 
+            {/* Segmented Tabs (Orders vs Profile) */}
+            <div className="customer-drawer-nav-tabs">
+              <button
+                type="button"
+                className={`drawer-tab-nav-btn ${customerDrawerTab === 'ORDERS' ? 'active' : ''}`}
+                onClick={() => setCustomerDrawerTab('ORDERS')}
+                style={customerDrawerTab === 'ORDERS' ? { borderBottomColor: primaryColor, color: primaryColor } : {}}
+              >
+                <Package size={15} />
+                <span>My Orders</span>
+                {customerOrders.length > 0 && <span className="drawer-tab-pill">{customerOrders.length}</span>}
+              </button>
+              <button
+                type="button"
+                className={`drawer-tab-nav-btn ${customerDrawerTab === 'PROFILE' ? 'active' : ''}`}
+                onClick={() => setCustomerDrawerTab('PROFILE')}
+                style={customerDrawerTab === 'PROFILE' ? { borderBottomColor: primaryColor, color: primaryColor } : {}}
+              >
+                <UserCheck size={15} />
+                <span>Edit Profile & Address</span>
+              </button>
+            </div>
+
             <div className="customer-drawer-body">
-              {/* Quick Actions Bar */}
-              <div className="drawer-actions-bar">
-                <button
-                  type="button"
-                  onClick={() => handleFetchCustomerOrders(customerUser?.phone)}
-                  className="btn-drawer-refresh"
-                >
-                  <Clock size={14} />
-                  <span>Refresh Orders</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCustomerAccountOpen(false);
-                    setIsTrackingModalOpen(true);
-                  }}
-                  className="btn-drawer-track"
-                  style={{ color: primaryColor }}
-                >
-                  <Truck size={14} />
-                  <span>Track by Invoice #</span>
-                </button>
-              </div>
+              {customerDrawerTab === 'ORDERS' ? (
+                <>
+                  {/* Quick Actions Bar */}
+                  <div className="drawer-actions-bar">
+                    <button
+                      type="button"
+                      onClick={() => handleFetchCustomerOrders(customerUser?.phone)}
+                      className="btn-drawer-refresh"
+                    >
+                      <Clock size={14} />
+                      <span>Refresh Orders</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomerAccountOpen(false);
+                        setIsTrackingModalOpen(true);
+                      }}
+                      className="btn-drawer-track"
+                      style={{ color: primaryColor }}
+                    >
+                      <Truck size={14} />
+                      <span>Track by Invoice #</span>
+                    </button>
+                  </div>
 
-              {/* Order History Section */}
-              <div className="drawer-section-heading">
-                <h5>My Orders & Deliveries</h5>
-                <span className="order-count-tag">{customerOrders.length}</span>
-              </div>
+                  {/* Order History Section */}
+                  <div className="drawer-section-heading">
+                    <h5>Orders & Delivery Records</h5>
+                    <span className="order-count-tag">{customerOrders.length}</span>
+                  </div>
 
-              {loadingOrders ? (
-                <div className="drawer-orders-loading">
-                  <Loader2 size={24} className="spinner text-primary" />
-                  <p>Retrieving your order records...</p>
-                </div>
-              ) : customerOrders.length === 0 ? (
-                <div className="drawer-empty-orders">
-                  <Package size={40} className="text-muted" />
-                  <h6>No Orders Yet</h6>
-                  <p>When you place an order, live tracking and digital receipts will appear right here.</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomerAccountOpen(false);
-                      scrollToCatalog();
-                    }}
-                    className="btn-clean-primary"
-                    style={{ background: primaryColor, marginTop: '0.75rem', fontSize: '0.82rem' }}
-                  >
-                    Start Shopping
-                  </button>
-                </div>
-              ) : (
-                <div className="drawer-orders-list">
-                  {customerOrders.map((ord) => (
-                    <div key={ord.id || ord.invoice_number} className="drawer-order-card">
-                      <div className="order-card-top">
-                        <div>
-                          <span className="order-inv-num">#{ord.invoice_number}</span>
-                          <span className="order-date-text">
-                            {new Date(ord.createdAt).toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
-                          </span>
-                        </div>
-                        <div
-                          className={`order-status-badge status-${(ord.order_status || 'PLACED').toLowerCase()}`}
-                        >
-                          {ord.order_status || 'PLACED'}
-                        </div>
-                      </div>
-
-                      <div className="order-card-middle">
-                        <div className="order-total-amount">
-                          ₹{parseFloat(ord.grand_total || 0).toLocaleString('en-IN')}
-                        </div>
-                        <div className="order-pay-method">
-                          {ord.payment_method || 'CASH'} • {ord.payment_status === 'PAID' ? 'Paid' : 'Unpaid'}
-                        </div>
-                      </div>
-
-                      {ord.items && ord.items.length > 0 && (
-                        <p className="order-items-brief">
-                          {ord.items.map((it) => `${it.product_name} (${it.quantity})`).join(', ')}
-                        </p>
-                      )}
-
-                      <div className="order-card-actions">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsCustomerAccountOpen(false);
-                            handleTrackOrder(ord.invoice_number);
-                          }}
-                          className="btn-order-track-card"
-                          style={{ background: `${primaryColor}15`, color: primaryColor }}
-                        >
-                          <Truck size={14} />
-                          <span>Track Live Status</span>
-                        </button>
-                        <Link
-                          to={`/e-bill/${ord.invoice_number}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn-order-ebill-card"
-                        >
-                          <FileText size={14} />
-                          <span>E-Bill</span>
-                        </Link>
-                      </div>
+                  {loadingOrders ? (
+                    <div className="drawer-orders-loading">
+                      <Loader2 size={24} className="spinner text-primary" />
+                      <p>Retrieving your order records...</p>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ) : customerOrders.length === 0 ? (
+                    <div className="drawer-empty-orders">
+                      <Package size={40} className="text-muted" />
+                      <h6>No Orders Yet</h6>
+                      <p>When you place an order, live tracking and digital receipts will appear right here.</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomerAccountOpen(false);
+                          scrollToCatalog();
+                        }}
+                        className="btn-clean-primary"
+                        style={{ background: primaryColor, marginTop: '0.75rem', fontSize: '0.82rem' }}
+                      >
+                        Start Shopping
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="drawer-orders-list">
+                      {customerOrders.map((ord) => (
+                        <div key={ord.id || ord.invoice_number} className="drawer-order-card">
+                          <div className="order-card-top">
+                            <div>
+                              <span className="order-inv-num">#{ord.invoice_number}</span>
+                              <span className="order-date-text">
+                                {new Date(ord.createdAt || ord.sale_date).toLocaleDateString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                            <div
+                              className={`order-status-badge status-${(ord.order_status || 'PLACED').toLowerCase()}`}
+                            >
+                              {ord.order_status || 'PLACED'}
+                            </div>
+                          </div>
 
-              {/* Saved Address Section */}
-              <div className="drawer-section-heading" style={{ marginTop: '1.5rem' }}>
-                <h5>Saved Address</h5>
-              </div>
-              <div className="drawer-address-card">
-                <MapPin size={18} color={primaryColor} style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div>
-                  <strong>Primary Delivery Address</strong>
-                  <p>{customerUser?.address || customer.address || 'No saved address. It will be saved on your next order.'}</p>
-                </div>
-              </div>
+                          <div className="order-card-middle">
+                            <div className="order-total-amount">
+                              ₹{parseFloat(ord.grand_total || 0).toLocaleString('en-IN')}
+                            </div>
+                            <div className="order-pay-method">
+                              {ord.payment_method || 'CASH'} • {ord.payment_status === 'PAID' ? 'Paid' : 'Unpaid'}
+                            </div>
+                          </div>
+
+                          {ord.items && ord.items.length > 0 && (
+                            <p className="order-items-brief">
+                              {ord.items.map((it) => `${it.product_name} (${it.quantity})`).join(', ')}
+                            </p>
+                          )}
+
+                          {ord.tracking_number && (
+                            <div className="order-tracking-hint">
+                              <Truck size={12} />
+                              <span>Tracking: <strong>{ord.tracking_number}</strong> {ord.courier_name ? `via ${ord.courier_name}` : ''}</span>
+                            </div>
+                          )}
+
+                          <div className="order-card-actions">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsCustomerAccountOpen(false);
+                                handleTrackOrder(ord.invoice_number);
+                              }}
+                              className="btn-order-track-card"
+                              style={{ background: `${primaryColor}15`, color: primaryColor }}
+                            >
+                              <Truck size={14} />
+                              <span>Track Live Status</span>
+                            </button>
+                            <Link
+                              to={`/e-bill/${ord.invoice_number}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn-order-ebill-card"
+                            >
+                              <FileText size={14} />
+                              <span>E-Bill</span>
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* EDIT PROFILE & DELIVERY ADDRESS TAB */
+                <form onSubmit={handleSaveCustomerProfile} className="drawer-profile-form">
+                  <div className="profile-form-intro">
+                    <h5>Profile & Delivery Details</h5>
+                    <p>Keep your contact and doorstep address updated for fast checkout and delivery updates.</p>
+                  </div>
+
+                  <div className="form-group-clean">
+                    <label>Full Name</label>
+                    <input
+                      type="text"
+                      className="clean-input"
+                      placeholder="Your Full Name"
+                      value={profileForm.name}
+                      onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group-clean">
+                    <label>Mobile Number</label>
+                    <div className="input-with-badge">
+                      <input
+                        type="tel"
+                        className="clean-input"
+                        value={profileForm.phone}
+                        disabled
+                        style={{ background: '#f8fafc', color: '#64748b', cursor: 'not-allowed' }}
+                      />
+                      <span className="verified-badge-mini">
+                        <CheckCheck size={12} /> Verified
+                      </span>
+                    </div>
+                    <span className="input-hint-clean">Mobile number linked to your verified account.</span>
+                  </div>
+
+                  <div className="form-group-clean">
+                    <label>Email Address</label>
+                    <input
+                      type="email"
+                      className="clean-input"
+                      placeholder="name@example.com (for e-receipts)"
+                      value={profileForm.email}
+                      onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="form-group-clean">
+                    <label>Primary Delivery Address</label>
+                    <textarea
+                      rows={3}
+                      className="clean-input clean-textarea"
+                      placeholder="Flat/House No., Street Name, Landmark, Area..."
+                      value={profileForm.address}
+                      onChange={(e) => setProfileForm((prev) => ({ ...prev, address: e.target.value }))}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-row-2col">
+                    <div className="form-group-clean">
+                      <label>City / Town</label>
+                      <input
+                        type="text"
+                        className="clean-input"
+                        placeholder="City"
+                        value={profileForm.city}
+                        onChange={(e) => setProfileForm((prev) => ({ ...prev, city: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group-clean">
+                      <label>Pincode</label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        className="clean-input"
+                        placeholder="6-digit PIN"
+                        value={profileForm.pincode}
+                        onChange={(e) => setProfileForm((prev) => ({ ...prev, pincode: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="btn-clean-primary"
+                    style={{
+                      background: primaryColor,
+                      width: '100%',
+                      marginTop: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.45rem'
+                    }}
+                  >
+                    {isSavingProfile ? (
+                      <>
+                        <Loader2 size={16} className="spinner" />
+                        <span>Saving Changes...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} />
+                        <span>Save Profile & Delivery Details</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
             </div>
 
             <div className="customer-drawer-footer">
@@ -3128,7 +3470,8 @@ export default function PublicStorePage() {
                 onClick={handleCustomerLogout}
                 className="btn-customer-logout"
               >
-                Log Out from Store
+                <LogOut size={16} />
+                <span>Log Out from Store</span>
               </button>
             </div>
           </aside>

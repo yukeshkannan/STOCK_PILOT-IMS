@@ -160,6 +160,17 @@ class SalesController {
     }
   }
 
+  async updateOrderStatus(req, res, next) {
+    try {
+      const tenantId = req.user.tenantId;
+      const saleId = parseInt(req.params.id, 10);
+      const result = await salesService.updateOrderStatus(tenantId, saleId, req.body);
+      return ApiResponse.success(res, result, 'Order status updated successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async deleteSale(req, res, next) {
     try {
       await salesService.deleteSale(req.user.tenantId, req.params.id);
