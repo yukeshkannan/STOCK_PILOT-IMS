@@ -90,6 +90,17 @@ async function syncTableColumns(sequelize) {
             }
             logger.info(`[Auto-Migration] Adding missing column "${dbCol}" to table "${tableName}"...`);
             await queryInterface.addColumn(tableName, dbCol, attr);
+          } else if (dbCol === 'store_config' && (tableName === 'tenants' || tableName === 'Tenants')) {
+            // Ensure store_config is upgraded to LONGTEXT for large visual builder payloads in MySQL
+            try {
+              const currentType = String(tableDescription[dbCol].type || '').toUpperCase();
+              if (currentType === 'TEXT' || currentType.includes('VARCHAR')) {
+                logger.info(`[Auto-Migration] Upgrading "store_config" to LONGTEXT on table "${tableName}"...`);
+                await sequelize.query(`ALTER TABLE \`${tableName}\` MODIFY COLUMN \`store_config\` LONGTEXT;`);
+              }
+            } catch (modifyErr) {
+              // Ignore if dialect is SQLite or already LONGTEXT
+            }
           }
         }
       } catch (tableErr) {
