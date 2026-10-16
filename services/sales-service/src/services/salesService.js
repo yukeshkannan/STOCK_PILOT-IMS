@@ -3,6 +3,7 @@ const { Customer, Sale, SaleItem, SaleReturn, SaleReturnItem, sequelize } = requ
 const { SALE_STATUS, PAYMENT_STATUS, PAYMENT_METHODS, STOCK_MOVEMENT_TYPES, eventBus, EVENTS, getNextSequenceNumber } = require('@stockpilot/common');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const emailService = require('./emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'stockpilot_super_secret_jwt_key_2026';
 
@@ -224,79 +225,104 @@ class SalesService {
     return tenantInfo;
   }
 
+  async resolveTenantById(tenantId) {
+    if (!tenantId) return null;
+    try {
+      const { createDatabaseConnection } = require('@stockpilot/common');
+      const tenantDb = createDatabaseConnection('tenant_db');
+      const [tenants] = await tenantDb.query(
+        'SELECT id, company_code, company_name, phone, email, address FROM tenants WHERE id = :tenantId LIMIT 1;',
+        { replacements: { tenantId } }
+      );
+      if (tenants && tenants.length > 0) {
+        return {
+          tenantId: Number(tenants[0].id),
+          companyCode: tenants[0].company_code,
+          companyName: tenants[0].company_name,
+          phone: tenants[0].phone,
+          email: tenants[0].email,
+          address: tenants[0].address
+        };
+      }
+    } catch (e) {}
+    return {
+      tenantId: Number(tenantId),
+      companyCode: 'STORE',
+      companyName: 'StockPilot Store'
+    };
+  }
+
   /**
-   * Fast Checkout: Send 4-digit OTP to Customer's Mobile Number
+   * Fast Checkout: Send 4-digit OTP to Customer's Mobile Number / Email
    */
-  async sendStorefrontOtp({ companyCode, phone }) {
-    if (!phone) {
-      throw { statusCode: 400, message: 'Mobile number is required' };
+  async sendStorefrontOtp({ companyCode, phone, email }) {
+    if (!phone && !email) {
+      throw { statusCode: 400, message: 'Mobile number or email is required' };
     }
 
-    const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
-    if (cleanPhone.length !== 10) {
-      throw { statusCode: 400, message: 'Please enter a valid 10-digit mobile number' };
-    }
+    const cleanPhone = phone ? String(phone).replace(/\D/g, '').slice(-10) : '';
+    const cleanEmail = email ? String(email).trim().toLowerCase() : null;
 
     const tenantInfo = await this.resolveTenantByCode(companyCode);
     const tenantId = tenantInfo.tenantId;
 
     // Check if customer is already registered/ordered previously
-    const existingCustomer = await Customer.findOne({
-      where: { tenant_id: tenantId, phone: cleanPhone }
-    });
+    let existingCustomer = null;
+    if (cleanPhone) {
+      existingCustomer = await Customer.findOne({
+        where: { tenant_id: tenantId, phone: cleanPhone }
+      });
+    }
+    if (!existingCustomer && cleanEmail) {
+      existingCustomer = await Customer.findOne({
+        where: { tenant_id: tenantId, email: cleanEmail }
+      });
+    }
 
     // Generate random 4-digit numeric OTP
     const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes validity
-    const cacheKey = `${tenantId}:${cleanPhone}`;
+    const cacheKey = `${tenantId}:${cleanPhone || cleanEmail}`;
 
     otpStore.set(cacheKey, {
       otp: generatedOtp,
       expiresAt,
       phone: cleanPhone,
+      email: cleanEmail || existingCustomer?.email,
       tenantId,
       attempts: 0
     });
 
-    // Attempt real SMS dispatch if Fast2SMS or Twilio API key is provided in ENV
-    let smsSent = false;
-    let smsErrorReason = null;
-    const fast2smsKey = process.env.FAST2SMS_API_KEY || 'jq3PLnGAVsItNZzxUdSvk6K2H1BW4bF7RDieJcOYpag5CmQlyrs8vaHxgceV671C0oTQLBqUrKjd4WDA';
-    if (fast2smsKey) {
+    // Send via Brevo if email address is present on customer or request
+    const targetEmail = cleanEmail || existingCustomer?.email;
+    let emailDispatched = false;
+    if (targetEmail) {
       try {
-        const smsRes = await axios.post('https://www.fast2sms.com/dev/bulkV2', {
-          route: 'otp',
-          variables_values: generatedOtp,
-          numbers: cleanPhone
-        }, {
-          headers: { authorization: fast2smsKey },
-          timeout: 5000
+        const sendRes = await emailService.sendOtpEmail({
+          toEmail: targetEmail,
+          customerName: existingCustomer?.name || 'Customer',
+          otp: generatedOtp,
+          storeName: tenantInfo.companyName
         });
-        if (smsRes.data && (smsRes.data.return === true || smsRes.data.status_code === 200)) {
-          smsSent = true;
-        } else {
-          smsErrorReason = smsRes.data?.message || 'Gateway rejected SMS';
-          console.warn('[Fast2SMS API Response]:', smsRes.data);
-        }
-      } catch (smsErr) {
-        smsErrorReason = smsErr.response?.data?.message || smsErr.message;
-        console.warn('[Fast2SMS Error]:', smsErrorReason);
+        emailDispatched = sendRes?.success || false;
+      } catch (err) {
+        console.warn('[Storefront OTP] Brevo OTP email error:', err.message);
       }
     }
 
-    console.log(`[Storefront OTP] Sent OTP ${generatedOtp} to +91 ${cleanPhone} for Store [${tenantInfo.companyCode}] (SMS dispatched: ${smsSent})`);
+    console.log(`[Storefront OTP] Generated OTP ${generatedOtp} for ${cleanPhone || targetEmail} [${tenantInfo.companyCode}] (Email dispatched: ${emailDispatched})`);
 
     return {
       success: true,
       phone: cleanPhone,
-      smsSent,
-      smsError: smsErrorReason,
+      email: targetEmail,
+      emailDispatched,
       isExistingCustomer: Boolean(existingCustomer),
       customerName: existingCustomer?.name || null,
       otp: generatedOtp,
-      message: smsSent
-        ? `Security OTP sent via SMS to +91 ${cleanPhone.slice(0, 2)}******${cleanPhone.slice(-2)}`
-        : `Verification code sent to +91 ${cleanPhone} (Code: ${generatedOtp})`,
+      message: emailDispatched
+        ? `Verification code sent to your email (${targetEmail})`
+        : `Verification code generated for checkout (Code: ${generatedOtp})`,
       expiresInSeconds: 300
     };
   }
@@ -462,10 +488,12 @@ class SalesService {
       : '';
 
     // Prepare sale
+    const resolvedCustomerEmail = customerEmail || customer?.email || null;
     const sale = await this.createSale(tenantId, {
       customerId: customer?.id,
       customerName: customerName || customer?.name || 'Online Customer',
       customerPhone: customerPhone || customer?.phone || '',
+      customerEmail: resolvedCustomerEmail,
       warehouseId,
       warehouseName,
       items,
@@ -479,6 +507,20 @@ class SalesService {
       createdBy: 'Online Customer'
     });
 
+    // Asynchronously dispatch Brevo confirmation email if customer email exists
+    if (resolvedCustomerEmail) {
+      emailService.sendOrderStatusNotification({
+        order: {
+          ...sale.toJSON(),
+          customer_email: resolvedCustomerEmail,
+          items: items || []
+        },
+        tenantInfo,
+        newStatus: 'PLACED',
+        notes: notes || 'Online Storefront Order Placed'
+      }).catch(err => console.warn('[EmailService] Order placed email error:', err.message));
+    }
+
     return {
       success: true,
       saleId: sale.id,
@@ -487,6 +529,7 @@ class SalesService {
       subtotal: sale.subtotal,
       taxAmount: sale.tax_amount,
       customerName: sale.customer_name,
+      customerEmail: resolvedCustomerEmail,
       ebillUrl: `/e-bill/${sale.invoice_number}`
     };
   }
@@ -787,12 +830,34 @@ class SalesService {
       minute: '2-digit'
     });
 
+    let history = [];
+    if (sale.status_history) {
+      try {
+        history = JSON.parse(sale.status_history);
+      } catch (e) {
+        history = [];
+      }
+    }
+    const historyMap = {};
+    if (Array.isArray(history)) {
+      history.forEach((h) => {
+        if (h.status && h.formattedDate) {
+          historyMap[h.status] = {
+            date: h.formattedDate,
+            courier: h.courier,
+            trackingNumber: h.trackingNumber,
+            notes: h.notes
+          };
+        }
+      });
+    }
+
     const timeline = [
       {
         step: 'PLACED',
         label: 'Order Placed',
         description: 'Order received and logged in system',
-        timestamp: orderDateFormatted,
+        timestamp: historyMap['PLACED']?.date || orderDateFormatted,
         isCompleted: currentStepIndex >= 0,
         isCurrent: currentStepIndex === 0
       },
@@ -800,7 +865,7 @@ class SalesService {
         step: 'CONFIRMED',
         label: 'Order Confirmed',
         description: 'Verified with store inventory',
-        timestamp: currentStepIndex >= 1 ? 'Confirmed by Store' : null,
+        timestamp: historyMap['CONFIRMED']?.date || (currentStepIndex >= 1 ? 'Confirmed by Store' : null),
         isCompleted: currentStepIndex >= 1,
         isCurrent: currentStepIndex === 1
       },
@@ -808,7 +873,7 @@ class SalesService {
         step: 'PACKED',
         label: 'Packed & Sealed',
         description: 'Picked from warehouse shelf & safely packed',
-        timestamp: currentStepIndex >= 2 ? 'Packed & Quality Checked' : null,
+        timestamp: historyMap['PACKED']?.date || (currentStepIndex >= 2 ? 'Packed & Quality Checked' : null),
         isCompleted: currentStepIndex >= 2,
         isCurrent: currentStepIndex === 2
       },
@@ -816,7 +881,7 @@ class SalesService {
         step: 'SHIPPED',
         label: 'Dispatched / In Transit',
         description: sale.courier_name ? `Handed over to ${sale.courier_name}` : 'Dispatched from distribution hub',
-        timestamp: currentStepIndex >= 3 ? (sale.tracking_number ? `AWB: ${sale.tracking_number}` : 'In Transit') : null,
+        timestamp: historyMap['SHIPPED']?.date || (currentStepIndex >= 3 ? (sale.tracking_number ? `AWB: ${sale.tracking_number}` : 'In Transit') : null),
         isCompleted: currentStepIndex >= 3,
         isCurrent: currentStepIndex === 3
       },
@@ -824,7 +889,7 @@ class SalesService {
         step: 'OUT_FOR_DELIVERY',
         label: 'Out for Delivery',
         description: 'Courier agent on the way to delivery address',
-        timestamp: currentStepIndex >= 4 ? 'Arriving Today' : null,
+        timestamp: historyMap['OUT_FOR_DELIVERY']?.date || (currentStepIndex >= 4 ? 'Arriving Today' : null),
         isCompleted: currentStepIndex >= 4,
         isCurrent: currentStepIndex === 4
       },
@@ -832,7 +897,7 @@ class SalesService {
         step: 'DELIVERED',
         label: 'Delivered',
         description: 'Package handed over successfully',
-        timestamp: currentStepIndex >= 5 ? 'Successfully Delivered' : null,
+        timestamp: historyMap['DELIVERED']?.date || (currentStepIndex >= 5 ? 'Successfully Delivered' : null),
         isCompleted: currentStepIndex >= 5,
         isCurrent: currentStepIndex === 5
       }
@@ -1024,6 +1089,26 @@ class SalesService {
         }
       }
 
+      const initialStatus = saleData.orderStatus || (createdBy === 'Online Customer' ? 'PLACED' : 'DELIVERED');
+      const now = new Date();
+      const initialHistory = [
+        {
+          status: initialStatus,
+          timestamp: now.toISOString(),
+          formattedDate: now.toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          courier: saleData.courierName || null,
+          trackingNumber: saleData.trackingNumber || null,
+          notes: 'Order initiated',
+          updatedBy: createdBy || 'System'
+        }
+      ];
+
       // 4. Save Sale & Items
       const sale = await Sale.create({
         tenant_id: tenantId,
@@ -1031,6 +1116,7 @@ class SalesService {
         customer_id: customerId || null,
         customer_name: customerName || 'Walk-in Customer',
         customer_phone: customerPhone || null,
+        customer_email: saleData.customerEmail || null,
         warehouse_id: whId,
         warehouse_name: whName,
         sale_date: new Date(),
@@ -1044,10 +1130,11 @@ class SalesService {
         paid_amount: paid,
         due_amount: due,
         notes: notes || '',
-        order_status: saleData.orderStatus || (createdBy === 'Online Customer' ? 'PLACED' : 'DELIVERED'),
+        order_status: initialStatus,
         delivery_address: saleData.deliveryAddress || null,
         tracking_number: saleData.trackingNumber || null,
         courier_name: saleData.courierName || null,
+        status_history: JSON.stringify(initialHistory),
         created_by: createdBy || 'Cashier'
       }, { transaction });
 
@@ -1484,8 +1571,9 @@ class SalesService {
 
   /**
    * Update Order Fulfillment Status, Courier Name & Tracking Number (Admin feature)
+   * Records date-stamped audit history & dispatches transactional customer email via Brevo
    */
-  async updateOrderStatus(tenantId, saleId, { orderStatus, trackingNumber, courierName, notes }) {
+  async updateOrderStatus(tenantId, saleId, { orderStatus, trackingNumber, courierName, notes, customerEmail }) {
     const sale = await Sale.findOne({
       where: { id: saleId, tenant_id: tenantId }
     });
@@ -1504,12 +1592,73 @@ class SalesService {
     }
     if (trackingNumber !== undefined) updates.tracking_number = trackingNumber ? String(trackingNumber).trim() : null;
     if (courierName !== undefined) updates.courier_name = courierName ? String(courierName).trim() : null;
+    if (customerEmail) updates.customer_email = String(customerEmail).trim();
     if (notes) {
       const statusLabel = updates.order_status || sale.order_status || 'UPDATE';
       updates.notes = sale.notes ? `${sale.notes}\n[Status: ${statusLabel}]: ${notes}` : `[Status: ${statusLabel}]: ${notes}`;
     }
 
+    // Append to status history timeline
+    let history = [];
+    if (sale.status_history) {
+      try {
+        history = JSON.parse(sale.status_history);
+      } catch (e) {
+        history = [];
+      }
+    }
+    const now = new Date();
+    const newStatusVal = updates.order_status || sale.order_status;
+    const historyEntry = {
+      status: newStatusVal,
+      timestamp: now.toISOString(),
+      formattedDate: now.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      courier: updates.courier_name !== undefined ? updates.courier_name : sale.courier_name,
+      trackingNumber: updates.tracking_number !== undefined ? updates.tracking_number : sale.tracking_number,
+      notes: notes || null
+    };
+    history.push(historyEntry);
+    updates.status_history = JSON.stringify(history);
+
     await sale.update(updates);
+
+    // Resolve customer email for Brevo notification
+    let recipientEmail = updates.customer_email || sale.customer_email;
+    if (!recipientEmail && sale.customer_id) {
+      const cust = await Customer.findByPk(sale.customer_id);
+      if (cust && cust.email) recipientEmail = cust.email;
+    }
+
+    // Dispatch live email notification via Brevo
+    let emailResult = null;
+    if (recipientEmail) {
+      try {
+        const tenantInfo = await this.resolveTenantById(tenantId);
+        const fullSale = await Sale.findOne({
+          where: { id: sale.id },
+          include: [{ model: SaleItem, as: 'items' }]
+        });
+        emailResult = await emailService.sendOrderStatusNotification({
+          order: {
+            ...fullSale.toJSON(),
+            customer_email: recipientEmail
+          },
+          tenantInfo,
+          newStatus: newStatusVal,
+          trackingNumber: updates.tracking_number !== undefined ? updates.tracking_number : sale.tracking_number,
+          courierName: updates.courier_name !== undefined ? updates.courier_name : sale.courier_name,
+          notes: notes || null
+        });
+      } catch (emailErr) {
+        console.error('[EmailService] Order status email dispatch error:', emailErr.message);
+      }
+    }
 
     return {
       success: true,
@@ -1518,7 +1667,10 @@ class SalesService {
       orderStatus: sale.order_status,
       trackingNumber: sale.tracking_number,
       courierName: sale.courier_name,
-      notes: sale.notes
+      notes: sale.notes,
+      emailDispatched: emailResult?.success || false,
+      recipientEmail: recipientEmail || null,
+      timeline: history
     };
   }
 }

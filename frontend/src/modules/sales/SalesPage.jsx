@@ -128,6 +128,7 @@ export default function SalesPage() {
     orderStatus: 'PLACED',
     courierName: '',
     trackingNumber: '',
+    customerEmail: '',
     notes: ''
   });
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -138,6 +139,7 @@ export default function SalesPage() {
       orderStatus: sale.order_status || 'PLACED',
       courierName: sale.courier_name || '',
       trackingNumber: sale.tracking_number || '',
+      customerEmail: sale.customer_email || (sale.customer && sale.customer.email) || '',
       notes: ''
     });
   };
@@ -156,7 +158,8 @@ export default function SalesPage() {
           ...s,
           order_status: orderStatusForm.orderStatus,
           courier_name: orderStatusForm.courierName,
-          tracking_number: orderStatusForm.trackingNumber
+          tracking_number: orderStatusForm.trackingNumber,
+          customer_email: orderStatusForm.customerEmail || s.customer_email
         } : s));
         setOrderStatusModal(null);
       } else {
@@ -2760,6 +2763,52 @@ export default function SalesPage() {
                 className="form-control"
                 style={{ fontSize: '0.82rem', resize: 'vertical' }}
               />
+            </div>
+
+            {/* Customer Email & Brevo Notification Indicator */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Mail size={14} color="#7c3aed" /> Customer Email for Status Updates
+                </label>
+                <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#059669', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
+                  ⚡ Brevo Live Relay
+                </span>
+              </div>
+              <input
+                type="email"
+                placeholder="customer@example.com (Transactional updates with tracking will be sent here)"
+                value={orderStatusForm.customerEmail}
+                onChange={(e) => setOrderStatusForm(prev => ({ ...prev, customerEmail: e.target.value }))}
+                className="form-control"
+                style={{ height: '38px', fontSize: '0.82rem' }}
+              />
+              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.35rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span>Real-time email will be sent automatically when status is saved.</span>
+                {orderStatusModal.customer_phone && (
+                  <a
+                    href={`https://wa.me/91${String(orderStatusModal.customer_phone).replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
+                      `Hello ${orderStatusModal.customer_name || 'Customer'},\n\nYour order #${orderStatusModal.invoice_number} is now marked as *${orderStatusForm.orderStatus}*.\n` +
+                      (orderStatusForm.courierName ? `Courier: ${orderStatusForm.courierName}\n` : '') +
+                      (orderStatusForm.trackingNumber ? `Tracking No: ${orderStatusForm.trackingNumber}\n` : '') +
+                      `Track live at: https://app.stockpilot.store/store/${user?.company_code || ''}?invoice=${orderStatusModal.invoice_number}\n\nThank you for choosing us!`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      color: '#16a34a',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      fontSize: '0.72rem'
+                    }}
+                  >
+                    💬 Send WhatsApp Update <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
             </div>
 
             {/* Actions */}

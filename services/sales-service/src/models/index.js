@@ -154,6 +154,14 @@ const Sale = sequelize.define('Sale', {
     type: DataTypes.STRING(100),
     allowNull: true
   },
+  customer_email: {
+    type: DataTypes.STRING(150),
+    allowNull: true
+  },
+  status_history: {
+    type: DataTypes.TEXT,
+    allowNull: true // JSON string of status timeline events
+  },
   created_by: {
     type: DataTypes.STRING(100),
     allowNull: true

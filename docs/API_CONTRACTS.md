@@ -131,10 +131,10 @@ All microservices adhere to standard JSON response envelopes to simplify client 
 | `GET` | `/api/v1/sales` | List sales invoices | `STAFF` |
 | `POST` | `/api/v1/sales` | Checkout invoice, reserve/deduct stock | `STAFF` |
 | `GET` | `/api/v1/sales/:id` | Full invoice details for printing / PDF | `STAFF` |
-| `PATCH` | `/api/v1/sales/:id/order-status` | Update fulfillment status, courier partner & tracking number | `STAFF` |
+| `PATCH` | `/api/v1/sales/:id/order-status` | Update fulfillment status, courier partner, AWB tracking, optional customer email, date-stamped history timeline, and dispatch automated Brevo email | `STAFF` |
 | `POST` | `/api/v1/sales-returns` | Process item return & restock | `MANAGER` |
-| `POST` | `/api/v1/sales/public/order` | Direct storefront customer checkout | `PUBLIC` |
-| `POST` | `/api/v1/sales/public/otp/send` | Send 4-digit OTP for 1-Click Fast Checkout | `PUBLIC` |
+| `POST` | `/api/v1/sales/public/order` | Direct storefront customer checkout (creates order, sends Brevo order confirmation with tracking link) | `PUBLIC` |
+| `POST` | `/api/v1/sales/public/otp/send` | Send 4-digit OTP for 1-Click Fast Checkout via Brevo Email Relay | `PUBLIC` |
 | `POST` | `/api/v1/sales/public/otp/verify` | Verify OTP & retrieve returning customer details | `PUBLIC` |
 | `POST` | `/api/v1/sales/public/customer/register` | Register customer account scoped to tenant store | `PUBLIC` |
 | `POST` | `/api/v1/sales/public/customer/login` | Customer login with mobile/email and password | `PUBLIC` |

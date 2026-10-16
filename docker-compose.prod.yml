@@ -263,8 +263,9 @@ services:
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_jwt_refresh_prod_secret_key_2026}
       - INVENTORY_SERVICE_URL=http://inventory-service:5004
       - NOTIFICATION_SERVICE_URL=http://notification-service:5009
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - FAST2SMS_API_KEY=${FAST2SMS_API_KEY:-jq3PLnGAVsItNZzxUdSvk6K2H1BW4bF7RDieJcOYpag5CmQlyrs8vaHxgceV671C0oTQLBqUrKjd4WDA}
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL:-yukesh785.in@gmail.com}
+      - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-StockPilot Orders}
     depends_on:
       - mysql
       - rabbitmq
