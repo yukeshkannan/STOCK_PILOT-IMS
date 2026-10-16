@@ -132,3 +132,11 @@ StockPilot supports three tiers of storefront domain resolution:
   `PLACED` -> `CONFIRMED` -> `PACKED` -> `SHIPPED` -> `OUT_FOR_DELIVERY` -> `DELIVERED`.
 - Real-time courier tracking (AWB, carrier name) and instant WhatsApp support integration.
 
+### 4. Multi-Warehouse Storefront Order Routing & Stock Fulfillment
+- **Catalog Aggregation**: The public store catalog displays `availableStock` calculated as the sum of available stocks across all active tenant warehouses (`SUM(current_stock) - SUM(reserved_stock)`).
+- **Fulfillment Warehouse Resolution**:
+  When a public storefront order is received (`POST /api/v1/sales/public/order`):
+  1. **Stock-Priority Lookup**: The system queries `inventory_db.stocks` to find the warehouse with the highest available inventory for the ordered items (`available_stock >= requested_qty ORDER BY available_stock DESC LIMIT 1`).
+  2. **Default Warehouse Fallback**: If no single warehouse has sufficient stock, the tenant's primary/default warehouse (`is_default = true` in `warehouses`) is assigned as the fulfillment hub.
+  3. **Event-Driven Deduction**: An asynchronous `sale.completed` event is broadcasted across RabbitMQ. The `inventory-service` consumes this message and automatically decrements `current_stock` specifically at the resolved `warehouse_id`, logging a `SALE` entry in `inventory_movements`.
+

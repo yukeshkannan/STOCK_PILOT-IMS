@@ -49,6 +49,7 @@ export default function ProductsPage() {
 
   const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
   const [brandForm, setBrandForm] = useState({ name: '', description: '' });
+  const [stockMap, setStockMap] = useState({});
 
   const fetchCatalogData = async () => {
     try {
@@ -58,17 +59,27 @@ export default function ProductsPage() {
       if (selectedCategory) params.append('categoryId', selectedCategory);
       if (selectedBrand) params.append('brandId', selectedBrand);
 
-      const [pRes, cRes, bRes, wRes] = await Promise.all([
+      const [pRes, cRes, bRes, wRes, invRes] = await Promise.all([
         api.get(`/products?${params.toString()}`),
         api.get('/categories'),
         api.get('/brands'),
-        api.get('/warehouses').catch(() => ({ data: [] }))
+        api.get('/warehouses').catch(() => ({ data: [] })),
+        api.get('/inventory').catch(() => ({ data: [] }))
       ]);
+
+      const rawStocks = invRes?.data || [];
+      const sm = {};
+      if (Array.isArray(rawStocks)) {
+        rawStocks.forEach((s) => {
+          sm[s.product_id] = (sm[s.product_id] || 0) + (Number(s.current_stock) || 0);
+        });
+      }
 
       setProducts(pRes?.data || []);
       setCategories(cRes?.data || []);
       setBrands(bRes?.data || []);
       setWarehouses(wRes?.data || []);
+      setStockMap(sm);
     } catch (err) {
       console.error('Error loading products:', err);
     } finally {
@@ -347,6 +358,7 @@ export default function ProductsPage() {
                 <th>Selling Price</th>
                 <th>Margin</th>
                 <th>Tax Rate</th>
+                <th>Current Stock</th>
                 <th>Min Stock</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
@@ -355,13 +367,13 @@ export default function ProductsPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={11} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+                  <td colSpan={12} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
                     Loading product catalog...
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={11} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+                  <td colSpan={12} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
                     No products found. Click "Add Product" to create your first item!
                   </td>
                 </tr>
@@ -370,6 +382,8 @@ export default function ProductsPage() {
                   const cost = parseFloat(p.purchase_price) || 0;
                   const price = parseFloat(p.selling_price) || 0;
                   const margin = price > 0 ? (((price - cost) / price) * 100).toFixed(1) : 0;
+                  const currentStock = stockMap[p.id] !== undefined ? stockMap[p.id] : 0;
+                  const minStock = p.minimum_stock !== undefined ? p.minimum_stock : 5;
 
                   return (
                     <tr key={p.id}>
@@ -388,6 +402,22 @@ export default function ProductsPage() {
                         </span>
                       </td>
                       <td style={{ color: '#64748b' }}>{p.tax_rate}%</td>
+                      <td>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '3px 9px',
+                          borderRadius: '12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          backgroundColor: currentStock > minStock ? '#ecfdf5' : currentStock > 0 ? '#fffbeb' : '#fef2f2',
+                          color: currentStock > minStock ? '#059669' : currentStock > 0 ? '#d97706' : '#dc2626',
+                          border: `1px solid ${currentStock > minStock ? '#a7f3d0' : currentStock > 0 ? '#fde68a' : '#fecaca'}`
+                        }}>
+                          <Package size={12} /> {currentStock} {p.unit || 'PCS'}
+                        </span>
+                      </td>
                       <td style={{ color: '#64748b' }}>{p.minimum_stock}</td>
                       <td>
                         <Badge status={p.status || 'ACTIVE'} />
@@ -428,6 +458,32 @@ export default function ProductsPage() {
         title={editingProduct ? `Edit Product: ${editingProduct.product_code}` : 'Add New Product'}
       >
         <form onSubmit={handleSaveProduct}>
+          {editingProduct && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.65rem 0.9rem',
+              borderRadius: '8px',
+              backgroundColor: (stockMap[editingProduct.id] || 0) > 0 ? '#f0fdf4' : '#fef2f2',
+              border: `1px solid ${(stockMap[editingProduct.id] || 0) > 0 ? '#bbf7d0' : '#fecaca'}`,
+              marginBottom: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Package size={16} color={(stockMap[editingProduct.id] || 0) > 0 ? '#16a34a' : '#dc2626'} />
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>
+                  Live Inventory (All Warehouses):
+                </span>
+              </div>
+              <span style={{
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                color: (stockMap[editingProduct.id] || 0) > 0 ? '#15803d' : '#b91c1c'
+              }}>
+                {(stockMap[editingProduct.id] || 0)} {editingProduct.unit || 'PCS'} in Stock
+              </span>
+            </div>
+          )}
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Product Code / SKU</label>

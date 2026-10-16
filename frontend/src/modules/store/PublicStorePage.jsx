@@ -310,11 +310,14 @@ export default function PublicStorePage() {
   // Strict stock evaluator - prevents showing 'In Stock' if current stock is 0
   const isProductInStock = (prod) => {
     if (!prod) return false;
-    if (prod.inStock === false) return false;
-    if (prod.availableStock !== undefined && Number(prod.availableStock) <= 0) return false;
-    if (prod.inStock === true) return true;
-    if (prod.availableStock !== undefined && Number(prod.availableStock) > 0) return true;
-    return false;
+    const numStock = prod.availableStock !== undefined && prod.availableStock !== null
+      ? Number(prod.availableStock)
+      : (prod.current_stock !== undefined && prod.current_stock !== null ? Number(prod.current_stock) : null);
+
+    if (numStock !== null && !isNaN(numStock)) {
+      return numStock > 0;
+    }
+    return Boolean(prod.inStock);
   };
 
   // Cart Actions
@@ -338,6 +341,9 @@ export default function PublicStorePage() {
       }
       const rawTax = product.tax_rate !== undefined && product.tax_rate !== null ? product.tax_rate : product.taxRate;
       const parsedTax = rawTax !== undefined && rawTax !== null && !isNaN(parseFloat(rawTax)) ? parseFloat(rawTax) : 0;
+      const resolvedStock = product.availableStock !== undefined && product.availableStock !== null
+        ? Number(product.availableStock)
+        : (product.current_stock !== undefined && product.current_stock !== null ? Number(product.current_stock) : 0);
       return [
         ...prev,
         {
@@ -350,7 +356,7 @@ export default function PublicStorePage() {
           taxRate: parsedTax,
           unit: product.unit || 'PCS',
           quantity: 1,
-          availableStock: product.availableStock !== undefined ? Number(product.availableStock) : 999,
+          availableStock: resolvedStock,
           imageUrl: product.image_url
         }
       ];
