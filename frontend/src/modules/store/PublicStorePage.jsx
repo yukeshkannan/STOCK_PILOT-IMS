@@ -3566,11 +3566,16 @@ export default function PublicStorePage() {
                   <div>
                     <span className="summary-label">Placed On</span>
                     <span>
-                      {new Date(trackingOrderData.orderDate).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                      })}
+                      {(() => {
+                        const raw = trackingOrderData.orderDate || trackingOrderData.createdAt || trackingOrderData.saleDate;
+                        if (!raw) return 'Recent';
+                        const d = new Date(raw);
+                        return isNaN(d.getTime()) ? String(raw).split('T')[0] : d.toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        });
+                      })()}
                     </span>
                   </div>
                   <div>
@@ -3618,7 +3623,13 @@ export default function PublicStorePage() {
                             <p className="step-desc">{st.desc}</p>
                             {st.timestamp && (
                               <span className="step-timestamp">
-                                {new Date(st.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {(() => {
+                                  if (typeof st.timestamp === 'string' && (st.timestamp.includes('AM') || st.timestamp.includes('PM') || st.timestamp.includes('–') || st.timestamp.includes('-') || st.timestamp.includes(':'))) {
+                                    return st.timestamp;
+                                  }
+                                  const d = new Date(st.timestamp);
+                                  return isNaN(d.getTime()) ? st.timestamp : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                })()}
                               </span>
                             )}
                           </div>
@@ -3656,11 +3667,23 @@ export default function PublicStorePage() {
                 {trackingOrderData.items && trackingOrderData.items.length > 0 && (
                   <div className="tracking-items-card">
                     <h6>Items in this shipment:</h6>
-                    <ul className="tracking-items-list">
+                    <ul className="tracking-items-list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                       {trackingOrderData.items.map((it, idx) => (
-                        <li key={idx}>
-                          <span>{it.name} &times; {it.quantity}</span>
-                          <strong>₹{parseFloat(it.totalPrice || it.unitPrice * it.quantity || 0).toLocaleString('en-IN')}</strong>
+                        <li key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.6rem 0', borderBottom: idx < trackingOrderData.items.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexShrink: 0 }}>
+                              <Package size={15} />
+                            </div>
+                            <div>
+                              <strong style={{ fontSize: '0.84rem', color: '#0f172a', display: 'block', fontWeight: 600 }}>
+                                {it.productName || it.name || it.product_name || 'Catalog Item'}
+                              </strong>
+                              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Qty: {it.quantity}</span>
+                            </div>
+                          </div>
+                          <strong style={{ fontSize: '0.84rem', color: '#0f172a', fontWeight: 700 }}>
+                            ₹{parseFloat(it.totalAmount || it.totalPrice || (it.unitPrice * it.quantity) || 0).toLocaleString('en-IN')}
+                          </strong>
                         </li>
                       ))}
                     </ul>

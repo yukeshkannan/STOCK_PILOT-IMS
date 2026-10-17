@@ -507,16 +507,55 @@ class SalesService {
       createdBy: 'Online Customer'
     });
 
-    // Asynchronously dispatch Brevo confirmation email if customer email exists
+    // Dispatch instant notification to tenant & warehouse admin
+    try {
+      const { createDatabaseConnection } = require('@stockpilot/common');
+      const notifDb = createDatabaseConnection('notification_db');
+      const notifTitle = `New Store Order: #${sale.invoice_number}`;
+      const notifMsg = `Order #${sale.invoice_number} received from ${customerName || 'Customer'} (Total: ₹${Number(sale.grand_total || 0).toLocaleString('en-IN')}). Allocated for fulfillment from warehouse: ${warehouseName || 'Warehouse #' + warehouseId}.`;
+      await notifDb.query(
+        `INSERT INTO notifications (tenant_id, title, message, type, category, link, metadata, is_read, created_at, updated_at)
+         VALUES (:tenantId, :title, :message, 'SALE', 'TRANSACTIONS', '/sales', :metadata, 0, NOW(), NOW())`,
+        {
+          replacements: {
+            tenantId,
+            title: notifTitle,
+            message: notifMsg,
+            metadata: JSON.stringify({
+              invoiceNumber: sale.invoice_number,
+              warehouseId,
+              warehouseName,
+              customerName: customerName || 'Customer',
+              grandTotal: sale.grand_total,
+              itemsCount: (items && items.length) || 1
+            })
+          }
+        }
+      );
+    } catch (notifErr) {
+      console.warn('[SalesService] Order notification dispatch error:', notifErr.message);
+    }
+
+    // Asynchronously dispatch Brevo confirmation email with itemized list if customer email exists
     if (resolvedCustomerEmail) {
+      const formattedItems = (items || []).map(i => ({
+        product_name: i.name || i.productName || i.product_name || 'Item',
+        name: i.name || i.productName || i.product_name || 'Item',
+        quantity: i.quantity || 1,
+        unit_price: i.price || i.unitPrice || i.unit_price || 0,
+        total_amount: (i.price || i.unitPrice || i.unit_price || 0) * (i.quantity || 1),
+        total: (i.price || i.unitPrice || i.unit_price || 0) * (i.quantity || 1)
+      }));
+
       emailService.sendOrderStatusNotification({
         order: {
           ...sale.toJSON(),
           customer_email: resolvedCustomerEmail,
-          items: items || []
+          items: formattedItems
         },
         tenantInfo,
         newStatus: 'PLACED',
+        estimatedDelivery: 'Will be updated shortly once dispatched',
         notes: notes || 'Online Storefront Order Placed'
       }).catch(err => console.warn('[EmailService] Order placed email error:', err.message));
     }
@@ -821,14 +860,17 @@ class SalesService {
       currentStepIndex = status === 'CANCELLED' ? -1 : 0;
     }
 
-    const createdAt = sale.created_at || sale.sale_date || new Date();
-    const orderDateFormatted = new Date(createdAt).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const createdAt = sale.created_at || sale.createdAt || (sale.dataValues && (sale.dataValues.created_at || sale.dataValues.createdAt)) || sale.sale_date || new Date();
+    const orderDateObj = new Date(createdAt);
+    const orderDateFormatted = isNaN(orderDateObj.getTime())
+      ? new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : orderDateObj.toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
 
     let history = [];
     if (sale.status_history) {
@@ -841,9 +883,9 @@ class SalesService {
     const historyMap = {};
     if (Array.isArray(history)) {
       history.forEach((h) => {
-        if (h.status && h.formattedDate) {
+        if (h.status && (h.formattedDate || h.timestamp)) {
           historyMap[h.status] = {
-            date: h.formattedDate,
+            date: h.formattedDate || h.timestamp,
             courier: h.courier,
             trackingNumber: h.trackingNumber,
             notes: h.notes
@@ -910,7 +952,9 @@ class SalesService {
         orderStatus: status,
         currentStepIndex,
         saleDate: sale.sale_date,
-        createdAt: sale.created_at,
+        createdAt: createdAt,
+        orderDate: createdAt,
+        orderDateFormatted,
         grandTotal: sale.grand_total,
         subtotal: sale.subtotal,
         taxAmount: sale.tax_amount,
@@ -926,10 +970,12 @@ class SalesService {
         items: (sale.items || []).map(i => ({
           id: i.id,
           productId: i.product_id,
-          productName: i.product_name,
+          productName: i.product_name || i.name || 'Product',
+          name: i.product_name || i.name || 'Product',
           quantity: i.quantity,
           unitPrice: i.unit_price,
-          totalAmount: i.total_amount
+          totalAmount: i.total_amount || (i.unit_price * i.quantity),
+          totalPrice: i.total_amount || (i.unit_price * i.quantity)
         }))
       }
     };
@@ -1573,7 +1619,7 @@ class SalesService {
    * Update Order Fulfillment Status, Courier Name & Tracking Number (Admin feature)
    * Records date-stamped audit history & dispatches transactional customer email via Brevo
    */
-  async updateOrderStatus(tenantId, saleId, { orderStatus, trackingNumber, courierName, notes, customerEmail }) {
+  async updateOrderStatus(tenantId, saleId, { orderStatus, trackingNumber, courierName, estimatedDelivery, notes, customerEmail }) {
     const sale = await Sale.findOne({
       where: { id: saleId, tenant_id: tenantId }
     });
@@ -1621,6 +1667,7 @@ class SalesService {
       }),
       courier: updates.courier_name !== undefined ? updates.courier_name : sale.courier_name,
       trackingNumber: updates.tracking_number !== undefined ? updates.tracking_number : sale.tracking_number,
+      estimatedDelivery: estimatedDelivery || null,
       notes: notes || null
     };
     history.push(historyEntry);
@@ -1653,6 +1700,7 @@ class SalesService {
           newStatus: newStatusVal,
           trackingNumber: updates.tracking_number !== undefined ? updates.tracking_number : sale.tracking_number,
           courierName: updates.courier_name !== undefined ? updates.courier_name : sale.courier_name,
+          estimatedDelivery: estimatedDelivery || null,
           notes: notes || null
         });
       } catch (emailErr) {

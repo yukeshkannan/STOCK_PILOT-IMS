@@ -129,6 +129,7 @@ export default function SalesPage() {
     courierName: '',
     trackingNumber: '',
     customerEmail: '',
+    estimatedDelivery: '',
     notes: ''
   });
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -140,6 +141,7 @@ export default function SalesPage() {
       courierName: sale.courier_name || '',
       trackingNumber: sale.tracking_number || '',
       customerEmail: sale.customer_email || (sale.customer && sale.customer.email) || '',
+      estimatedDelivery: sale.estimated_delivery || '',
       notes: ''
     });
   };
@@ -2602,69 +2604,76 @@ export default function SalesPage() {
           onClose={() => {
             if (!isUpdatingStatus) setOrderStatusModal(null);
           }}
-          title={`Update Fulfillment Status — #${orderStatusModal.invoice_number}`}
+          title={`Order Fulfillment — #${orderStatusModal.invoice_number}`}
           maxWidth="640px"
         >
           <form onSubmit={handleUpdateOrderStatus} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {/* Header Order Brief */}
             <div
               style={{
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                background: '#f8fafc',
                 border: '1px solid #e2e8f0',
                 borderRadius: '12px',
-                padding: '1rem 1.15rem',
+                padding: '1.1rem 1.25rem',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
-                gap: '0.75rem'
+                gap: '0.85rem'
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '4px' }}>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#7c3aed', fontSize: '0.95rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '6px' }}>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--primary, #982A86)', fontSize: '0.95rem', background: '#fdf2fb', padding: '2px 8px', borderRadius: '6px', border: '1px solid #f3c7ec' }}>
                     {orderStatusModal.invoice_number}
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>•</span>
-                  <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.85rem' }}>
+                  <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>
                     {orderStatusModal.customer_name}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  {orderStatusModal.customer_phone && <span>📞 {orderStatusModal.customer_phone}</span>}
-                  {orderStatusModal.warehouse_name && <span>🏬 {orderStatusModal.warehouse_name}</span>}
+                <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {orderStatusModal.customer_phone && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Phone size={12} color="#64748b" /> {orderStatusModal.customer_phone}
+                    </span>
+                  )}
+                  {orderStatusModal.warehouse_name && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#0284c7', background: '#f0f9ff', padding: '1px 7px', borderRadius: '4px', fontWeight: 600 }}>
+                      <Building2 size={12} color="#0284c7" /> {orderStatusModal.warehouse_name}
+                    </span>
+                  )}
                 </div>
                 {orderStatusModal.delivery_address && (
-                  <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <MapPin size={12} color="#0284c7" /> {orderStatusModal.delivery_address}
+                  <div style={{ fontSize: '0.76rem', color: '#475569', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <MapPin size={13} color="#94a3b8" /> {orderStatusModal.delivery_address}
                   </div>
                 )}
               </div>
 
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', display: 'block' }}>
-                  Grand Total
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.5px', display: 'block' }}>
+                  Order Total
                 </span>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
                   ₹{parseFloat(orderStatusModal.grand_total || 0).toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
 
-            {/* Status Selection Pills */}
+            {/* Status Selection Segmented Pipeline */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>
-                Order Fulfillment Status <span style={{ color: '#dc2626' }}>*</span>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Fulfillment Stage <span style={{ color: '#ef4444' }}>*</span>
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '0.45rem' }}>
                 {[
-                  { value: 'PLACED', label: 'Placed / Received', icon: Clock, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-                  { value: 'CONFIRMED', label: 'Confirmed', icon: CheckSquare, color: '#4f46e5', bg: '#eef2ff', border: '#c7d2fe' },
-                  { value: 'PACKED', label: 'Packed & Ready', icon: Package, color: '#d97706', bg: '#fef3c7', border: '#fde68a' },
-                  { value: 'SHIPPED', label: 'Dispatched / In Transit', icon: Truck, color: '#7c3aed', bg: '#f3e8ff', border: '#e9d5ff' },
-                  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', icon: Navigation, color: '#ea580c', bg: '#ffedd5', border: '#fed7aa' },
-                  { value: 'DELIVERED', label: 'Delivered', icon: CheckCircle2, color: '#16a34a', bg: '#dcfce7', border: '#bbf7d0' },
-                  { value: 'CANCELLED', label: 'Cancelled', icon: RotateCcw, color: '#dc2626', bg: '#fee2e2', border: '#fecaca' }
+                  { value: 'PLACED', label: 'Placed', icon: Clock, color: '#3b82f6', bg: '#eff6ff' },
+                  { value: 'CONFIRMED', label: 'Confirmed', icon: CheckSquare, color: '#4f46e5', bg: '#eef2ff' },
+                  { value: 'PACKED', label: 'Packed & Ready', icon: Package, color: '#d97706', bg: '#fffbeb' },
+                  { value: 'SHIPPED', label: 'Dispatched', icon: Truck, color: 'var(--primary, #982A86)', bg: '#fdf2fb' },
+                  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', icon: Navigation, color: '#ea580c', bg: '#fff7ed' },
+                  { value: 'DELIVERED', label: 'Delivered', icon: CheckCircle2, color: '#10b981', bg: '#f0fdf4' },
+                  { value: 'CANCELLED', label: 'Cancelled', icon: RotateCcw, color: '#ef4444', bg: '#fef2f2' }
                 ].map((st) => {
                   const isSelected = orderStatusForm.orderStatus === st.value;
                   const IconComp = st.icon;
@@ -2674,24 +2683,23 @@ export default function SalesPage() {
                       type="button"
                       onClick={() => setOrderStatusForm(prev => ({ ...prev, orderStatus: st.value }))}
                       style={{
-                        padding: '0.65rem 0.5rem',
-                        borderRadius: '10px',
+                        padding: '0.6rem 0.5rem',
+                        borderRadius: '8px',
                         border: isSelected ? `2px solid ${st.color}` : '1px solid #e2e8f0',
                         background: isSelected ? st.bg : '#ffffff',
                         color: isSelected ? st.color : '#475569',
                         cursor: 'pointer',
                         display: 'flex',
-                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.35rem',
+                        gap: '0.4rem',
                         fontWeight: isSelected ? 700 : 500,
-                        fontSize: '0.75rem',
+                        fontSize: '0.78rem',
                         transition: 'all 0.15s ease',
-                        boxShadow: isSelected ? `0 2px 8px ${st.color}25` : 'none'
+                        boxShadow: isSelected ? '0 1px 4px rgba(0,0,0,0.06)' : 'none'
                       }}
                     >
-                      <IconComp size={16} color={isSelected ? st.color : '#64748b'} />
+                      <IconComp size={15} color={isSelected ? st.color : '#64748b'} />
                       <span>{st.label}</span>
                     </button>
                   );
@@ -2700,20 +2708,20 @@ export default function SalesPage() {
             </div>
 
             {/* Courier & Tracking Details */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-                  Courier / Logistics Partner
+                  Courier / Carrier Partner
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Delhivery, Blue Dart, DTDC, Local Van"
+                  placeholder="e.g. Delhivery, Blue Dart, DTDC, Local Express"
                   value={orderStatusForm.courierName}
                   onChange={(e) => setOrderStatusForm(prev => ({ ...prev, courierName: e.target.value }))}
                   className="form-control"
                   style={{ height: '38px', fontSize: '0.82rem' }}
                 />
-                <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
                   {['Delhivery', 'Blue Dart', 'Shadowfax', 'Local Express', 'Self-Pickup'].map((cName) => (
                     <button
                       key={cName}
@@ -2721,12 +2729,13 @@ export default function SalesPage() {
                       onClick={() => setOrderStatusForm(prev => ({ ...prev, courierName: cName }))}
                       style={{
                         fontSize: '0.68rem',
-                        padding: '0.15rem 0.45rem',
+                        padding: '0.15rem 0.5rem',
                         borderRadius: '4px',
-                        border: '1px solid #cbd5e1',
-                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        background: orderStatusForm.courierName === cName ? '#f1f5f9' : '#ffffff',
                         color: '#475569',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        fontWeight: orderStatusForm.courierName === cName ? 700 : 500
                       }}
                     >
                       {cName}
@@ -2748,6 +2757,23 @@ export default function SalesPage() {
                   style={{ height: '38px', fontSize: '0.82rem', fontFamily: 'monospace' }}
                 />
               </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                  Estimated Delivery Timeframe
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Tomorrow by 6 PM, or 2-3 Business Days"
+                  value={orderStatusForm.estimatedDelivery}
+                  onChange={(e) => setOrderStatusForm(prev => ({ ...prev, estimatedDelivery: e.target.value }))}
+                  className="form-control"
+                  style={{ height: '38px', fontSize: '0.82rem' }}
+                />
+                <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginTop: '0.25rem' }}>
+                  Leave blank to show "Will be updated shortly once dispatched".
+                </span>
+              </div>
             </div>
 
             {/* Status Update Note */}
@@ -2765,25 +2791,25 @@ export default function SalesPage() {
               />
             </div>
 
-            {/* Customer Email & Brevo Notification Indicator */}
+            {/* Customer Email & Brevo Notification Dispatcher */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                 <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Mail size={14} color="#7c3aed" /> Customer Email for Status Updates
+                  <Mail size={14} color="var(--primary, #982A86)" /> Customer Email for Status Updates
                 </label>
                 <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#059669', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
-                  ⚡ Brevo Live Relay
+                  Brevo Transactional Gateway
                 </span>
               </div>
               <input
                 type="email"
-                placeholder="customer@example.com (Transactional updates with tracking will be sent here)"
+                placeholder="customer@example.com (Notifications with tracking link will be sent here)"
                 value={orderStatusForm.customerEmail}
                 onChange={(e) => setOrderStatusForm(prev => ({ ...prev, customerEmail: e.target.value }))}
                 className="form-control"
                 style={{ height: '38px', fontSize: '0.82rem' }}
               />
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.35rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <span>Real-time email will be sent automatically when status is saved.</span>
                 {orderStatusModal.customer_phone && (
                   <a
@@ -2791,6 +2817,7 @@ export default function SalesPage() {
                       `Hello ${orderStatusModal.customer_name || 'Customer'},\n\nYour order #${orderStatusModal.invoice_number} is now marked as *${orderStatusForm.orderStatus}*.\n` +
                       (orderStatusForm.courierName ? `Courier: ${orderStatusForm.courierName}\n` : '') +
                       (orderStatusForm.trackingNumber ? `Tracking No: ${orderStatusForm.trackingNumber}\n` : '') +
+                      (orderStatusForm.estimatedDelivery ? `Estimated Delivery: ${orderStatusForm.estimatedDelivery}\n` : '') +
                       `Track live at: https://app.stockpilot.store/store/${user?.company_code || ''}?invoice=${orderStatusModal.invoice_number}\n\nThank you for choosing us!`
                     )}`}
                     target="_blank"
@@ -2805,7 +2832,7 @@ export default function SalesPage() {
                       fontSize: '0.72rem'
                     }}
                   >
-                    💬 Send WhatsApp Update <ExternalLink size={11} />
+                    Send WhatsApp Update <ExternalLink size={11} />
                   </a>
                 )}
               </div>
@@ -2829,15 +2856,14 @@ export default function SalesPage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-                  border: 'none',
+                  background: 'var(--primary, #982A86)',
+                  borderColor: 'var(--primary, #982A86)',
                   color: '#ffffff',
-                  fontWeight: 700,
-                  boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)'
+                  fontWeight: 700
                 }}
               >
                 <Send size={15} />
-                {isUpdatingStatus ? 'Saving Status...' : 'Save & Broadcast Status'}
+                {isUpdatingStatus ? 'Saving Status...' : 'Save & Dispatch Notification'}
               </button>
             </div>
           </form>

@@ -130,7 +130,7 @@ class EmailService {
   /**
    * Generates a modern, clean HTML transactional email
    */
-  generateOrderEmailHtml({ order, tenantInfo, newStatus, trackingNumber, courierName, notes }) {
+  generateOrderEmailHtml({ order, tenantInfo, newStatus, trackingNumber, courierName, estimatedDelivery, notes }) {
     const storeName = tenantInfo?.companyName || 'StockPilot Store';
     const storeCode = tenantInfo?.companyCode || '';
     const invoiceNum = order.invoice_number || `INV-${order.id}`;
@@ -151,7 +151,7 @@ class EmailService {
           ${item.quantity || 1}
         </td>
         <td style="padding: 12px 0; text-align: right; color: #0f172a; font-size: 14px; font-weight: 700;">
-          ₹${(parseFloat(item.total || (item.unit_price * item.quantity)) || 0).toLocaleString('en-IN')}
+          ₹${(parseFloat(item.total || item.total_amount || (item.unit_price * item.quantity)) || 0).toLocaleString('en-IN')}
         </td>
       </tr>
     `).join('');
@@ -163,6 +163,29 @@ class EmailService {
       hour: '2-digit',
       minute: '2-digit'
     });
+
+    const estDeliveryText = estimatedDelivery || (newStatus === 'DELIVERED' ? 'Successfully Delivered' : 'Will be updated shortly once dispatched');
+    const estimatedDeliverySection = `
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin: 18px 0; display: table; width: 100%; box-sizing: border-box;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="vertical-align: middle;">
+              <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; display: block; margin-bottom: 2px;">
+                Estimated Delivery
+              </span>
+              <strong style="font-size: 14px; color: #0f172a;">
+                ${estDeliveryText}
+              </strong>
+            </td>
+            <td align="right" style="vertical-align: middle;">
+              <span style="display: inline-block; font-size: 12px; font-weight: 600; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 6px;">
+                🚚 Doorstep Dispatch
+              </span>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `;
 
     const courierSection = (courierName || trackingNumber) ? `
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
@@ -251,6 +274,7 @@ class EmailService {
                 <!-- Content Body -->
                 <tr>
                   <td style="padding: 28px 32px;">
+                    ${estimatedDeliverySection}
                     ${courierSection}
                     ${notesSection}
 
@@ -331,7 +355,7 @@ class EmailService {
   /**
    * Main order status trigger called on every status update
    */
-  async sendOrderStatusNotification({ order, tenantInfo, newStatus, trackingNumber, courierName, notes }) {
+  async sendOrderStatusNotification({ order, tenantInfo, newStatus, trackingNumber, courierName, estimatedDelivery, notes }) {
     const customerEmail = order.customer_email || order.email;
     if (!customerEmail) {
       console.log(`[EmailService] Order #${order.invoice_number} has no customer email recorded; notification skipped.`);
@@ -357,6 +381,7 @@ class EmailService {
       newStatus,
       trackingNumber,
       courierName,
+      estimatedDelivery,
       notes
     });
 
