@@ -1813,6 +1813,86 @@
   margin-left: 0.25rem;
 }
 
+.modern-phone-field {
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.modern-phone-field:focus-within {
+  border-color: var(--store-primary, #982A86) !important;
+  box-shadow: 0 0 0 3px rgba(152, 42, 134, 0.14) !important;
+  background: #ffffff !important;
+}
+
+.modern-phone-prefix {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  padding: 0 0.8rem !important;
+  background: #f8fafc !important;
+  color: #334155 !important;
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  user-select: none !important;
+  flex-shrink: 0 !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+
+.modern-phone-flag {
+  font-size: 1.05rem !important;
+  line-height: 1 !important;
+}
+
+.modern-phone-code {
+  letter-spacing: 0.02em !important;
+  color: #1e293b !important;
+}
+
+.modern-phone-field input {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0.6rem 0.85rem !important;
+  font-size: 0.88rem !important;
+  color: #0f172a !important;
+  min-width: 0 !important;
+  font-family: inherit !important;
+  height: 40px !important;
+  box-sizing: border-box !important;
+}
+
+.modern-phone-field input::placeholder {
+  color: #94a3b8 !important;
+  font-weight: 400 !important;
+}
+
+.modern-phone-field.modern-phone-field-auth {
+  border-radius: 12px !important;
+  min-height: 44px !important;
+}
+
+.modern-phone-field.modern-phone-field-auth .modern-phone-prefix {
+  height: 44px !important;
+  line-height: 44px !important;
+}
+
+.modern-phone-field.modern-phone-field-auth input {
+  height: 44px !important;
+}
+
 .input-phone-wrap {
   position: relative;
   display: flex;
@@ -1831,8 +1911,9 @@
   gap: 0.25rem;
 }
 
+.input-with-icon.input-phone-wrap input,
 .input-phone-wrap input {
-  padding-left: 4.2rem !important;
+  padding-left: 4.8rem !important;
 }
 
 .checkout-address-group textarea {

@@ -133,6 +133,7 @@ export default function PublicStorePage() {
   // Customer Account & Authentication State (Tenant Scoped)
   const [customerUser, setCustomerUser] = useState(null);
   const [customerToken, setCustomerToken] = useState('');
+  const [pendingAddToCartProduct, setPendingAddToCartProduct] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('LOGIN'); // 'LOGIN' | 'REGISTER' | 'OTP'
   const [authFormData, setAuthFormData] = useState({
@@ -343,7 +344,16 @@ export default function PublicStorePage() {
   };
 
   // Cart Actions
-  const addToCart = (product) => {
+  const addToCart = (product, explicitUser = null) => {
+    const activeCustomer = explicitUser || customerUser;
+    if (!activeCustomer) {
+      setPendingAddToCartProduct(product);
+      toast.info('Please sign in or create an account to start shopping and add items to your cart.');
+      setAuthModalMode('LOGIN');
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     const isAvailable = isProductInStock(product);
     if (!isAvailable) {
       toast.error(`"${product.name}" is currently out of stock.`, { autoClose: 2000 });
@@ -586,6 +596,10 @@ export default function PublicStorePage() {
         pincode: ''
       });
       toast.success(`Account registered with saved delivery address! Welcome to ${storeTitle}, ${data.customer.name}!`);
+      if (pendingAddToCartProduct) {
+        addToCart(pendingAddToCartProduct, data.customer);
+        setPendingAddToCartProduct(null);
+      }
     } catch (err) {
       const errorMsg = err?.response?.data?.message || err?.message || 'Registration failed. Mobile may already be registered.';
       setAuthError(errorMsg);
@@ -632,6 +646,10 @@ export default function PublicStorePage() {
       setIsAuthModalOpen(false);
       setAuthFormData({ name: '', phone: '', email: '', password: '', confirmPassword: '' });
       toast.success(`Welcome back, ${data.customer.name}!`);
+      if (pendingAddToCartProduct) {
+        addToCart(pendingAddToCartProduct, data.customer);
+        setPendingAddToCartProduct(null);
+      }
     } catch (err) {
       const errorMsg = err?.response?.data?.message || err?.message || 'Invalid credentials. Please verify your phone/email and password.';
       setAuthError(errorMsg);
@@ -650,6 +668,8 @@ export default function PublicStorePage() {
     } catch (e) {}
     setCustomerUser(null);
     setCustomerToken('');
+    setCart([]);
+    setPendingAddToCartProduct(null);
     setIsCustomerAccountOpen(false);
     setIsAccountDropdownOpen(false);
     toast.info('Logged out from store account');
@@ -2137,7 +2157,15 @@ export default function PublicStorePage() {
 
             {navbarConfig.showCart !== false && (
               <button
-                onClick={() => setIsCartOpen(true)}
+                onClick={() => {
+                  if (!customerUser) {
+                    toast.info('Please sign in or create an account to view and manage your cart.');
+                    setAuthModalMode('LOGIN');
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  setIsCartOpen(true);
+                }}
                 className="btn-clean-cart"
                 aria-label="View Shopping Bag"
               >
@@ -2700,8 +2728,11 @@ export default function PublicStorePage() {
                         <div className="clean-form-grid">
                           <div className="clean-input-group">
                             <label>Mobile Number <span className="req-star">*</span></label>
-                            <div className="input-with-icon input-phone-wrap">
-                              <span className="input-prefix-tag">🇮🇳 +91</span>
+                            <div className="modern-phone-field">
+                              <div className="modern-phone-prefix">
+                                <span className="modern-phone-flag">🇮🇳</span>
+                                <span className="modern-phone-code">+91</span>
+                              </div>
                               <input
                                 type="tel"
                                 maxLength={10}
@@ -2841,8 +2872,11 @@ export default function PublicStorePage() {
                                   </div>
                                   <div className="clean-input-group">
                                     <label>Contact Mobile <span className="req-star">*</span></label>
-                                    <div className="input-with-icon input-phone-wrap">
-                                      <span className="input-prefix-tag">🇮🇳 +91</span>
+                                    <div className="modern-phone-field">
+                                      <div className="modern-phone-prefix">
+                                        <span className="modern-phone-flag">🇮🇳</span>
+                                        <span className="modern-phone-code">+91</span>
+                                      </div>
                                       <input
                                         type="tel"
                                         maxLength={10}
@@ -3405,32 +3439,34 @@ export default function PublicStorePage() {
                   {authModalMode === 'LOGIN' ? 'Mobile Number or Email' : 'Mobile Number'}{' '}
                   <span className="req-star">*</span>
                 </label>
-                <div className="auth-field-input-wrap">
-                  {authModalMode === 'LOGIN' ? (
+                {authModalMode === 'LOGIN' ? (
+                  <div className="auth-field-input-wrap">
                     <User size={16} className="auth-field-icon" />
-                  ) : (
-                    <span className="auth-prefix-tag">🇮🇳 +91</span>
-                  )}
-                  <input
-                    type={authModalMode === 'LOGIN' ? 'text' : 'tel'}
-                    required
-                    maxLength={authModalMode === 'LOGIN' ? 60 : 10}
-                    placeholder={
-                      authModalMode === 'LOGIN'
-                        ? '10-digit mobile or email address'
-                        : '10-digit mobile number'
-                    }
-                    value={authFormData.phone}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (authModalMode === 'REGISTER') {
-                        setAuthFormData({ ...authFormData, phone: val.replace(/\D/g, '').slice(0, 10) });
-                      } else {
-                        setAuthFormData({ ...authFormData, phone: val });
-                      }
-                    }}
-                  />
-                </div>
+                    <input
+                      type="text"
+                      required
+                      maxLength={60}
+                      placeholder="10-digit mobile or email address"
+                      value={authFormData.phone}
+                      onChange={(e) => setAuthFormData({ ...authFormData, phone: e.target.value })}
+                    />
+                  </div>
+                ) : (
+                  <div className="modern-phone-field modern-phone-field-auth">
+                    <div className="modern-phone-prefix">
+                      <span className="modern-phone-flag">🇮🇳</span>
+                      <span className="modern-phone-code">+91</span>
+                    </div>
+                    <input
+                      type="tel"
+                      required
+                      maxLength={10}
+                      placeholder="10-digit mobile number"
+                      value={authFormData.phone}
+                      onChange={(e) => setAuthFormData({ ...authFormData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                    />
+                  </div>
+                )}
               </div>
 
               {authModalMode === 'REGISTER' && (
