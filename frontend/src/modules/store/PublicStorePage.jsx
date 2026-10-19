@@ -77,6 +77,24 @@ export const WhatsAppBrandIcon = ({ size = 18, color = '#25D366', className = ''
   </svg>
 );
 
+// Official Crisp India Vector Flag SVG (Never breaks into letters on Windows)
+export const IndiaFlagIcon = ({ width = 16, height = 11, className = '' }) => (
+  <svg
+    width={width}
+    height={height}
+    viewBox="0 0 30 20"
+    className={className}
+    style={{ borderRadius: 2, flexShrink: 0, boxShadow: '0 0 1px rgba(0,0,0,0.25)' }}
+  >
+    <rect width="30" height="20" fill="#ffffff" />
+    <rect width="30" height="6.67" fill="#FF9933" />
+    <rect y="13.33" width="30" height="6.67" fill="#138808" />
+    <circle cx="15" cy="10" r="2.5" fill="#000080" />
+    <circle cx="15" cy="10" r="2" fill="#ffffff" />
+    <circle cx="15" cy="10" r="0.7" fill="#000080" />
+  </svg>
+);
+
 const SORT_OPTIONS = [
   { value: 'DEFAULT', label: 'Featured' },
   { value: 'PRICE_LOW', label: 'Price: Low to High' },
@@ -2730,13 +2748,13 @@ export default function PublicStorePage() {
                             <label>Mobile Number <span className="req-star">*</span></label>
                             <div className="modern-phone-field">
                               <div className="modern-phone-prefix">
-                                <span className="modern-phone-flag">🇮🇳</span>
+                                <span className="modern-phone-flag"><IndiaFlagIcon /></span>
                                 <span className="modern-phone-code">+91</span>
                               </div>
                               <input
                                 type="tel"
                                 maxLength={10}
-                                placeholder="10-digit number"
+                                placeholder="Mobile number"
                                 required
                                 value={customer.phone}
                                 onChange={(e) => setCustomer({ ...customer, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
@@ -2874,13 +2892,13 @@ export default function PublicStorePage() {
                                     <label>Contact Mobile <span className="req-star">*</span></label>
                                     <div className="modern-phone-field">
                                       <div className="modern-phone-prefix">
-                                        <span className="modern-phone-flag">🇮🇳</span>
+                                        <span className="modern-phone-flag"><IndiaFlagIcon /></span>
                                         <span className="modern-phone-code">+91</span>
                                       </div>
                                       <input
                                         type="tel"
                                         maxLength={10}
-                                        placeholder="10-digit mobile"
+                                        placeholder="Mobile number"
                                         required
                                         value={altAddressForm.phone || customerUser.phone}
                                         onChange={(e) => setAltAddressForm({ ...altAddressForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
@@ -3455,14 +3473,14 @@ export default function PublicStorePage() {
                     <label>Mobile Number <span className="req-star">*</span></label>
                     <div className="modern-phone-field modern-phone-field-auth">
                       <div className="modern-phone-prefix">
-                        <span className="modern-phone-flag">🇮🇳</span>
+                        <span className="modern-phone-flag"><IndiaFlagIcon /></span>
                         <span className="modern-phone-code">+91</span>
                       </div>
                       <input
                         type="tel"
                         required
                         maxLength={10}
-                        placeholder="10-digit mobile"
+                        placeholder="Mobile number"
                         value={authFormData.phone}
                         onChange={(e) => setAuthFormData({ ...authFormData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                       />
