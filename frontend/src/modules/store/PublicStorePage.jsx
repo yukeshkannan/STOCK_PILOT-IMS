@@ -3356,7 +3356,7 @@ export default function PublicStorePage() {
       {/* Customer Authentication Modal (Login / Register) */}
       {isAuthModalOpen && (
         <div className="clean-modal-overlay" onClick={() => setIsAuthModalOpen(false)}>
-          <div className="clean-customer-auth-modal" onClick={(e) => e.stopPropagation()}>
+          <div className={`clean-customer-auth-modal ${authModalMode === 'REGISTER' ? 'modal-register-mode' : ''}`} onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={() => {
@@ -3371,14 +3371,14 @@ export default function PublicStorePage() {
 
             <div className="customer-auth-header">
               <div className="customer-auth-brand-badge" style={{ background: `${primaryColor}15`, color: primaryColor }}>
-                <Store size={24} />
+                <Store size={22} />
               </div>
               <h3 className="auth-header-title">
                 {authModalMode === 'LOGIN' ? `Welcome Back` : `Create Your Account`}
               </h3>
               <p className="auth-header-sub">
                 {authModalMode === 'LOGIN'
-                  ? `Sign in to track your orders, access fast checkout, and reorder from ${storeTitle}.`
+                  ? `Sign in to track orders, access fast checkout, and reorder from ${storeTitle}.`
                   : `Join ${storeTitle} to save delivery addresses and access live order tracking.`}
               </p>
             </div>
@@ -3434,12 +3434,9 @@ export default function PublicStorePage() {
                 </div>
               )}
 
-              <div className="auth-field-group">
-                <label>
-                  {authModalMode === 'LOGIN' ? 'Mobile Number or Email' : 'Mobile Number'}{' '}
-                  <span className="req-star">*</span>
-                </label>
-                {authModalMode === 'LOGIN' ? (
+              {authModalMode === 'LOGIN' ? (
+                <div className="auth-field-group">
+                  <label>Mobile Number or Email <span className="req-star">*</span></label>
                   <div className="auth-field-input-wrap">
                     <User size={16} className="auth-field-icon" />
                     <input
@@ -3451,35 +3448,38 @@ export default function PublicStorePage() {
                       onChange={(e) => setAuthFormData({ ...authFormData, phone: e.target.value })}
                     />
                   </div>
-                ) : (
-                  <div className="modern-phone-field modern-phone-field-auth">
-                    <div className="modern-phone-prefix">
-                      <span className="modern-phone-flag">🇮🇳</span>
-                      <span className="modern-phone-code">+91</span>
+                </div>
+              ) : (
+                <div className="auth-field-row auth-field-row-2col">
+                  <div className="auth-field-group">
+                    <label>Mobile Number <span className="req-star">*</span></label>
+                    <div className="modern-phone-field modern-phone-field-auth">
+                      <div className="modern-phone-prefix">
+                        <span className="modern-phone-flag">🇮🇳</span>
+                        <span className="modern-phone-code">+91</span>
+                      </div>
+                      <input
+                        type="tel"
+                        required
+                        maxLength={10}
+                        placeholder="10-digit mobile"
+                        value={authFormData.phone}
+                        onChange={(e) => setAuthFormData({ ...authFormData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                      />
                     </div>
-                    <input
-                      type="tel"
-                      required
-                      maxLength={10}
-                      placeholder="10-digit mobile number"
-                      value={authFormData.phone}
-                      onChange={(e) => setAuthFormData({ ...authFormData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                    />
                   </div>
-                )}
-              </div>
 
-              {authModalMode === 'REGISTER' && (
-                <div className="auth-field-group">
-                  <label>Email Address <span className="opt-tag">(Optional)</span></label>
-                  <div className="auth-field-input-wrap">
-                    <Mail size={16} className="auth-field-icon" />
-                    <input
-                      type="email"
-                      placeholder="name@example.com (for tax invoice)"
-                      value={authFormData.email}
-                      onChange={(e) => setAuthFormData({ ...authFormData, email: e.target.value })}
-                    />
+                  <div className="auth-field-group">
+                    <label>Email Address <span className="opt-tag">(Optional)</span></label>
+                    <div className="auth-field-input-wrap">
+                      <Mail size={16} className="auth-field-icon" />
+                      <input
+                        type="email"
+                        placeholder="name@mail.com"
+                        value={authFormData.email}
+                        onChange={(e) => setAuthFormData({ ...authFormData, email: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -3488,10 +3488,10 @@ export default function PublicStorePage() {
                 <>
                   <div className="auth-address-divider">
                     <div className="auth-address-subheading">
-                      <MapPin size={15} style={{ color: primaryColor }} />
+                      <MapPin size={14} style={{ color: primaryColor }} />
                       <span>Primary Delivery Address</span>
                     </div>
-                    <span className="auth-address-sub-note">Doorstep shipping address saved to your account</span>
+                    <span className="auth-address-sub-note">Default doorstep shipping destination</span>
                   </div>
 
                   <div className="auth-field-group">
@@ -3540,48 +3540,72 @@ export default function PublicStorePage() {
                 </>
               )}
 
-              <div className="auth-field-group">
-                <label>Password <span className="req-star">*</span></label>
-                <div className="auth-field-input-wrap">
-                  <Lock size={16} className="auth-field-icon" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    placeholder={authModalMode === 'REGISTER' ? 'At least 6 characters' : 'Enter your password'}
-                    value={authFormData.password}
-                    onChange={(e) => setAuthFormData({ ...authFormData, password: e.target.value })}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="btn-auth-pw-toggle"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {authModalMode === 'REGISTER' && (
+              {authModalMode === 'LOGIN' ? (
                 <div className="auth-field-group">
-                  <label>Confirm Password <span className="req-star">*</span></label>
+                  <label>Password <span className="req-star">*</span></label>
                   <div className="auth-field-input-wrap">
                     <Lock size={16} className="auth-field-icon" />
                     <input
-                      type={showConfirmPassword ? 'text' : 'password'}
+                      type={showPassword ? 'text' : 'password'}
                       required
-                      placeholder="Re-enter your password"
-                      value={authFormData.confirmPassword}
-                      onChange={(e) => setAuthFormData({ ...authFormData, confirmPassword: e.target.value })}
+                      placeholder="Enter your password"
+                      value={authFormData.password}
+                      onChange={(e) => setAuthFormData({ ...authFormData, password: e.target.value })}
                     />
                     <button
                       type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() => setShowPassword(!showPassword)}
                       className="btn-auth-pw-toggle"
-                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="auth-field-row auth-pw-grid">
+                  <div className="auth-field-group">
+                    <label>Password <span className="req-star">*</span></label>
+                    <div className="auth-field-input-wrap">
+                      <Lock size={16} className="auth-field-icon" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        placeholder="At least 6 chars"
+                        value={authFormData.password}
+                        onChange={(e) => setAuthFormData({ ...authFormData, password: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="btn-auth-pw-toggle"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="auth-field-group">
+                    <label>Confirm Password <span className="req-star">*</span></label>
+                    <div className="auth-field-input-wrap">
+                      <Lock size={16} className="auth-field-icon" />
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        required
+                        placeholder="Re-enter password"
+                        value={authFormData.confirmPassword}
+                        onChange={(e) => setAuthFormData({ ...authFormData, confirmPassword: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="btn-auth-pw-toggle"
+                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

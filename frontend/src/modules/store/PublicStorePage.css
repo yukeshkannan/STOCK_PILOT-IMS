@@ -2099,13 +2099,15 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
   z-index: 110;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 1rem;
+  overflow-y: auto;
+  padding: 1.5rem 1rem;
+  box-sizing: border-box;
 }
 
 .clean-modal-card {
@@ -4164,14 +4166,38 @@
 .clean-customer-auth-modal {
   position: relative;
   background: #ffffff;
-  border-radius: 24px;
+  border-radius: 20px;
   width: 100%;
   max-width: 440px;
-  padding: 2.25rem 2rem;
+  margin: auto;
+  padding: 1.6rem 1.75rem 1.4rem 1.75rem;
   box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.25);
   border: 1px solid rgba(226, 232, 240, 0.9);
   animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
+  max-height: calc(100vh - 2.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.clean-customer-auth-modal.modal-register-mode {
+  max-width: 520px;
+  padding: 1.35rem 1.75rem 1.25rem 1.75rem;
+}
+
+.clean-customer-auth-modal::-webkit-scrollbar {
+  width: 5px;
+}
+.clean-customer-auth-modal::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+.clean-customer-auth-modal::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+.clean-customer-auth-modal::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 @keyframes modalPopIn {
@@ -4181,54 +4207,54 @@
 
 .customer-auth-header {
   text-align: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.9rem;
 }
 
 .customer-auth-brand-badge {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 0.85rem auto;
+  margin: 0 auto 0.5rem auto;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .auth-header-title {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: #0f172a;
-  margin: 0 0 0.35rem 0;
+  margin: 0 0 0.25rem 0;
   letter-spacing: -0.02em;
 }
 
 .auth-header-sub {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: #64748b;
   margin: 0;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 /* Luxury Segmented Pill Switcher */
 .auth-mode-pill-switcher {
   display: flex;
   background: #f1f5f9;
-  padding: 4px;
-  border-radius: 12px;
-  margin-bottom: 1.25rem;
-  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  margin-bottom: 0.85rem;
+  gap: 3px;
 }
 
 .auth-tab-pill {
   flex: 1;
   background: transparent;
   border: none;
-  padding: 0.6rem 0.5rem;
-  font-size: 0.84rem;
+  padding: 0.48rem 0.5rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: #64748b;
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -4247,24 +4273,24 @@
   background: #fef2f2;
   border: 1px solid #fecaca;
   color: #b91c1c;
-  padding: 0.65rem 0.85rem;
-  border-radius: 10px;
-  font-size: 0.82rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 9px;
+  font-size: 0.8rem;
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   line-height: 1.35;
 }
 
 .auth-error-icon {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   background: #ef4444;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
   flex-shrink: 0;
 }
@@ -4272,20 +4298,44 @@
 .customer-auth-form {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.65rem;
 }
 
 .auth-field-group {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.25rem;
 }
 
 .auth-field-group label {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   color: #334155;
   letter-spacing: 0.01em;
+}
+
+.auth-field-row {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.auth-field-row-2col {
+  grid-template-columns: 1.25fr 1fr;
+}
+
+.auth-pw-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 520px) {
+  .clean-customer-auth-modal {
+    padding: 1.25rem 1rem !important;
+    border-radius: 16px !important;
+  }
+  .auth-field-row-2col,
+  .auth-pw-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 .auth-field-input-wrap {
@@ -4313,10 +4363,11 @@
 
 .auth-field-input-wrap input {
   width: 100%;
-  padding: 0.7rem 2.45rem 0.7rem 2.45rem;
-  border-radius: 12px;
+  height: 40px;
+  padding: 0.55rem 2.2rem;
+  border-radius: 10px;
   border: 1.5px solid #cbd5e1;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   color: #0f172a;
   outline: none;
   box-sizing: border-box;
@@ -4325,8 +4376,8 @@
 }
 
 .auth-field-input-wrap input:focus {
-  border-color: var(--store-primary, #4f46e5);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  border-color: var(--store-primary, #982A86);
+  box-shadow: 0 0 0 3px rgba(152, 42, 134, 0.12);
   background: #ffffff;
 }
 
@@ -4336,7 +4387,7 @@
 
 .btn-auth-pw-toggle {
   position: absolute;
-  right: 0.75rem;
+  right: 0.65rem;
   background: transparent;
   border: none;
   color: #94a3b8;
@@ -4359,15 +4410,15 @@
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  height: 46px;
+  height: 42px;
   padding: 0 1rem;
-  border-radius: 12px;
+  border-radius: 10px;
   border: none;
   color: #ffffff;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 800;
   cursor: pointer;
-  margin-top: 0.4rem;
+  margin-top: 0.35rem;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
   transition: all 0.2s ease;
 }
@@ -4384,11 +4435,11 @@
 
 .auth-footer-toggle {
   text-align: center;
-  margin-top: 0.4rem;
+  margin-top: 0.35rem;
 }
 
 .auth-footer-toggle p {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: #64748b;
   margin: 0;
 }
@@ -5759,27 +5810,29 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .auth-address-divider {
-  margin: 1.1rem 0 0.75rem 0;
-  padding-top: 0.9rem;
-  border-top: 1px dashed #e2e8f0;
+  margin: 0.35rem 0 0.15rem 0;
+  padding: 0.45rem 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .auth-address-subheading {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.86rem;
+  gap: 0.35rem;
+  font-size: 0.8rem;
   font-weight: 800;
   color: #0f172a;
 }
 
 .auth-address-sub-note {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: #64748b;
-  margin-left: 1.45rem;
+  margin: 0;
 }
 
 /* Amazon-Style Delivery Section Wrapper */
