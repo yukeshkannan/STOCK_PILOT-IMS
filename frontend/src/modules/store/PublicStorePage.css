@@ -6040,3 +6040,107 @@
   border-radius: 12px;
 }
 
+/* WhatsApp Admin Notification Card in Success Modal */
+.whatsapp-admin-notify-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1.5px solid #86efac;
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  margin: 1rem 0;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);
+}
+
+.whatsapp-notify-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.whatsapp-notify-meta {
+  flex: 1;
+  text-align: left;
+}
+
+.whatsapp-notify-meta strong {
+  display: block;
+  font-size: 0.86rem;
+  color: #14532d;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.whatsapp-notify-meta span {
+  display: block;
+  font-size: 0.74rem;
+  color: #166534;
+  line-height: 1.35;
+}
+
+.btn-whatsapp-notify-admin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #25D366;
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.6rem 1rem;
+  border-radius: 9px;
+  text-decoration: none;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-whatsapp-notify-admin:hover {
+  background: #1eb855;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 211, 102, 0.45);
+}
+
+.btn-clean-track-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-clean-track-order:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+@media (max-width: 640px) {
+  .whatsapp-admin-notify-banner {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  .whatsapp-notify-meta {
+    text-align: center;
+  }
+  .btn-whatsapp-notify-admin {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

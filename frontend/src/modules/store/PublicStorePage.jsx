@@ -3383,6 +3383,28 @@ export default function PublicStorePage() {
               <div><span>Total:</span> <strong>₹{parseFloat(orderSuccess.grandTotal || cartGrandTotal).toLocaleString('en-IN')}</strong></div>
             </div>
 
+            {/* Instant WhatsApp Notification to Admin / Store Support */}
+            {(orderSuccess.adminWhatsAppUrl || (whatsappUrl && orderSuccess.invoiceNumber)) && (
+              <div className="whatsapp-admin-notify-banner">
+                <div className="whatsapp-notify-icon">
+                  <WhatsAppBrandIcon size={24} color="#25D366" />
+                </div>
+                <div className="whatsapp-notify-meta">
+                  <strong>Instant WhatsApp Confirmation</strong>
+                  <span>Send direct order alert to store admin on WhatsApp for priority dispatch.</span>
+                </div>
+                <a
+                  href={orderSuccess.adminWhatsAppUrl || (whatsappUrl ? `${whatsappUrl}&text=${encodeURIComponent(`🛍️ Order Placed: #${orderSuccess.invoiceNumber}. Please confirm dispatch.`)}` : '#')}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-whatsapp-notify-admin"
+                >
+                  <WhatsAppBrandIcon size={16} color="#ffffff" />
+                  <span>Notify via WhatsApp</span>
+                </a>
+              </div>
+            )}
+
             <div className="clean-success-actions">
               <Link
                 to={orderSuccess.ebillUrl || `/e-bill/${orderSuccess.invoiceNumber}`}
@@ -3391,6 +3413,17 @@ export default function PublicStorePage() {
               >
                 <FileText size={16} /> View Digital Invoice
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  const inv = orderSuccess.invoiceNumber;
+                  setOrderSuccess(null);
+                  handleOpenTrackingModal(inv);
+                }}
+                className="btn-clean-track-order"
+              >
+                <Truck size={16} /> Track Order Live
+              </button>
               <button
                 type="button"
                 onClick={() => setOrderSuccess(null)}

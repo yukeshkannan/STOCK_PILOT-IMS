@@ -574,6 +574,33 @@ class SalesService {
       }
     }
 
+    // Construct Instant WhatsApp notification link for Store Admin
+    let adminPhone = tenantInfo.phone;
+    if (!adminPhone) {
+      try {
+        const fullTenant = await this.resolveTenantById(tenantId);
+        adminPhone = fullTenant?.phone;
+      } catch (e) {}
+    }
+
+    const cleanAdminPhone = adminPhone ? String(adminPhone).replace(/\D/g, '').slice(-10) : '';
+    const itemSummary = (items || []).map(i => `• ${i.name || i.productName || 'Item'} (Qty: ${i.quantity || 1}) - ₹${((i.price || i.unitPrice || 0) * (i.quantity || 1)).toLocaleString('en-IN')}`).join('\n');
+    const paymentLabel = paymentMethod === 'UPI' ? 'UPI / Online' : 'Cash on Delivery (COD)';
+
+    const adminWhatsAppMsg = `🛍️ *NEW ORDER RECEIVED - ${tenantInfo.companyName || 'StockPilot Store'}*\n\n` +
+      `*Order #:* ${sale.invoice_number}\n` +
+      `*Customer:* ${customerName || 'Online Customer'} (+91 ${customerPhone || ''})\n` +
+      `*Amount:* ₹${Number(sale.grand_total || 0).toLocaleString('en-IN')} (${paymentLabel})\n` +
+      `*Delivery Address:* ${customerAddress || 'Store Counter Pickup'}\n` +
+      `*Fulfillment Warehouse:* ${warehouseName || 'Main Store Outlet'}\n\n` +
+      `*Items in Order:*\n${itemSummary}\n\n` +
+      `📦 *Manage Order Fulfillment:* /sales\n` +
+      `📄 *Digital E-Bill:* /e-bill/${sale.invoice_number}`;
+
+    const adminWhatsAppUrl = cleanAdminPhone
+      ? `https://wa.me/91${cleanAdminPhone}?text=${encodeURIComponent(adminWhatsAppMsg)}`
+      : null;
+
     return {
       success: true,
       saleId: sale.id,
@@ -583,7 +610,10 @@ class SalesService {
       taxAmount: sale.tax_amount,
       customerName: sale.customer_name,
       customerEmail: resolvedCustomerEmail,
-      ebillUrl: `/e-bill/${sale.invoice_number}`
+      ebillUrl: `/e-bill/${sale.invoice_number}`,
+      adminWhatsAppUrl,
+      adminWhatsAppMsg,
+      adminPhone: cleanAdminPhone || null
     };
   }
 

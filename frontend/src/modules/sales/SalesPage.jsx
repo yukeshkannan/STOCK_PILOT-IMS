@@ -38,8 +38,12 @@ import {
   Clock,
   Navigation,
   CheckSquare,
-  Send
+  Send,
+  Copy,
+  Sparkles
 } from 'lucide-react';
+import './SalesFulfillment.css';
+import { WhatsAppBrandIcon } from '../store/PublicStorePage';
 
 export default function SalesPage() {
   const { user } = useSelector((state) => state.auth);
@@ -747,6 +751,19 @@ export default function SalesPage() {
                             >
                               <Truck size={13} /> Status
                             </button>
+                            {s.customer_phone && (
+                              <a
+                                href={`https://wa.me/91${String(s.customer_phone).replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
+                                  `Hello ${s.customer_name || 'Customer'},\n\nUpdate on your Order #${s.invoice_number} from ${user?.companyName || user?.company_name || 'StockPilot'}:\nStatus: *${s.order_status || 'PLACED'}*\nAmount: ₹${parseFloat(s.grand_total || 0).toLocaleString('en-IN')}\n\nTrack your order: https://app.stockpilot.store/store/${user?.company_code || ''}?invoice=${s.invoice_number}`
+                                )}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="btn-whatsapp-table-action"
+                                title="Send live order update to customer on WhatsApp"
+                              >
+                                <WhatsAppBrandIcon size={12} color="#15803d" /> WhatsApp
+                              </a>
+                            )}
                             {s.payment_status !== 'PAID' && (
                               <button
                                 onClick={() => handleOpenCollectPayment(s)}
@@ -2604,76 +2621,76 @@ export default function SalesPage() {
           onClose={() => {
             if (!isUpdatingStatus) setOrderStatusModal(null);
           }}
-          title={`Order Fulfillment — #${orderStatusModal.invoice_number}`}
-          maxWidth="640px"
+          title={`Order Fulfillment & Logistics Hub — #${orderStatusModal.invoice_number}`}
+          maxWidth="700px"
         >
-          <form onSubmit={handleUpdateOrderStatus} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Header Order Brief */}
-            <div
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '1.1rem 1.25rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '0.85rem'
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '6px' }}>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--primary, #982A86)', fontSize: '0.95rem', background: '#fdf2fb', padding: '2px 8px', borderRadius: '6px', border: '1px solid #f3c7ec' }}>
-                    {orderStatusModal.invoice_number}
+          <form onSubmit={handleUpdateOrderStatus} className="fulfillment-modal-body">
+            {/* 1. Header Order Brief */}
+            <div className="fulfillment-order-brief">
+              <div className="fulfillment-brief-left">
+                <div className="fulfillment-invoice-row">
+                  <span className="fulfillment-inv-pill">
+                    #{orderStatusModal.invoice_number}
                   </span>
-                  <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>
-                    {orderStatusModal.customer_name}
+                  <strong className="fulfillment-customer-name">
+                    {orderStatusModal.customer_name || 'Online Customer'}
+                  </strong>
+                  <span className={`fulfillment-pay-status-pill ${orderStatusModal.payment_status === 'PAID' ? 'paid' : 'unpaid'}`}>
+                    {orderStatusModal.payment_status === 'PAID' ? <CheckCircle2 size={11} /> : <Clock size={11} />}
+                    {orderStatusModal.payment_status || 'UNPAID'} ({orderStatusModal.payment_method || 'CASH'})
                   </span>
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+
+                <div className="fulfillment-meta-row">
                   {orderStatusModal.customer_phone && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Phone size={12} color="#64748b" /> {orderStatusModal.customer_phone}
+                    <span className="fulfillment-meta-item">
+                      <Phone size={12} color="#64748b" /> +91 {orderStatusModal.customer_phone}
                     </span>
                   )}
                   {orderStatusModal.warehouse_name && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#0284c7', background: '#f0f9ff', padding: '1px 7px', borderRadius: '4px', fontWeight: 600 }}>
-                      <Building2 size={12} color="#0284c7" /> {orderStatusModal.warehouse_name}
+                    <span className="fulfillment-wh-pill">
+                      <Building2 size={12} /> {orderStatusModal.warehouse_name}
                     </span>
                   )}
+                  <span className="fulfillment-meta-item">
+                    <Calendar size={12} color="#64748b" />
+                    {new Date(orderStatusModal.sale_date || orderStatusModal.created_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
                 </div>
+
                 {orderStatusModal.delivery_address && (
-                  <div style={{ fontSize: '0.76rem', color: '#475569', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <MapPin size={13} color="#94a3b8" /> {orderStatusModal.delivery_address}
+                  <div className="fulfillment-addr-row">
+                    <MapPin size={13} color="var(--primary, #982A86)" style={{ flexShrink: 0 }} />
+                    <span>{orderStatusModal.delivery_address}</span>
                   </div>
                 )}
               </div>
 
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.5px', display: 'block' }}>
-                  Order Total
-                </span>
-                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
+              <div className="fulfillment-brief-right">
+                <span className="fulfillment-total-label">Grand Total</span>
+                <div className="fulfillment-total-amount">
                   ₹{parseFloat(orderStatusModal.grand_total || 0).toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
 
-            {/* Status Selection Segmented Pipeline */}
+            {/* 2. Interactive Fulfillment Stage Stepper */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                Fulfillment Stage <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '0.45rem' }}>
+              <div className="fulfillment-section-title">
+                <label>Fulfillment Pipeline Stage</label>
+                <span className="fulfillment-current-stage-tag">
+                  Current: {orderStatusForm.orderStatus}
+                </span>
+              </div>
+              <div className="fulfillment-stage-grid">
                 {[
-                  { value: 'PLACED', label: 'Placed', icon: Clock, color: '#3b82f6', bg: '#eff6ff' },
-                  { value: 'CONFIRMED', label: 'Confirmed', icon: CheckSquare, color: '#4f46e5', bg: '#eef2ff' },
-                  { value: 'PACKED', label: 'Packed & Ready', icon: Package, color: '#d97706', bg: '#fffbeb' },
-                  { value: 'SHIPPED', label: 'Dispatched', icon: Truck, color: 'var(--primary, #982A86)', bg: '#fdf2fb' },
-                  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', icon: Navigation, color: '#ea580c', bg: '#fff7ed' },
-                  { value: 'DELIVERED', label: 'Delivered', icon: CheckCircle2, color: '#10b981', bg: '#f0fdf4' },
-                  { value: 'CANCELLED', label: 'Cancelled', icon: RotateCcw, color: '#ef4444', bg: '#fef2f2' }
+                  { value: 'PLACED', label: 'Placed', desc: 'Order logged', icon: Clock, color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
+                  { value: 'CONFIRMED', label: 'Confirmed', desc: 'Stock reserved', icon: CheckSquare, color: '#4f46e5', bg: '#eef2ff', border: '#c7d2fe' },
+                  { value: 'PACKED', label: 'Packed & Ready', desc: 'Sealed & tagged', icon: Package, color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+                  { value: 'SHIPPED', label: 'Dispatched', desc: 'Handed to courier', icon: Truck, color: 'var(--primary, #982A86)', bg: '#fdf2fb', border: '#f3c7ec' },
+                  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', desc: 'Agent on route', icon: Navigation, color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
+                  { value: 'DELIVERED', label: 'Delivered', desc: 'Handed to customer', icon: CheckCircle2, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
+                  { value: 'CANCELLED', label: 'Cancelled', desc: 'Void & restock', icon: RotateCcw, color: '#ef4444', bg: '#fef2f2', border: '#fecaca' }
                 ].map((st) => {
                   const isSelected = orderStatusForm.orderStatus === st.value;
                   const IconComp = st.icon;
@@ -2681,189 +2698,217 @@ export default function SalesPage() {
                     <button
                       key={st.value}
                       type="button"
-                      onClick={() => setOrderStatusForm(prev => ({ ...prev, orderStatus: st.value }))}
+                      onClick={() => {
+                        const updates = { orderStatus: st.value };
+                        if (!orderStatusForm.notes) {
+                          if (st.value === 'CONFIRMED') updates.notes = 'Order confirmed and inventory reserved at warehouse.';
+                          else if (st.value === 'PACKED') updates.notes = 'Package picked, verified, and sealed securely.';
+                          else if (st.value === 'SHIPPED') updates.notes = `Dispatched via ${orderStatusForm.courierName || 'Express Courier'}. Tracking in transit.`;
+                          else if (st.value === 'OUT_FOR_DELIVERY') updates.notes = 'Package is out with the delivery agent for doorstep delivery.';
+                          else if (st.value === 'DELIVERED') updates.notes = 'Order successfully delivered to customer.';
+                        }
+                        setOrderStatusForm(prev => ({ ...prev, ...updates }));
+                      }}
+                      className={`fulfillment-stage-btn ${isSelected ? 'selected' : ''}`}
                       style={{
-                        padding: '0.6rem 0.5rem',
-                        borderRadius: '8px',
-                        border: isSelected ? `2px solid ${st.color}` : '1px solid #e2e8f0',
-                        background: isSelected ? st.bg : '#ffffff',
-                        color: isSelected ? st.color : '#475569',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.4rem',
-                        fontWeight: isSelected ? 700 : 500,
-                        fontSize: '0.78rem',
-                        transition: 'all 0.15s ease',
-                        boxShadow: isSelected ? '0 1px 4px rgba(0,0,0,0.06)' : 'none'
+                        borderColor: isSelected ? st.color : '#e2e8f0',
+                        background: isSelected ? st.bg : '#ffffff'
                       }}
                     >
-                      <IconComp size={15} color={isSelected ? st.color : '#64748b'} />
-                      <span>{st.label}</span>
+                      <div className="fulfillment-stage-icon-wrap" style={{ background: isSelected ? `${st.color}20` : '#f8fafc', color: st.color }}>
+                        <IconComp size={16} />
+                      </div>
+                      <span className="fulfillment-stage-label" style={{ color: isSelected ? st.color : '#1e293b' }}>
+                        {st.label}
+                      </span>
+                      <span className="fulfillment-stage-desc">{st.desc}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Courier & Tracking Details */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-                  Courier / Carrier Partner
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Delhivery, Blue Dart, DTDC, Local Express"
-                  value={orderStatusForm.courierName}
-                  onChange={(e) => setOrderStatusForm(prev => ({ ...prev, courierName: e.target.value }))}
-                  className="form-control"
-                  style={{ height: '38px', fontSize: '0.82rem' }}
-                />
-                <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                  {['Delhivery', 'Blue Dart', 'Shadowfax', 'Local Express', 'Self-Pickup'].map((cName) => (
+            {/* 3. Logistics & Carrier Suite */}
+            <div className="fulfillment-logistics-box">
+              <div className="fulfillment-fields-row">
+                <div className="fulfillment-field-group">
+                  <label>
+                    <Truck size={14} color="var(--primary, #982A86)" /> Courier / Carrier Partner
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Delhivery, Blue Dart, Shadowfax, DTDC"
+                    value={orderStatusForm.courierName}
+                    onChange={(e) => setOrderStatusForm(prev => ({ ...prev, courierName: e.target.value }))}
+                    className="fulfillment-input"
+                  />
+                  <div className="fulfillment-chip-row">
+                    {['Delhivery', 'Blue Dart', 'Shadowfax', 'DTDC', 'Local Express', 'Self-Pickup'].map((cName) => (
+                      <button
+                        key={cName}
+                        type="button"
+                        onClick={() => setOrderStatusForm(prev => ({ ...prev, courierName: cName }))}
+                        className={`fulfillment-chip-btn ${orderStatusForm.courierName === cName ? 'active' : ''}`}
+                      >
+                        {cName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="fulfillment-field-group">
+                  <label>
+                    <Navigation size={14} color="var(--primary, #982A86)" /> AWB Tracking Number / Link
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. DEL-892401829"
+                    value={orderStatusForm.trackingNumber}
+                    onChange={(e) => setOrderStatusForm(prev => ({ ...prev, trackingNumber: e.target.value }))}
+                    className="fulfillment-input monospace"
+                  />
+                  <div className="fulfillment-chip-row">
                     <button
-                      key={cName}
                       type="button"
-                      onClick={() => setOrderStatusForm(prev => ({ ...prev, courierName: cName }))}
-                      style={{
-                        fontSize: '0.68rem',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        border: '1px solid #e2e8f0',
-                        background: orderStatusForm.courierName === cName ? '#f1f5f9' : '#ffffff',
-                        color: '#475569',
-                        cursor: 'pointer',
-                        fontWeight: orderStatusForm.courierName === cName ? 700 : 500
-                      }}
+                      onClick={() => setOrderStatusForm(prev => ({ ...prev, trackingNumber: `AWB-${Date.now().toString().slice(-8)}` }))}
+                      className="fulfillment-chip-btn"
                     >
-                      {cName}
+                      <Sparkles size={11} style={{ display: 'inline', marginRight: '3px' }} /> Auto AWB
                     </button>
-                  ))}
+                    {orderStatusForm.trackingNumber && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(orderStatusForm.trackingNumber);
+                          toast.success('AWB copied to clipboard!');
+                        }}
+                        className="fulfillment-chip-btn"
+                      >
+                        <Copy size={11} style={{ display: 'inline', marginRight: '3px' }} /> Copy AWB
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-                  AWB Tracking Number / Reference
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. AWB-982347101"
-                  value={orderStatusForm.trackingNumber}
-                  onChange={(e) => setOrderStatusForm(prev => ({ ...prev, trackingNumber: e.target.value }))}
-                  className="form-control"
-                  style={{ height: '38px', fontSize: '0.82rem', fontFamily: 'monospace' }}
-                />
-              </div>
+              <div className="fulfillment-fields-row">
+                <div className="fulfillment-field-group">
+                  <label>
+                    <Clock size={14} color="var(--primary, #982A86)" /> Estimated Delivery Window
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Tomorrow by 6 PM, or 2-3 Business Days"
+                    value={orderStatusForm.estimatedDelivery}
+                    onChange={(e) => setOrderStatusForm(prev => ({ ...prev, estimatedDelivery: e.target.value }))}
+                    className="fulfillment-input"
+                  />
+                  <div className="fulfillment-chip-row">
+                    {['Same Day Express', 'Tomorrow by 6 PM', '2-3 Business Days', '3-5 Business Days'].map((win) => (
+                      <button
+                        key={win}
+                        type="button"
+                        onClick={() => setOrderStatusForm(prev => ({ ...prev, estimatedDelivery: win }))}
+                        className={`fulfillment-chip-btn ${orderStatusForm.estimatedDelivery === win ? 'active' : ''}`}
+                      >
+                        {win}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-                  Estimated Delivery Timeframe
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Tomorrow by 6 PM, or 2-3 Business Days"
-                  value={orderStatusForm.estimatedDelivery}
-                  onChange={(e) => setOrderStatusForm(prev => ({ ...prev, estimatedDelivery: e.target.value }))}
-                  className="form-control"
-                  style={{ height: '38px', fontSize: '0.82rem' }}
-                />
-                <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginTop: '0.25rem' }}>
-                  Leave blank to show "Will be updated shortly once dispatched".
-                </span>
+                <div className="fulfillment-field-group">
+                  <label>
+                    <FileText size={14} color="var(--primary, #982A86)" /> Fulfillment Note / Instructions
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Dispatched in tamper-evident sealed box"
+                    value={orderStatusForm.notes}
+                    onChange={(e) => setOrderStatusForm(prev => ({ ...prev, notes: e.target.value }))}
+                    className="fulfillment-input"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Status Update Note */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-                Delivery Note / Tracking Update Message
-              </label>
-              <textarea
-                rows={2}
-                placeholder="e.g. Package dispatched via Delhivery. Estimated delivery within 24-48 hours."
-                value={orderStatusForm.notes}
-                onChange={(e) => setOrderStatusForm(prev => ({ ...prev, notes: e.target.value }))}
-                className="form-control"
-                style={{ fontSize: '0.82rem', resize: 'vertical' }}
-              />
-            </div>
-
-            {/* Customer Email & Brevo Notification Dispatcher */}
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Mail size={14} color="var(--primary, #982A86)" /> Customer Email for Status Updates
-                </label>
-                <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#059669', background: '#dcfce7', padding: '2px 8px', borderRadius: '12px' }}>
-                  Brevo Transactional Gateway
-                </span>
-              </div>
-              <input
-                type="email"
-                placeholder="customer@example.com (Notifications with tracking link will be sent here)"
-                value={orderStatusForm.customerEmail}
-                onChange={(e) => setOrderStatusForm(prev => ({ ...prev, customerEmail: e.target.value }))}
-                className="form-control"
-                style={{ height: '38px', fontSize: '0.82rem' }}
-              />
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.45rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <span>Real-time email will be sent automatically when status is saved.</span>
-                {orderStatusModal.customer_phone && (
+            {/* 4. Multi-Channel Customer Comms (WhatsApp & Brevo) */}
+            <div className="fulfillment-comms-container">
+              {/* WhatsApp Direct Dispatch Card */}
+              <div className="fulfillment-comms-card whatsapp">
+                <div className="fulfillment-comms-header">
+                  <strong>
+                    <WhatsAppBrandIcon size={16} color="#25D366" /> WhatsApp Live Ping
+                  </strong>
+                  <span className="fulfillment-comms-tag green">1-Tap Direct Chat</span>
+                </div>
+                <p className="fulfillment-comms-desc">
+                  Send instant WhatsApp order status update with live tracking & digital e-bill link to the customer.
+                </p>
+                {orderStatusModal.customer_phone ? (
                   <a
                     href={`https://wa.me/91${String(orderStatusModal.customer_phone).replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
-                      `Hello ${orderStatusModal.customer_name || 'Customer'},\n\nYour order #${orderStatusModal.invoice_number} is now marked as *${orderStatusForm.orderStatus}*.\n` +
-                      (orderStatusForm.courierName ? `Courier: ${orderStatusForm.courierName}\n` : '') +
-                      (orderStatusForm.trackingNumber ? `Tracking No: ${orderStatusForm.trackingNumber}\n` : '') +
-                      (orderStatusForm.estimatedDelivery ? `Estimated Delivery: ${orderStatusForm.estimatedDelivery}\n` : '') +
-                      `Track live at: https://app.stockpilot.store/store/${user?.company_code || ''}?invoice=${orderStatusModal.invoice_number}\n\nThank you for choosing us!`
+                      `Hello ${orderStatusModal.customer_name || 'Customer'},\n\n` +
+                      `Your order *#${orderStatusModal.invoice_number}* has been updated to: *${orderStatusForm.orderStatus}*.\n\n` +
+                      (orderStatusForm.courierName ? `🚚 *Courier Partner:* ${orderStatusForm.courierName}\n` : '') +
+                      (orderStatusForm.trackingNumber ? `📍 *Tracking / AWB:* ${orderStatusForm.trackingNumber}\n` : '') +
+                      (orderStatusForm.estimatedDelivery ? `⏱️ *Estimated Delivery:* ${orderStatusForm.estimatedDelivery}\n` : '') +
+                      (orderStatusForm.notes ? `📝 *Note:* ${orderStatusForm.notes}\n` : '') +
+                      `\n🔗 *Track Live:* https://app.stockpilot.store/store/${user?.company_code || ''}?invoice=${orderStatusModal.invoice_number}\n` +
+                      `📄 *Digital E-Bill:* https://app.stockpilot.store/e-bill/${orderStatusModal.invoice_number}\n\n` +
+                      `Thank you for shopping with *${user?.companyName || user?.company_name || 'StockPilot Store'}*!`
                     )}`}
                     target="_blank"
                     rel="noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.3rem',
-                      color: '#16a34a',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      fontSize: '0.72rem'
-                    }}
+                    className="btn-whatsapp-direct-dispatch"
                   >
-                    Send WhatsApp Update <ExternalLink size={11} />
+                    <WhatsAppBrandIcon size={15} color="#ffffff" />
+                    <span>Send Update on WhatsApp</span>
                   </a>
+                ) : (
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>No customer mobile number linked</span>
                 )}
+              </div>
+
+              {/* Email Gateway Card */}
+              <div className="fulfillment-comms-card email">
+                <div className="fulfillment-comms-header">
+                  <strong>
+                    <Mail size={16} color="var(--primary, #982A86)" /> Brevo Transactional Email
+                  </strong>
+                  <span className="fulfillment-comms-tag purple">Auto Dispatch</span>
+                </div>
+                <input
+                  type="email"
+                  placeholder="customer@example.com"
+                  value={orderStatusForm.customerEmail}
+                  onChange={(e) => setOrderStatusForm(prev => ({ ...prev, customerEmail: e.target.value }))}
+                  className="fulfillment-input"
+                  style={{ height: '36px', fontSize: '0.8rem' }}
+                />
+                <span className="fulfillment-comms-desc">
+                  An itemized email notification with live tracking and estimated delivery will be automatically dispatched when saved.
+                </span>
               </div>
             </div>
 
-            {/* Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '0.85rem', borderTop: '1px solid #f1f5f9' }}>
+            {/* 5. Modal Footer Action Bar */}
+            <div className="fulfillment-modal-footer">
               <button
                 type="button"
                 onClick={() => setOrderStatusModal(null)}
                 disabled={isUpdatingStatus}
-                className="btn btn-secondary"
+                className="btn-fulfillment-cancel"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isUpdatingStatus}
-                className="btn btn-primary"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  background: 'var(--primary, #982A86)',
-                  borderColor: 'var(--primary, #982A86)',
-                  color: '#ffffff',
-                  fontWeight: 700
-                }}
+                className="btn-fulfillment-save"
               >
                 <Send size={15} />
-                {isUpdatingStatus ? 'Saving Status...' : 'Save & Dispatch Notification'}
+                <span>{isUpdatingStatus ? 'Saving Status...' : 'Save & Dispatch Status'}</span>
               </button>
             </div>
           </form>
