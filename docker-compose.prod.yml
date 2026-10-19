@@ -263,6 +263,7 @@ services:
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-stockpilot_jwt_refresh_prod_secret_key_2026}
       - INVENTORY_SERVICE_URL=http://inventory-service:5004
       - NOTIFICATION_SERVICE_URL=http://notification-service:5009
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}
       - BREVO_API_KEY=${BREVO_API_KEY}
       - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL:-yukesh785.in@gmail.com}
       - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-StockPilot Orders}

@@ -63,6 +63,7 @@ class SalesController {
       const order = await salesService.createPublicOrder(req.body);
       return ApiResponse.created(res, order, 'Online customer order placed successfully');
     } catch (err) {
+      console.error('[salesController.createPublicOrder] Error creating public order:', err);
       next(err);
     }
   }

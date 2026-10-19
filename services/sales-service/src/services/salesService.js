@@ -448,15 +448,23 @@ class SalesService {
 
     // Find or create customer
     let customer = null;
-    if (customerPhone) {
+    const cleanPhone = customerPhone ? String(customerPhone).replace(/\D/g, '').slice(-10) : '';
+    if (cleanPhone) {
+      const { Op } = require('sequelize');
       customer = await Customer.findOne({
-        where: { tenant_id: tenantId, phone: customerPhone }
+        where: {
+          tenant_id: tenantId,
+          [Op.or]: [
+            { phone: cleanPhone },
+            ...(customerPhone !== cleanPhone ? [{ phone: customerPhone }] : [])
+          ]
+        }
       });
       if (!customer) {
         customer = await Customer.create({
           tenant_id: tenantId,
           name: customerName || 'Online Customer',
-          phone: customerPhone,
+          phone: cleanPhone,
           email: customerEmail || null,
           address: customerAddress || '',
           credit_limit: 10000,
@@ -547,17 +555,23 @@ class SalesService {
         total: (i.price || i.unitPrice || i.unit_price || 0) * (i.quantity || 1)
       }));
 
-      emailService.sendOrderStatusNotification({
-        order: {
-          ...sale.toJSON(),
-          customer_email: resolvedCustomerEmail,
-          items: formattedItems
-        },
-        tenantInfo,
-        newStatus: 'PLACED',
-        estimatedDelivery: 'Will be updated shortly once dispatched',
-        notes: notes || 'Online Storefront Order Placed'
-      }).catch(err => console.warn('[EmailService] Order placed email error:', err.message));
+      const rawSale = typeof sale?.toJSON === 'function' ? sale.toJSON() : (sale || {});
+
+      try {
+        emailService.sendOrderStatusNotification({
+          order: {
+            ...rawSale,
+            customer_email: resolvedCustomerEmail,
+            items: formattedItems
+          },
+          tenantInfo,
+          newStatus: 'PLACED',
+          estimatedDelivery: 'Will be updated shortly once dispatched',
+          notes: notes || 'Online Storefront Order Placed'
+        }).catch(err => console.warn('[EmailService] Order placed email error:', err.message));
+      } catch (emailErr) {
+        console.warn('[SalesService] Order email notification warning:', emailErr.message);
+      }
     }
 
     return {
@@ -1237,25 +1251,35 @@ class SalesService {
       await transaction.commit();
 
       // 5. Emit SALE_CREATED event to RabbitMQ
-      await eventBus.publish(EVENTS.SALE_CREATED, {
-        tenantId,
-        saleId: sale.id,
-        invoiceNumber,
-        customerId,
-        customerName: sale.customer_name,
-        grandTotal,
-        paidAmount: paid,
-        dueAmount: due,
-        paymentMethod,
-        paymentStatus,
-        warehouseId: whId,
-        itemsCount: calculatedItems.length,
-        items: calculatedItems
-      });
+      try {
+        await eventBus.publish(EVENTS.SALE_CREATED, {
+          tenantId,
+          saleId: sale.id,
+          invoiceNumber,
+          customerId,
+          customerName: sale.customer_name,
+          grandTotal,
+          paidAmount: paid,
+          dueAmount: due,
+          paymentMethod,
+          paymentStatus,
+          warehouseId: whId,
+          itemsCount: calculatedItems.length,
+          items: calculatedItems
+        });
+      } catch (eventErr) {
+        console.warn('[SalesService] RabbitMQ publish SALE_CREATED event warning:', eventErr.message);
+      }
 
       return this.getSaleById(tenantId, sale.id);
     } catch (err) {
-      await transaction.rollback();
+      if (transaction && !transaction.finished) {
+        try {
+          await transaction.rollback();
+        } catch (rbErr) {
+          console.warn('[SalesService] Transaction rollback warning:', rbErr.message);
+        }
+      }
       throw err;
     }
   }

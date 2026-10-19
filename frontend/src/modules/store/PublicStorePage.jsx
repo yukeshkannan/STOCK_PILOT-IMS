@@ -95,6 +95,18 @@ export const IndiaFlagIcon = ({ width = 16, height = 11, className = '' }) => (
   </svg>
 );
 
+// Safely sanitize product image URLs: eliminates foreign dead localhost ports & broken URLs
+export const sanitizeProductImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  // If URL references foreign localhost or raw local ports like localhost:37857 or localhost:7071
+  if (/^https?:\/\/localhost(:\d+)?\//i.test(trimmed) || /^https?:\/\/127\.0\.0\.1(:\d+)?\//i.test(trimmed)) {
+    return null;
+  }
+  return trimmed;
+};
+
 const SORT_OPTIONS = [
   { value: 'DEFAULT', label: 'Featured' },
   { value: 'PRICE_LOW', label: 'Price: Low to High' },
@@ -407,7 +419,7 @@ export default function PublicStorePage() {
           unit: product.unit || 'PCS',
           quantity: 1,
           availableStock: resolvedStock,
-          imageUrl: product.image_url
+          imageUrl: sanitizeProductImageUrl(product.image_url)
         }
       ];
     });
@@ -1426,8 +1438,15 @@ export default function PublicStorePage() {
                         className="clean-card-image-wrap"
                         onClick={() => setQuickViewProduct(prod)}
                       >
-                        {prod.image_url ? (
-                          <img src={prod.image_url} alt={prod.name} className="clean-product-img" />
+                        {sanitizeProductImageUrl(prod.image_url) ? (
+                          <img
+                            src={sanitizeProductImageUrl(prod.image_url)}
+                            alt={prod.name}
+                            className="clean-product-img"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
                         ) : (
                           <div className="clean-no-image">
                             <Package size={36} />
@@ -1548,8 +1567,15 @@ export default function PublicStorePage() {
                           className="clean-card-image-wrap"
                           onClick={() => setQuickViewProduct(prod)}
                         >
-                          {prod.image_url ? (
-                            <img src={prod.image_url} alt={prod.name} className="clean-product-img" />
+                          {sanitizeProductImageUrl(prod.image_url) ? (
+                            <img
+                              src={sanitizeProductImageUrl(prod.image_url)}
+                              alt={prod.name}
+                              className="clean-product-img"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
                           ) : (
                             <div className="clean-no-image">
                               <Package size={36} />
@@ -2616,8 +2642,14 @@ export default function PublicStorePage() {
                   {cart.map((item) => (
                     <div key={item.id} className="clean-cart-item-card">
                       <div className="cart-item-thumb">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.name} />
+                        {sanitizeProductImageUrl(item.imageUrl) ? (
+                          <img
+                            src={sanitizeProductImageUrl(item.imageUrl)}
+                            alt={item.name}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
                         ) : (
                           <Package size={22} className="text-muted" />
                         )}
