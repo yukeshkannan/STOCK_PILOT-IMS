@@ -29,6 +29,7 @@ export default function ProductsPage() {
   const [deletingBrand, setDeletingBrand] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form states
   const [productForm, setProductForm] = useState({
@@ -164,7 +165,12 @@ export default function ProductsPage() {
 
   const handleSaveProduct = async (e) => {
     e.preventDefault();
+    if (productForm.productCode === 'Loading...') {
+      toast.warning('Please wait a moment while the product code finishes generating');
+      return;
+    }
     try {
+      setIsSaving(true);
       const defaultWh = warehouses[0];
       const selectedWh = warehouses.find(w => String(w.id) === String(productForm.warehouseId)) || defaultWh;
       const whId = productForm.warehouseId ? parseInt(productForm.warehouseId, 10) : (defaultWh?.id ? parseInt(defaultWh.id, 10) : 1);
@@ -193,7 +199,9 @@ export default function ProductsPage() {
       setIsProductModalOpen(false);
       fetchCatalogData();
     } catch (err) {
-      toast.error(err.message || 'Failed to save product');
+      toast.error(err.response?.data?.message || err.message || 'Failed to save product');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -703,8 +711,8 @@ export default function ProductsPage() {
             <button type="button" onClick={() => setIsProductModalOpen(false)} className="btn btn-secondary">
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
-              {editingProduct ? 'Save Changes' : 'Create Product'}
+            <button type="submit" className="btn btn-primary" disabled={isSaving || productForm.productCode === 'Loading...'}>
+              {isSaving ? 'Saving Product...' : (editingProduct ? 'Save Changes' : 'Create Product')}
             </button>
           </div>
         </form>

@@ -149,6 +149,9 @@ class ProductService {
 
   async createProduct(tenantId, productData) {
     let formattedCode = (productData.productCode || '').trim().toUpperCase();
+    if (formattedCode === 'LOADING...' || formattedCode === 'LOADING') {
+      formattedCode = '';
+    }
     const prefix = this.extractCompanyPrefix(productData.companyCode, productData.companyName);
     const { sequelize } = require('../models');
     const { syncSequenceNumber, getNextSequenceNumber } = require('@stockpilot/common');
@@ -165,12 +168,24 @@ class ProductService {
       }
     }
 
-    // Check code uniqueness
-    const existing = await Product.findOne({
+    // Check code uniqueness with graceful auto-increment if auto-generated code collided
+    let existing = await Product.findOne({
       where: { tenant_id: tenantId, product_code: formattedCode }
     });
     if (existing) {
-      throw { statusCode: 409, message: `Product code [${formattedCode}] already exists for your company.` };
+      const isAutoPattern = formattedCode.startsWith(prefix) || !productData.productCode || productData.productCode.includes('Loading');
+      if (isAutoPattern) {
+        let attempts = 0;
+        while (existing && attempts < 15) {
+          formattedCode = await getNextSequenceNumber(sequelize, tenantId, 'PRODUCT', prefix, 4);
+          existing = await Product.findOne({
+            where: { tenant_id: tenantId, product_code: formattedCode }
+          });
+          attempts++;
+        }
+      } else {
+        throw { statusCode: 409, message: `Product code [${formattedCode}] already exists for your company.` };
+      }
     }
 
     const product = await Product.create({
@@ -190,16 +205,20 @@ class ProductService {
       status: productData.status || 'ACTIVE'
     });
 
-    // Publish event
-    await eventBus.publish(EVENTS.PRODUCT_CREATED, {
-      productId: product.id,
-      tenantId,
-      productCode: product.product_code,
-      name: product.name,
-      purchasePrice: product.purchase_price,
-      sellingPrice: product.selling_price,
-      minimumStock: product.minimum_stock
-    });
+    // Safely publish event without breaking product creation
+    try {
+      await eventBus.publish(EVENTS.PRODUCT_CREATED, {
+        productId: product.id,
+        tenantId,
+        productCode: product.product_code,
+        name: product.name,
+        purchasePrice: product.purchase_price,
+        sellingPrice: product.selling_price,
+        minimumStock: product.minimum_stock
+      });
+    } catch (eErr) {
+      console.warn('[ProductService] RabbitMQ publish notice:', eErr.message);
+    }
 
     // Automatically initialize stock record in Inventory Service
     const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || (process.env.NODE_ENV === 'production' ? 'http://inventory-service:5004' : 'http://localhost:5004');
@@ -323,14 +342,19 @@ class ProductService {
       status: updateData.status !== undefined ? updateData.status : product.status
     });
 
-    await eventBus.publish(EVENTS.PRODUCT_UPDATED, {
-      productId: product.id,
-      tenantId,
-      productCode: product.product_code,
-      name: product.name,
-      sellingPrice: product.selling_price,
-      minimumStock: product.minimum_stock
-    });
+    // Safely publish update event
+    try {
+      await eventBus.publish(EVENTS.PRODUCT_UPDATED, {
+        productId: product.id,
+        tenantId,
+        productCode: product.product_code,
+        name: product.name,
+        sellingPrice: product.selling_price,
+        minimumStock: product.minimum_stock
+      });
+    } catch (eErr) {
+      console.warn('[ProductService] RabbitMQ publish notice:', eErr.message);
+    }
 
     // Automatically sync updated product details to Inventory Service
     const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
@@ -351,9 +375,13 @@ class ProductService {
       console.warn('Inventory stock update notice:', err.message);
     }
 
-    // Invalidate product cache
-    await cache.delByPattern(`stockpilot:products:tenant:${tenantId}:*`);
-    await cache.del(`stockpilot:product:tenant:${tenantId}:${productId}`);
+    // Invalidate product cache safely
+    try {
+      await cache.delByPattern(`stockpilot:products:tenant:${tenantId}:*`);
+      await cache.del(`stockpilot:product:tenant:${tenantId}:${productId}`);
+    } catch (cErr) {
+      console.warn('[ProductService] Cache invalidate notice:', cErr.message);
+    }
 
     return this.getProductById(tenantId, product.id);
   }

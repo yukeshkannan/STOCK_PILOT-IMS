@@ -576,7 +576,7 @@ class SalesService {
   /**
    * Customer Storefront Registration
    */
-  async registerCustomer({ companyCode, name, phone, email, password, address }) {
+  async registerCustomer({ companyCode, name, phone, email, password, address, city, state, pincode }) {
     if (!phone || !name || !password) {
       throw { statusCode: 400, message: 'Name, phone number, and password are required' };
     }
@@ -599,11 +599,36 @@ class SalesService {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    // Format full delivery address string
+    let formattedAddress = (address || '').trim();
+    if (city && city.trim() && !formattedAddress.toLowerCase().includes(city.trim().toLowerCase())) {
+      formattedAddress = formattedAddress ? `${formattedAddress}, ${city.trim()}` : city.trim();
+    }
+    if (state && state.trim() && !formattedAddress.toLowerCase().includes(state.trim().toLowerCase())) {
+      formattedAddress = formattedAddress ? `${formattedAddress}, ${state.trim()}` : state.trim();
+    }
+    if (pincode && pincode.trim() && !formattedAddress.includes(pincode.trim())) {
+      formattedAddress = formattedAddress ? `${formattedAddress} - ${pincode.trim()}` : pincode.trim();
+    }
+
+    const defaultAddrObj = formattedAddress ? [{
+      id: `addr_${Date.now()}`,
+      isDefault: true,
+      name: name.trim(),
+      phone: cleanPhone,
+      street: (address || '').trim(),
+      city: (city || '').trim(),
+      state: (state || '').trim(),
+      pincode: (pincode || '').trim(),
+      fullAddress: formattedAddress
+    }] : [];
+
     if (customer) {
       await customer.update({
         name,
         email: email || customer.email,
-        address: address || customer.address,
+        address: formattedAddress || customer.address,
+        saved_addresses: defaultAddrObj.length > 0 ? JSON.stringify(defaultAddrObj) : customer.saved_addresses,
         password_hash: passwordHash
       });
     } else {
@@ -612,7 +637,8 @@ class SalesService {
         name,
         phone: cleanPhone,
         email: email || null,
-        address: address || '',
+        address: formattedAddress || '',
+        saved_addresses: defaultAddrObj.length > 0 ? JSON.stringify(defaultAddrObj) : null,
         password_hash: passwordHash,
         credit_limit: 10000,
         status: 'ACTIVE'
@@ -625,6 +651,15 @@ class SalesService {
       { expiresIn: '30d' }
     );
 
+    let parsedSavedAddresses = [];
+    try {
+      if (customer.saved_addresses) {
+        parsedSavedAddresses = typeof customer.saved_addresses === 'string' ? JSON.parse(customer.saved_addresses) : customer.saved_addresses;
+      }
+    } catch (e) {
+      parsedSavedAddresses = defaultAddrObj;
+    }
+
     return {
       success: true,
       message: 'Account registered successfully',
@@ -634,7 +669,7 @@ class SalesService {
         phone: customer.phone,
         email: customer.email,
         address: customer.address,
-        savedAddresses: customer.saved_addresses ? JSON.parse(customer.saved_addresses) : []
+        savedAddresses: parsedSavedAddresses
       },
       token
     };

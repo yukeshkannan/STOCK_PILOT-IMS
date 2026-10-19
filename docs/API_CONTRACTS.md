@@ -136,9 +136,9 @@ All microservices adhere to standard JSON response envelopes to simplify client 
 | `POST` | `/api/v1/sales/public/order` | Direct storefront customer checkout (creates order, sends Brevo order confirmation with tracking link) | `PUBLIC` |
 | `POST` | `/api/v1/sales/public/otp/send` | Send 4-digit OTP for 1-Click Fast Checkout via Brevo Email Relay | `PUBLIC` |
 | `POST` | `/api/v1/sales/public/otp/verify` | Verify OTP & retrieve returning customer details | `PUBLIC` |
-| `POST` | `/api/v1/sales/public/customer/register` | Register customer account scoped to tenant store | `PUBLIC` |
-| `POST` | `/api/v1/sales/public/customer/login` | Customer login with mobile/email and password | `PUBLIC` |
-| `GET` | `/api/v1/sales/public/customer/profile` | Fetch customer profile and saved delivery addresses | `PUBLIC` |
+| `POST` | `/api/v1/sales/public/customer/register` | Register customer account with structured doorstep address (Street, City, State, PIN) & default delivery address | `PUBLIC` |
+| `POST` | `/api/v1/sales/public/customer/login` | Customer login with mobile/email and password (returns saved addresses) | `PUBLIC` |
+| `PUT` | `/api/v1/sales/public/customer/profile` | Update customer profile and manage saved multi-address book | `PUBLIC` |
 | `GET` | `/api/v1/sales/public/customer/orders` | Fetch customer order history with live fulfillment statuses | `PUBLIC` |
 | `GET` | `/api/v1/sales/public/order/track/:invoiceNumber` | Real-time 6-stage order tracking & courier details | `PUBLIC` |
 | `GET` | `/api/v1/sales/public/invoice/:invoiceNumber` | Public E-bill / tax invoice lookup | `PUBLIC` |

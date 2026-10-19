@@ -56,7 +56,6 @@ export default function NotificationDropdown() {
   const [notifications, setNotifications] = useState([]);
   const [counts, setCounts] = useState({ all: 0, unread: 0, requests: 0, stock: 0, transactions: 0 });
   const [unreadCount, setUnreadCount] = useState(0);
-  const [actionLoadingId, setActionLoadingId] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const prevUnreadRef = useRef(0);
 
@@ -112,27 +111,6 @@ export default function NotificationDropdown() {
       toast.success('All marked as read');
     } catch {
       // ignore
-    }
-  };
-
-  const handleExecuteAction = async (e, n, action) => {
-    e.stopPropagation();
-    try {
-      setActionLoadingId(n.id);
-      await api.post(`/notifications/${n.id}/action`, { action });
-      
-      const newStatus = action === 'APPROVE' ? 'APPROVED' : (action === 'REJECT' ? 'REJECTED' : 'PROCESSED');
-      setNotifications((prev) =>
-        prev.map((item) =>
-          item.id === n.id ? { ...item, action_status: newStatus, is_read: true } : item
-        )
-      );
-      toast.success(`Request ${action.toLowerCase()}d successfully!`);
-      fetchNotifications();
-    } catch (err) {
-      toast.error(err.response?.data?.message || `Failed to ${action.toLowerCase()} request`);
-    } finally {
-      setActionLoadingId(null);
     }
   };
 
@@ -477,289 +455,37 @@ export default function NotificationDropdown() {
                       >
                         {n.message}
                       </div>
-
-                      {/* Interactive In-Card Actions */}
-                      {n.action_type === 'TRANSFER_RECEIVE' ? (
-                        <div
-                          style={{
-                            marginTop: '0.55rem',
-                            paddingTop: '0.45rem',
-                            borderTop: '1px dashed #e2e8f0',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: '0.4rem'
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {n.action_status === 'COMPLETED' ? (
-                            <span
-                              style={{
-                                fontSize: '0.7rem',
-                                color: '#059669',
-                                fontWeight: 700,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                background: '#ecfdf5',
-                                padding: '2px 8px',
-                                borderRadius: '999px',
-                                border: '1px solid #a7f3d0'
-                              }}
-                            >
-                              <CheckCheck size={12} /> Stock Received
-                            </span>
-                          ) : (
-                            (() => {
-                              const meta = n.metadata ? (typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata) : {};
-                              const userWhId = user?.warehouseId || user?.warehouse_id ? String(user?.warehouseId || user?.warehouse_id) : null;
-                              const isDest = Boolean(userWhId && String(meta.toWarehouseId) === String(userWhId));
-                              const isReq = Boolean(meta.requestedBy && user?.email && meta.requestedBy.toLowerCase() === user.email.toLowerCase());
-                              const canReceive = isDest || isReq;
-
-                              if (canReceive) {
-                                return (
-                                  <button
-                                    onClick={(e) => handleExecuteAction(e, n, 'RECEIVE')}
-                                    disabled={actionLoadingId === n.id}
-                                    style={{
-                                      padding: '0.26rem 0.65rem',
-                                      borderRadius: '6px',
-                                      border: 'none',
-                                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                                      color: '#ffffff',
-                                      fontSize: '0.7rem',
-                                      fontWeight: 700,
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      boxShadow: '0 2px 6px rgba(5, 150, 105, 0.25)'
-                                    }}
-                                  >
-                                    {actionLoadingId === n.id ? (
-                                      <RefreshCw size={11} className="spin" />
-                                    ) : (
-                                      <CheckCheck size={12} />
-                                    )}
-                                    Receive Stock
-                                  </button>
-                                );
-                              }
-                              return (
-                                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                  <ArrowRightLeft size={12} color="var(--primary)" /> En Route to Destination
-                                </span>
-                              );
-                            })()
-                          )}
-
-                          <span
-                            onClick={() => handleNotificationClick(n)}
-                            style={{
-                              color: '#982A86',
-                              fontWeight: 700,
-                              fontSize: '0.7rem',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              padding: '2px 8px',
-                              background: 'rgba(152, 42, 134, 0.06)',
-                              borderRadius: '6px',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            Details <ArrowRight size={11} />
-                          </span>
-                        </div>
-                      ) : ['TRANSFER_APPROVE', 'PURCHASE_APPROVE', 'RETURN_APPROVE'].includes(n.action_type) ? (
-                        <div
-                          style={{
-                            marginTop: '0.55rem',
-                            paddingTop: '0.45rem',
-                            borderTop: '1px dashed #e2e8f0',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: '0.4rem'
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {n.action_status === 'APPROVED' ? (
-                            <span
-                              style={{
-                                fontSize: '0.7rem',
-                                color: '#10b981',
-                                fontWeight: 700,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                background: '#ecfdf5',
-                                padding: '2px 8px',
-                                borderRadius: '999px',
-                                border: '1px solid #a7f3d0'
-                              }}
-                            >
-                              <Check size={12} /> Approved
-                            </span>
-                          ) : n.action_status === 'REJECTED' ? (
-                            <span
-                              style={{
-                                fontSize: '0.7rem',
-                                color: '#ef4444',
-                                fontWeight: 700,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                background: '#fef2f2',
-                                padding: '2px 8px',
-                                borderRadius: '999px',
-                                border: '1px solid #fecaca'
-                              }}
-                            >
-                              <X size={12} /> Rejected
-                            </span>
-                          ) : n.action_status === 'PROCESSED' ? (
-                            <span style={{ fontSize: '0.72rem', color: '#3b82f6', fontWeight: 700 }}>
-                              Action Handled
-                            </span>
-                          ) : (
-                            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                              <button
-                                onClick={(e) => handleExecuteAction(e, n, 'APPROVE')}
-                                disabled={actionLoadingId === n.id}
-                                style={{
-                                  padding: '0.24rem 0.6rem',
-                                  borderRadius: '6px',
-                                  border: 'none',
-                                  background: '#10b981',
-                                  color: '#ffffff',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '3px'
-                                }}
-                              >
-                                {actionLoadingId === n.id ? (
-                                  <RefreshCw size={11} className="spin" />
-                                ) : (
-                                  <Check size={12} />
-                                )}
-                                Approve
-                              </button>
-
-                              <button
-                                onClick={(e) => handleExecuteAction(e, n, 'REJECT')}
-                                disabled={actionLoadingId === n.id}
-                                style={{
-                                  padding: '0.24rem 0.6rem',
-                                  borderRadius: '6px',
-                                  border: '1px solid #cbd5e1',
-                                  background: '#ffffff',
-                                  color: '#64748b',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '3px'
-                                }}
-                              >
-                                <X size={12} /> Reject
-                              </button>
-                            </div>
-                          )}
-
-                          <span
-                            onClick={() => handleNotificationClick(n)}
-                            style={{
-                              color: '#982A86',
-                              fontWeight: 700,
-                              fontSize: '0.7rem',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              padding: '2px 8px',
-                              background: 'rgba(152, 42, 134, 0.06)',
-                              borderRadius: '6px',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            Details <ArrowRight size={11} />
-                          </span>
-                        </div>
-                      ) : (n.category === 'STOCK' || n.type === 'LOW_STOCK' || n.type === 'OUT_OF_STOCK') ? (
-                        <div
-                          style={{
-                            marginTop: '0.55rem',
-                            paddingTop: '0.45rem',
-                            borderTop: '1px dashed #e2e8f0',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
-                            gap: '0.4rem'
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span
-                            onClick={() => handleNotificationClick(n)}
-                            style={{
-                              color: '#982A86',
-                              fontWeight: 700,
-                              fontSize: '0.7rem',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              padding: '2px 8px',
-                              background: 'rgba(152, 42, 134, 0.06)',
-                              borderRadius: '6px'
-                            }}
-                          >
-                            View Stock <ArrowRight size={11} />
-                          </span>
-                        </div>
-                      ) : null}
-
                       {/* Timestamp and Quick View Link */}
-                      {!n.action_type && (
-                        <div
+                      <div
+                        style={{
+                          fontSize: '0.675rem',
+                          color: '#94a3b8',
+                          marginTop: '6px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Clock size={11} />
+                          {new Date(n.created_at || n.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                        <span
                           style={{
-                            fontSize: '0.675rem',
-                            color: '#94a3b8',
-                            marginTop: '6px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
+                            color: '#982A86',
+                            fontWeight: 700,
+                            fontSize: '0.7rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px'
                           }}
                         >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                            <Clock size={11} />
-                            {new Date(n.created_at || n.createdAt).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                          <span
-                            style={{
-                              color: '#982A86',
-                              fontWeight: 700,
-                              fontSize: '0.7rem',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '2px'
-                            }}
-                          >
-                            View details <ArrowRight size={11} />
-                          </span>
-                        </div>
-                      )}
+                          View details <ArrowRight size={11} />
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))

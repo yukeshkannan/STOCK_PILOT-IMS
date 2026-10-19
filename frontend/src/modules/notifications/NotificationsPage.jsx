@@ -42,7 +42,6 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL', 'REQUESTS', 'STOCK', 'TRANSACTIONS', 'SYSTEM'
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [actionLoadingId, setActionLoadingId] = useState(null);
 
   // Broadcast Modal State for Super Admin
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
@@ -144,25 +143,6 @@ export default function NotificationsPage() {
       toast.success('Notification dismissed');
     } catch (err) {
       console.error(err);
-    }
-  };
-
-  const handleExecuteAction = async (n, action) => {
-    try {
-      setActionLoadingId(n.id);
-      await api.post(`/notifications/${n.id}/action`, { action });
-      const newStatus = action === 'APPROVE' ? 'APPROVED' : (action === 'REJECT' ? 'REJECTED' : (action === 'RECEIVE' ? 'COMPLETED' : 'PROCESSED'));
-      setNotifications((prev) =>
-        prev.map((item) =>
-          item.id === n.id ? { ...item, action_status: newStatus, is_read: true } : item
-        )
-      );
-      toast.success(`Request ${action.toLowerCase()}d successfully!`);
-      fetchNotifications();
-    } catch (err) {
-      toast.error(err.response?.data?.message || `Failed to execute ${action.toLowerCase()}`);
-    } finally {
-      setActionLoadingId(null);
     }
   };
 
@@ -510,305 +490,76 @@ export default function NotificationsPage() {
                   {n.message}
                 </p>
 
-                {/* In-Card Interactive Action Bar */}
-                {n.action_type === 'TRANSFER_RECEIVE' ? (
-                  <div
-                    style={{
-                      marginTop: '0.75rem',
-                      paddingTop: '0.65rem',
-                      borderTop: '1px dashed #e2e8f0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '0.6rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {n.action_status === 'COMPLETED' ? (
-                        <span
-                          style={{
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            color: '#10b981',
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            padding: '0.25rem 0.6rem',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <CheckCheck size={14} /> Stock Received into Inventory
-                        </span>
-                      ) : (
-                        (() => {
-                          const meta = n.metadata ? (typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata) : {};
-                          const userWhId = user?.warehouseId || user?.warehouse_id ? String(user?.warehouseId || user?.warehouse_id) : null;
-                          const isDest = Boolean(userWhId && String(meta.toWarehouseId) === String(userWhId));
-                          const isReq = Boolean(meta.requestedBy && user?.email && meta.requestedBy.toLowerCase() === user.email.toLowerCase());
-                          const canReceive = isDest || isReq;
+                {/* Clean Direct Operational Redirection Link */}
+                {(() => {
+                  let targetRoute = n.link;
+                  let targetLabel = 'View Details';
+                  if (!targetRoute) {
+                    if (n.type === 'TRANSFER' || n.category === 'TRANSFER' || n.action_type?.startsWith('TRANSFER')) {
+                      targetRoute = '/warehouses?tab=transfers';
+                      targetLabel = 'Review in Transfers';
+                    } else if (n.type === 'PURCHASE' || n.category === 'PURCHASE' || n.action_type?.startsWith('PURCHASE')) {
+                      targetRoute = '/purchases';
+                      targetLabel = 'Review Purchase Order';
+                    } else if (n.type === 'SALE' || n.category === 'SALE' || n.type === 'NEW_ORDER') {
+                      targetRoute = '/sales';
+                      targetLabel = 'View in Sales';
+                    } else if (n.category === 'STOCK' || n.type === 'LOW_STOCK' || n.type === 'OUT_OF_STOCK') {
+                      targetRoute = '/inventory';
+                      targetLabel = 'View Live Stock';
+                    } else {
+                      targetRoute = null;
+                    }
+                  }
 
-                          if (canReceive) {
-                            return (
-                              <button
-                                onClick={() => handleExecuteAction(n, 'RECEIVE')}
-                                disabled={actionLoadingId === n.id}
-                                style={{
-                                  padding: '0.35rem 0.8rem',
-                                  borderRadius: '6px',
-                                  border: 'none',
-                                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                                  color: '#ffffff',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  boxShadow: '0 2px 4px rgba(5, 150, 105, 0.2)'
-                                }}
-                              >
-                                {actionLoadingId === n.id ? <RefreshCw size={13} className="spin" /> : <CheckCheck size={14} />}
-                                Receive Goods into Stock
-                              </button>
-                            );
-                          }
-                          return (
-                            <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <ArrowRightLeft size={14} color="var(--primary)" /> En Route to Destination — Inward Receipt Pending
-                            </span>
-                          );
-                        })()
-                      )}
-                    </div>
+                  if (!targetRoute) return null;
 
-                    <button
-                      onClick={() => {
-                        handleMarkAsRead(n.id);
-                        navigate('/warehouses?tab=transfers');
-                      }}
+                  return (
+                    <div
                       style={{
-                        padding: '0.28rem 0.65rem',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: 'var(--primary)',
-                        fontSize: '0.74rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
+                        marginTop: '0.75rem',
+                        paddingTop: '0.65rem',
+                        borderTop: '1px dashed #e2e8f0',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        justifyContent: 'flex-end',
+                        gap: '0.6rem'
                       }}
                     >
-                      Track Shipment <ArrowRight size={12} />
-                    </button>
-                  </div>
-                ) : ['TRANSFER_APPROVE', 'PURCHASE_APPROVE', 'RETURN_APPROVE'].includes(n.action_type) ? (
-                  <div
-                    style={{
-                      marginTop: '0.75rem',
-                      paddingTop: '0.65rem',
-                      borderTop: '1px dashed #e2e8f0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '0.6rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {n.action_status === 'APPROVED' ? (
-                        <span
-                          style={{
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            color: '#10b981',
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            padding: '0.25rem 0.6rem',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Check size={14} /> Approved
-                        </span>
-                      ) : n.action_status === 'REJECTED' ? (
-                        <span
-                          style={{
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            color: '#ef4444',
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            padding: '0.25rem 0.6rem',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <X size={14} /> Rejected
-                        </span>
-                      ) : n.action_status === 'PROCESSED' ? (
-                        <span
-                          style={{
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            color: '#3b82f6',
-                            background: 'rgba(59, 130, 246, 0.1)',
-                            padding: '0.25rem 0.6rem',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <PackageCheck size={14} /> Handled
-                        </span>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => handleExecuteAction(n, 'APPROVE')}
-                            disabled={actionLoadingId === n.id}
-                            style={{
-                              padding: '0.35rem 0.8rem',
-                              borderRadius: '6px',
-                              border: 'none',
-                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                              color: '#ffffff',
-                              fontSize: '0.78rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
-                            }}
-                          >
-                            {actionLoadingId === n.id ? <RefreshCw size={13} className="spin" /> : <Check size={14} />}
-                            Approve
-                          </button>
-
-                          <button
-                            onClick={() => handleExecuteAction(n, 'REJECT')}
-                            disabled={actionLoadingId === n.id}
-                            style={{
-                              padding: '0.35rem 0.8rem',
-                              borderRadius: '6px',
-                              border: '1px solid #cbd5e1',
-                              background: '#ffffff',
-                              color: '#64748b',
-                              fontSize: '0.78rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            <X size={14} /> Reject
-                          </button>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Navigation Link */}
-                    {(n.link || n.type === 'TRANSFER' || n.type === 'PURCHASE') && (
                       <button
                         onClick={() => {
                           handleMarkAsRead(n.id);
-                          if (n.link) navigate(n.link);
-                          else if (n.type === 'TRANSFER') navigate('/warehouses?tab=transfers');
-                          else if (n.type === 'PURCHASE') navigate('/purchases');
+                          navigate(targetRoute);
                         }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '4px',
-                          background: 'none',
-                          border: 'none',
+                          gap: '6px',
+                          background: 'rgba(152, 42, 134, 0.08)',
+                          border: '1px solid rgba(152, 42, 134, 0.22)',
                           color: 'var(--primary)',
-                          fontSize: '0.8rem',
+                          fontSize: '0.78rem',
                           fontWeight: 700,
                           cursor: 'pointer',
-                          padding: 0
+                          padding: '0.35rem 0.85rem',
+                          borderRadius: '6px',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'var(--primary)';
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(152, 42, 134, 0.08)';
+                          e.currentTarget.style.color = 'var(--primary)';
                         }}
                       >
-                        View Full Details <ArrowRight size={13} />
+                        <span>{targetLabel}</span>
+                        <ArrowRight size={13} />
                       </button>
-                    )}
-                  </div>
-                ) : (n.category === 'STOCK' || n.type === 'LOW_STOCK' || n.type === 'OUT_OF_STOCK') ? (
-                  <div
-                    style={{
-                      marginTop: '0.75rem',
-                      paddingTop: '0.65rem',
-                      borderTop: '1px dashed #e2e8f0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'flex-end',
-                      gap: '0.6rem'
-                    }}
-                  >
-                    <button
-                      onClick={() => {
-                        handleMarkAsRead(n.id);
-                        navigate('/inventory');
-                      }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--primary)',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        padding: 0
-                      }}
-                    >
-                      View Live Stock <ArrowRight size={13} />
-                    </button>
-                  </div>
-                ) : (n.link || n.type === 'PURCHASE' || n.type === 'TRANSFER' || n.type === 'SALE') ? (
-                  <div
-                    style={{
-                      marginTop: '0.75rem',
-                      paddingTop: '0.65rem',
-                      borderTop: '1px dashed #e2e8f0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'flex-end'
-                    }}
-                  >
-                    <button
-                      onClick={() => {
-                        handleMarkAsRead(n.id);
-                        if (n.link) navigate(n.link);
-                        else if (n.type === 'PURCHASE') navigate('/purchases');
-                        else if (n.type === 'TRANSFER') navigate('/warehouses?tab=transfers');
-                        else if (n.type === 'SALE') navigate('/sales');
-                      }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--primary)',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        padding: 0
-                      }}
-                    >
-                      View Details <ArrowRight size={13} />
-                    </button>
-                  </div>
-                ) : null}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Action Buttons: Mark Read & Dismiss */}

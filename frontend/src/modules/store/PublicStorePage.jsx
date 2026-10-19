@@ -58,6 +58,7 @@ import {
   UserCheck,
   Building2,
   Navigation,
+  Home,
   Save
 } from 'lucide-react';
 import './PublicStorePage.css';
@@ -139,7 +140,26 @@ export default function PublicStorePage() {
     phone: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: ''
+  });
+  const [deliveryAddressMode, setDeliveryAddressMode] = useState('SAVED'); // 'SAVED' | 'NEW'
+  const [altAddressForm, setAltAddressForm] = useState({
+    name: '',
+    phone: '',
+    street: '',
+    city: '',
+    state: '',
+    pincode: '',
+    saveForFuture: true
+  });
+  const [guestAddress, setGuestAddress] = useState({
+    street: '',
+    city: '',
+    pincode: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -438,10 +458,10 @@ export default function PublicStorePage() {
 
       const payload = {
         companyCode: companyCode.toUpperCase(),
-        customerName: customer.name.trim(),
-        customerPhone: customer.phone.trim(),
+        customerName: (orderOverrides.customerName || customer.name).trim(),
+        customerPhone: (orderOverrides.customerPhone || customer.phone).trim(),
         customerEmail: customer.email ? customer.email.trim() : null,
-        customerAddress: customer.deliveryType === 'DELIVERY' ? customer.address : 'Store Counter Pickup',
+        customerAddress: customer.deliveryType === 'DELIVERY' ? (orderOverrides.customerAddress || customer.address) : 'Store Counter Pickup',
         paymentMethod: chosenMethod === 'UPI' ? 'UPI' : 'CASH',
         isPaid,
         paidAmount,
@@ -486,6 +506,21 @@ export default function PublicStorePage() {
       return;
     }
 
+    if (!authFormData.address?.trim() || !authFormData.city?.trim() || !authFormData.pincode?.trim()) {
+      const msg = 'Please provide your full delivery address, city, and 6-digit pincode';
+      setAuthError(msg);
+      toast.warn(msg);
+      return;
+    }
+
+    const cleanPin = authFormData.pincode.replace(/\D/g, '');
+    if (cleanPin.length !== 6) {
+      const msg = 'Please enter a valid 6-digit postal pincode';
+      setAuthError(msg);
+      toast.warn(msg);
+      return;
+    }
+
     if (authFormData.password !== authFormData.confirmPassword) {
       const msg = 'Passwords do not match. Please verify both password fields.';
       setAuthError(msg);
@@ -516,7 +551,10 @@ export default function PublicStorePage() {
         phone: cleanPhone,
         email: authFormData.email?.trim() || null,
         password: authFormData.password,
-        address: ''
+        address: authFormData.address.trim(),
+        city: authFormData.city.trim(),
+        state: authFormData.state?.trim() || '',
+        pincode: cleanPin
       });
       const data = res?.data || res;
       setCustomerUser(data.customer);
@@ -534,9 +572,20 @@ export default function PublicStorePage() {
         email: data.customer.email || prev.email,
         address: data.customer.address || prev.address
       }));
+      setDeliveryAddressMode('SAVED');
       setIsAuthModalOpen(false);
-      setAuthFormData({ name: '', phone: '', email: '', password: '', confirmPassword: '' });
-      toast.success(`Account created successfully! Welcome to ${storeTitle}, ${data.customer.name}!`);
+      setAuthFormData({
+        name: '',
+        phone: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: ''
+      });
+      toast.success(`Account registered with saved delivery address! Welcome to ${storeTitle}, ${data.customer.name}!`);
     } catch (err) {
       const errorMsg = err?.response?.data?.message || err?.message || 'Registration failed. Mobile may already be registered.';
       setAuthError(errorMsg);
@@ -694,19 +743,77 @@ export default function PublicStorePage() {
       toast.warn('Your bag is empty.');
       return;
     }
-    const cleanPhone = (customer.phone || '').replace(/\D/g, '').slice(-10);
-    if (!cleanPhone || cleanPhone.length !== 10) {
+
+    let resolvedName = customer.name?.trim();
+    let resolvedPhone = (customer.phone || '').replace(/\D/g, '').slice(-10);
+    let resolvedAddress = customer.address?.trim();
+
+    if (customer.deliveryType === 'DELIVERY') {
+      if (customerUser) {
+        if (deliveryAddressMode === 'NEW') {
+          if (!altAddressForm.street?.trim() || !altAddressForm.city?.trim() || !altAddressForm.pincode?.trim()) {
+            toast.warn('Please fill in Street Address, City, and 6-digit Pincode.');
+            return;
+          }
+          const altPin = altAddressForm.pincode.replace(/\D/g, '');
+          if (altPin.length !== 6) {
+            toast.warn('Please enter a valid 6-digit postal pincode.');
+            return;
+          }
+          resolvedName = altAddressForm.name?.trim() || customerUser.name;
+          resolvedPhone = (altAddressForm.phone || customerUser.phone).replace(/\D/g, '').slice(-10);
+          resolvedAddress = [altAddressForm.street.trim(), altAddressForm.city.trim(), `PIN - ${altPin}`].filter(Boolean).join(', ');
+
+          if (altAddressForm.saveForFuture && companyCode) {
+            api.put('/sales/public/customer/profile', {
+              companyCode: companyCode.toUpperCase(),
+              customerId: customerUser.id,
+              phone: customerUser.phone,
+              address: resolvedAddress
+            }).catch((err) => console.warn('Address profile save notice:', err.message));
+          }
+        } else {
+          // SAVED mode
+          resolvedAddress = customerUser.address || customer.address;
+          if (!resolvedAddress || !resolvedAddress.trim()) {
+            toast.warn('Please provide a delivery address or choose "Deliver to a different address".');
+            return;
+          }
+        }
+      } else {
+        // Guest user
+        if (!guestAddress.street?.trim() || !guestAddress.city?.trim() || !guestAddress.pincode?.trim()) {
+          toast.warn('Please provide your complete Doorstep Address, City, and 6-digit Pincode.');
+          return;
+        }
+        const guestPin = guestAddress.pincode.replace(/\D/g, '');
+        if (guestPin.length !== 6) {
+          toast.warn('Please enter a valid 6-digit postal pincode.');
+          return;
+        }
+        resolvedAddress = [guestAddress.street.trim(), guestAddress.city.trim(), `PIN - ${guestPin}`].filter(Boolean).join(', ');
+      }
+    }
+
+    if (!resolvedPhone || resolvedPhone.length !== 10) {
       toast.warn('Please provide a valid 10-digit mobile number for order dispatch updates.');
       return;
     }
-    if (!customer.name?.trim()) {
+    if (!resolvedName) {
       toast.warn('Please provide your Full Name.');
       return;
     }
-    if (customer.deliveryType === 'DELIVERY' && !customer.address?.trim()) {
+    if (customer.deliveryType === 'DELIVERY' && (!resolvedAddress || !resolvedAddress.trim())) {
       toast.warn('Please provide your complete Delivery Address.');
       return;
     }
+
+    setCustomer((prev) => ({
+      ...prev,
+      name: resolvedName,
+      phone: resolvedPhone,
+      address: resolvedAddress
+    }));
 
     if (customer.paymentMethod === 'UPI') {
       try {
@@ -714,12 +821,15 @@ export default function PublicStorePage() {
         await openRazorpayCheckout({
           amount: cartGrandTotal,
           companyName: storeData?.tenant?.companyName || 'StockPilot Store',
-          description: `Order Payment (${customer.name})`,
+          description: `Order Payment (${resolvedName})`,
           userEmail: customer.email,
-          userPhone: customer.phone,
+          userPhone: resolvedPhone,
           themeColor: primaryColor,
           onSuccess: async (rzpResponse) => {
             await submitOrder({
+              customerName: resolvedName,
+              customerPhone: resolvedPhone,
+              customerAddress: resolvedAddress,
               paymentMethod: 'UPI',
               isPaid: true,
               paidAmount: cartGrandTotal,
@@ -741,7 +851,12 @@ export default function PublicStorePage() {
       }
     } else {
       // Cash payment
-      await submitOrder({ paymentMethod: 'CASH' });
+      await submitOrder({
+        customerName: resolvedName,
+        customerPhone: resolvedPhone,
+        customerAddress: resolvedAddress,
+        paymentMethod: 'CASH'
+      });
     }
   };
 
@@ -2632,15 +2747,247 @@ export default function PublicStorePage() {
                     </div>
 
                     {customer.deliveryType === 'DELIVERY' && (
-                      <div className="clean-input-group checkout-address-group">
-                        <label>Delivery Address <span className="req-star">*</span></label>
-                        <textarea
-                          rows={2}
-                          placeholder="Flat / House No, Street name, Area, City & Pincode"
-                          required
-                          value={customer.address}
-                          onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                        />
+                      <div className="amazon-delivery-section-wrap">
+                        {customerUser ? (
+                          /* Amazon-Style Delivery Address Selector for Logged-In Customer */
+                          <div className="amazon-delivery-address-container">
+                            <div className="amazon-address-section-header">
+                              <MapPin size={16} className="amazon-header-pin" style={{ color: primaryColor }} />
+                              <div>
+                                <h5 className="amazon-address-title">Select a delivery address</h5>
+                                <p className="amazon-address-sub">Choose where you'd like your order delivered</p>
+                              </div>
+                            </div>
+
+                            {/* Option 1: Saved Primary Delivery Address Card */}
+                            <div
+                              className={`amazon-address-card ${deliveryAddressMode === 'SAVED' ? 'selected' : ''}`}
+                              onClick={() => {
+                                setDeliveryAddressMode('SAVED');
+                                if (customerUser.address) {
+                                  setCustomer((prev) => ({ ...prev, address: customerUser.address }));
+                                }
+                              }}
+                            >
+                              <div className="amazon-radio-indicator">
+                                <div
+                                  className={`amazon-radio-circle ${deliveryAddressMode === 'SAVED' ? 'checked' : ''}`}
+                                  style={deliveryAddressMode === 'SAVED' ? { borderColor: primaryColor, backgroundColor: primaryColor } : {}}
+                                />
+                              </div>
+                              <div className="amazon-address-card-body">
+                                <div className="amazon-address-card-header">
+                                  <strong className="amazon-recipient-name">{customerUser.name}</strong>
+                                  <span className="amazon-badge-default" style={{ background: `${primaryColor}18`, color: primaryColor }}>
+                                    DEFAULT ADDRESS
+                                  </span>
+                                </div>
+                                <p className="amazon-address-text">
+                                  {customerUser.address || customer.address || 'No primary delivery address saved in profile.'}
+                                </p>
+                                <div className="amazon-address-phone">
+                                  <span>Phone: +91 {customerUser.phone}</span>
+                                </div>
+                                {deliveryAddressMode === 'SAVED' && (
+                                  <div
+                                    className="amazon-deliver-here-chip"
+                                    style={{ background: `${primaryColor}14`, color: primaryColor, borderColor: `${primaryColor}40` }}
+                                  >
+                                    <Check size={12} /> Deliver to this address
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Option 2: Add / Deliver to a Different Address Card */}
+                            <div
+                              className={`amazon-address-card ${deliveryAddressMode === 'NEW' ? 'selected' : ''}`}
+                              onClick={() => setDeliveryAddressMode('NEW')}
+                            >
+                              <div className="amazon-radio-indicator">
+                                <div
+                                  className={`amazon-radio-circle ${deliveryAddressMode === 'NEW' ? 'checked' : ''}`}
+                                  style={deliveryAddressMode === 'NEW' ? { borderColor: primaryColor, backgroundColor: primaryColor } : {}}
+                                />
+                              </div>
+                              <div className="amazon-address-card-body">
+                                <div className="amazon-address-card-header">
+                                  <strong className="amazon-recipient-name" style={{ color: deliveryAddressMode === 'NEW' ? primaryColor : '#1e293b' }}>
+                                    + Deliver to a different address
+                                  </strong>
+                                </div>
+                                <p className="amazon-address-text" style={{ color: '#64748b' }}>
+                                  Ship to a different doorstep, office, friend, or family address.
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Expanded New Address Form when NEW is selected */}
+                            {deliveryAddressMode === 'NEW' && (
+                              <div className="amazon-new-address-expanded-form">
+                                <div className="clean-form-grid" style={{ marginBottom: '0.65rem' }}>
+                                  <div className="clean-input-group">
+                                    <label>Recipient Name <span className="req-star">*</span></label>
+                                    <div className="input-with-icon">
+                                      <User size={14} className="input-icon" />
+                                      <input
+                                        type="text"
+                                        placeholder="Receiver's name"
+                                        required
+                                        value={altAddressForm.name || customerUser.name}
+                                        onChange={(e) => setAltAddressForm({ ...altAddressForm, name: e.target.value })}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="clean-input-group">
+                                    <label>Contact Mobile <span className="req-star">*</span></label>
+                                    <div className="input-with-icon input-phone-wrap">
+                                      <span className="input-prefix-tag">🇮🇳 +91</span>
+                                      <input
+                                        type="tel"
+                                        maxLength={10}
+                                        placeholder="10-digit mobile"
+                                        required
+                                        value={altAddressForm.phone || customerUser.phone}
+                                        onChange={(e) => setAltAddressForm({ ...altAddressForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="clean-input-group" style={{ marginBottom: '0.65rem' }}>
+                                  <label>House / Flat / Street / Area <span className="req-star">*</span></label>
+                                  <div className="input-with-icon">
+                                    <Home size={14} className="input-icon" />
+                                    <input
+                                      type="text"
+                                      placeholder="Door No, Building, Street Name"
+                                      required
+                                      value={altAddressForm.street}
+                                      onChange={(e) => {
+                                        const street = e.target.value;
+                                        setAltAddressForm({ ...altAddressForm, street });
+                                        const full = [street, altAddressForm.city, altAddressForm.pincode ? `PIN - ${altAddressForm.pincode}` : ''].filter(Boolean).join(', ');
+                                        setCustomer((prev) => ({ ...prev, address: full }));
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="clean-form-grid" style={{ marginBottom: '0.65rem' }}>
+                                  <div className="clean-input-group">
+                                    <label>City / Town <span className="req-star">*</span></label>
+                                    <div className="input-with-icon">
+                                      <MapPin size={14} className="input-icon" />
+                                      <input
+                                        type="text"
+                                        placeholder="City / Town"
+                                        required
+                                        value={altAddressForm.city}
+                                        onChange={(e) => {
+                                          const city = e.target.value;
+                                          setAltAddressForm({ ...altAddressForm, city });
+                                          const full = [altAddressForm.street, city, altAddressForm.pincode ? `PIN - ${altAddressForm.pincode}` : ''].filter(Boolean).join(', ');
+                                          setCustomer((prev) => ({ ...prev, address: full }));
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="clean-input-group">
+                                    <label>Pincode <span className="req-star">*</span></label>
+                                    <div className="input-with-icon">
+                                      <Navigation size={14} className="input-icon" />
+                                      <input
+                                        type="text"
+                                        maxLength={6}
+                                        placeholder="6-digit PIN"
+                                        required
+                                        value={altAddressForm.pincode}
+                                        onChange={(e) => {
+                                          const pincode = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                          setAltAddressForm({ ...altAddressForm, pincode });
+                                          const full = [altAddressForm.street, altAddressForm.city, pincode ? `PIN - ${pincode}` : ''].filter(Boolean).join(', ');
+                                          setCustomer((prev) => ({ ...prev, address: full }));
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <label className="amazon-save-checkbox-label">
+                                  <input
+                                    type="checkbox"
+                                    checked={altAddressForm.saveForFuture}
+                                    onChange={(e) => setAltAddressForm({ ...altAddressForm, saveForFuture: e.target.checked })}
+                                  />
+                                  <span>Save this delivery address to my account</span>
+                                </label>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          /* Structured Doorstep Address for Guest Customer */
+                          <div className="guest-address-structured-group">
+                            <div className="clean-input-group" style={{ marginBottom: '0.65rem' }}>
+                              <label>Doorstep Delivery Address <span className="req-star">*</span></label>
+                              <div className="input-with-icon">
+                                <Home size={14} className="input-icon" />
+                                <input
+                                  type="text"
+                                  placeholder="Flat / House No, Street name, Area"
+                                  required
+                                  value={guestAddress.street}
+                                  onChange={(e) => {
+                                    const street = e.target.value;
+                                    setGuestAddress({ ...guestAddress, street });
+                                    const full = [street, guestAddress.city, guestAddress.pincode ? `PIN - ${guestAddress.pincode}` : ''].filter(Boolean).join(', ');
+                                    setCustomer((prev) => ({ ...prev, address: full }));
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="clean-form-grid">
+                              <div className="clean-input-group">
+                                <label>City / Town <span className="req-star">*</span></label>
+                                <div className="input-with-icon">
+                                  <MapPin size={14} className="input-icon" />
+                                  <input
+                                    type="text"
+                                    placeholder="City"
+                                    required
+                                    value={guestAddress.city}
+                                    onChange={(e) => {
+                                      const city = e.target.value;
+                                      setGuestAddress({ ...guestAddress, city });
+                                      const full = [guestAddress.street, city, guestAddress.pincode ? `PIN - ${guestAddress.pincode}` : ''].filter(Boolean).join(', ');
+                                      setCustomer((prev) => ({ ...prev, address: full }));
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              <div className="clean-input-group">
+                                <label>Pincode <span className="req-star">*</span></label>
+                                <div className="input-with-icon">
+                                  <Navigation size={14} className="input-icon" />
+                                  <input
+                                    type="text"
+                                    maxLength={6}
+                                    placeholder="6-digit PIN"
+                                    required
+                                    value={guestAddress.pincode}
+                                    onChange={(e) => {
+                                      const pincode = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                      setGuestAddress({ ...guestAddress, pincode });
+                                      const full = [guestAddress.street, guestAddress.city, pincode ? `PIN - ${pincode}` : ''].filter(Boolean).join(', ');
+                                      setCustomer((prev) => ({ ...prev, address: full }));
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -3099,6 +3446,62 @@ export default function PublicStorePage() {
                     />
                   </div>
                 </div>
+              )}
+
+              {authModalMode === 'REGISTER' && (
+                <>
+                  <div className="auth-address-divider">
+                    <div className="auth-address-subheading">
+                      <MapPin size={15} style={{ color: primaryColor }} />
+                      <span>Primary Delivery Address</span>
+                    </div>
+                    <span className="auth-address-sub-note">Doorstep shipping address saved to your account</span>
+                  </div>
+
+                  <div className="auth-field-group">
+                    <label>House / Flat / Street / Area <span className="req-star">*</span></label>
+                    <div className="auth-field-input-wrap">
+                      <Home size={16} className="auth-field-icon" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Flat 302, Green Avenue, Anna Nagar"
+                        value={authFormData.address}
+                        onChange={(e) => setAuthFormData({ ...authFormData, address: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="auth-field-row" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.65rem' }}>
+                    <div className="auth-field-group">
+                      <label>City / Town <span className="req-star">*</span></label>
+                      <div className="auth-field-input-wrap">
+                        <MapPin size={16} className="auth-field-icon" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Chennai"
+                          value={authFormData.city}
+                          onChange={(e) => setAuthFormData({ ...authFormData, city: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="auth-field-group">
+                      <label>Pincode <span className="req-star">*</span></label>
+                      <div className="auth-field-input-wrap">
+                        <Navigation size={16} className="auth-field-icon" />
+                        <input
+                          type="text"
+                          maxLength={6}
+                          required
+                          placeholder="6-digit PIN"
+                          value={authFormData.pincode}
+                          onChange={(e) => setAuthFormData({ ...authFormData, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="auth-field-group">
