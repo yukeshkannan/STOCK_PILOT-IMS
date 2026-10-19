@@ -56,6 +56,8 @@ import {
   LogOut,
   Edit3,
   UserCheck,
+  Building2,
+  Navigation,
   Save
 } from 'lucide-react';
 import './PublicStorePage.css';
@@ -3230,19 +3232,21 @@ export default function PublicStorePage() {
                 type="button"
                 className={`drawer-tab-nav-btn ${customerDrawerTab === 'ORDERS' ? 'active' : ''}`}
                 onClick={() => setCustomerDrawerTab('ORDERS')}
-                style={customerDrawerTab === 'ORDERS' ? { borderBottomColor: primaryColor, color: primaryColor } : {}}
+                style={customerDrawerTab === 'ORDERS' ? { color: primaryColor } : {}}
               >
-                <Package size={15} />
+                <Package size={15} color={customerDrawerTab === 'ORDERS' ? primaryColor : '#64748b'} />
                 <span>My Orders</span>
-                {customerOrders.length > 0 && <span className="drawer-tab-pill">{customerOrders.length}</span>}
+                {customerOrders.length > 0 && (
+                  <span className="drawer-tab-pill" style={{ background: primaryColor }}>{customerOrders.length}</span>
+                )}
               </button>
               <button
                 type="button"
                 className={`drawer-tab-nav-btn ${customerDrawerTab === 'PROFILE' ? 'active' : ''}`}
                 onClick={() => setCustomerDrawerTab('PROFILE')}
-                style={customerDrawerTab === 'PROFILE' ? { borderBottomColor: primaryColor, color: primaryColor } : {}}
+                style={customerDrawerTab === 'PROFILE' ? { color: primaryColor } : {}}
               >
-                <UserCheck size={15} />
+                <UserCheck size={15} color={customerDrawerTab === 'PROFILE' ? primaryColor : '#64748b'} />
                 <span>Edit Profile & Address</span>
               </button>
             </div>
@@ -3384,19 +3388,23 @@ export default function PublicStorePage() {
 
                   <div className="form-group-clean">
                     <label>Full Name</label>
-                    <input
-                      type="text"
-                      className="clean-input"
-                      placeholder="Your Full Name"
-                      value={profileForm.name}
-                      onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
-                      required
-                    />
+                    <div className="clean-input-wrapper">
+                      <User size={16} className="clean-input-icon" />
+                      <input
+                        type="text"
+                        className="clean-input"
+                        placeholder="Your Full Name"
+                        value={profileForm.name}
+                        onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group-clean">
                     <label>Mobile Number</label>
-                    <div className="input-with-badge">
+                    <div className="clean-input-wrapper input-with-badge">
+                      <Phone size={16} className="clean-input-icon" />
                       <input
                         type="tel"
                         className="clean-input"
@@ -3413,48 +3421,60 @@ export default function PublicStorePage() {
 
                   <div className="form-group-clean">
                     <label>Email Address</label>
-                    <input
-                      type="email"
-                      className="clean-input"
-                      placeholder="name@example.com (for e-receipts)"
-                      value={profileForm.email}
-                      onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
-                    />
+                    <div className="clean-input-wrapper">
+                      <Mail size={16} className="clean-input-icon" />
+                      <input
+                        type="email"
+                        className="clean-input"
+                        placeholder="name@example.com (for e-receipts)"
+                        value={profileForm.email}
+                        onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group-clean">
                     <label>Primary Delivery Address</label>
-                    <textarea
-                      rows={3}
-                      className="clean-input clean-textarea"
-                      placeholder="Flat/House No., Street Name, Landmark, Area..."
-                      value={profileForm.address}
-                      onChange={(e) => setProfileForm((prev) => ({ ...prev, address: e.target.value }))}
-                      required
-                    />
+                    <div className="clean-input-wrapper">
+                      <MapPin size={16} className="clean-input-icon" style={{ top: '14px', position: 'absolute' }} />
+                      <textarea
+                        rows={3}
+                        className="clean-input clean-textarea"
+                        placeholder="Flat/House No., Street Name, Landmark, Area..."
+                        value={profileForm.address}
+                        onChange={(e) => setProfileForm((prev) => ({ ...prev, address: e.target.value }))}
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div className="form-row-2col">
                     <div className="form-group-clean">
                       <label>City / Town</label>
-                      <input
-                        type="text"
-                        className="clean-input"
-                        placeholder="City"
-                        value={profileForm.city}
-                        onChange={(e) => setProfileForm((prev) => ({ ...prev, city: e.target.value }))}
-                      />
+                      <div className="clean-input-wrapper">
+                        <Building2 size={16} className="clean-input-icon" />
+                        <input
+                          type="text"
+                          className="clean-input"
+                          placeholder="City"
+                          value={profileForm.city}
+                          onChange={(e) => setProfileForm((prev) => ({ ...prev, city: e.target.value }))}
+                        />
+                      </div>
                     </div>
                     <div className="form-group-clean">
                       <label>Pincode</label>
-                      <input
-                        type="text"
-                        maxLength={6}
-                        className="clean-input"
-                        placeholder="6-digit PIN"
-                        value={profileForm.pincode}
-                        onChange={(e) => setProfileForm((prev) => ({ ...prev, pincode: e.target.value }))}
-                      />
+                      <div className="clean-input-wrapper">
+                        <Navigation size={16} className="clean-input-icon" />
+                        <input
+                          type="text"
+                          maxLength={6}
+                          className="clean-input"
+                          placeholder="6-digit PIN"
+                          value={profileForm.pincode}
+                          onChange={(e) => setProfileForm((prev) => ({ ...prev, pincode: e.target.value }))}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -3465,11 +3485,15 @@ export default function PublicStorePage() {
                     style={{
                       background: primaryColor,
                       width: '100%',
-                      marginTop: '1rem',
+                      marginTop: '0.85rem',
+                      height: '44px',
+                      borderRadius: '10px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.45rem'
+                      gap: '0.45rem',
+                      fontWeight: 700,
+                      boxShadow: `0 4px 14px ${primaryColor}35`
                     }}
                   >
                     {isSavingProfile ? (
