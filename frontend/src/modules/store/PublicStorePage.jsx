@@ -45,7 +45,6 @@ import {
   User,
   ArrowUpDown,
   ShoppingBasket,
-  Sparkles,
   HelpCircle,
   Tag,
   Percent,
@@ -1531,7 +1530,7 @@ export default function PublicStorePage() {
               <div className="clean-carousel-header-row">
                 <div>
                   <div className="clean-pill-tag" style={{ color: accentColor }}>
-                    <Sparkles size={13} /> Curated Picks
+                    <Star size={13} /> Curated Picks
                   </div>
                   <h2 className="clean-section-title">{carouselTitle}</h2>
                   <p className="clean-section-subtitle">{carouselSubtitle}</p>
@@ -1865,7 +1864,7 @@ export default function PublicStorePage() {
             <div className="clean-newsletter-card" style={{ borderLeft: `4px solid ${primaryColor}` }}>
               <div className="clean-newsletter-info">
                 <div className="clean-pill-tag" style={{ color: accentColor }}>
-                  <Sparkles size={13} /> Exclusive Customer Offer
+                  <Tag size={13} /> Exclusive Customer Offer
                 </div>
                 <h3>{sData.title || 'Unlock 10% Off Your Next Purchase'}</h3>
                 <p>{sData.subtitle || 'Use this special coupon code during checkout to enjoy an instant discount on all orders.'}</p>

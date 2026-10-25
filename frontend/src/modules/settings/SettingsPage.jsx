@@ -11,7 +11,7 @@ import {
   Check,
   Save,
   RotateCcw,
-  Sparkles,
+  ShieldCheck,
   Hash,
   Mail,
   Phone,
@@ -230,7 +230,7 @@ export default function SettingsPage() {
               className={`settings-plan-badge ${plan.toLowerCase()}`}
               title="Click to manage subscription plan"
             >
-              <Sparkles size={11} />
+              <ShieldCheck size={11} />
               <span>{plan} Plan</span>
             </Link>
           </div>

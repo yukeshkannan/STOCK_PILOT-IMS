@@ -43,7 +43,7 @@ import MobileAppBanner from './components/MobileAppBanner';
 import Preloader from './components/Preloader';
 
 import DeveloperLoginPage from './modules/auth/DeveloperLoginPage';
-import DeveloperLayout from './components/DeveloperLayout';
+import DeveloperLayout from './layouts/DeveloperLayout';
 
 export default function App() {
   const { mode } = useSelector((state) => state.theme);

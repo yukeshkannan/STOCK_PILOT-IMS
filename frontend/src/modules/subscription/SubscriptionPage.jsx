@@ -12,8 +12,7 @@ import {
   CreditCard,
   Building,
   RefreshCw,
-  ShieldCheck,
-  Sparkles
+  ShieldCheck
 } from 'lucide-react';
 
 export default function SubscriptionPage() {

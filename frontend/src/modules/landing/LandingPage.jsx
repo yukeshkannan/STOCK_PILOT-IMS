@@ -18,7 +18,6 @@ import {
   Printer,
   ChevronDown,
   Layers,
-  Sparkles,
   BarChart3,
   Building2,
   HelpCircle,

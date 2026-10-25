@@ -17,11 +17,11 @@ export default function Preloader({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#ffffff',
         width: '100%',
+        flex: 1,
         opacity: fadeOut ? 0 : 1,
         transition: 'opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s ease',
-        transform: fadeOut ? 'scale(1.02)' : 'scale(1)',
+        transform: fadeOut ? 'scale(1.01)' : 'scale(1)',
         pointerEvents: fadeOut ? 'none' : 'auto',
         ...(isFullScreen
           ? {
@@ -33,11 +33,14 @@ export default function Preloader({
               zIndex: 9999999,
               height: '100vh',
               minHeight: '100vh',
+              backgroundColor: '#ffffff',
               padding: 'max(env(safe-area-inset-top, 0px), 1rem) 1.5rem max(env(safe-area-inset-bottom, 0px), 1rem) 1.5rem'
             }
           : {
-              minHeight: '60vh',
-              padding: '2.5rem 1rem'
+              minHeight: 'calc(100vh - 170px)',
+              height: '100%',
+              backgroundColor: 'transparent',
+              padding: '1.5rem 1rem'
             }),
         boxSizing: 'border-box'
       }}
@@ -49,7 +52,7 @@ export default function Preloader({
             src={logoImg}
             alt="StockPilot"
             style={{
-              width: compact ? '120px' : '150px',
+              width: compact ? '118px' : '142px',
               height: 'auto'
             }}
           />
@@ -59,13 +62,13 @@ export default function Preloader({
         <div
           className="preloader-hairline-track"
           style={{
-            width: compact ? '110px' : '140px'
+            width: compact ? '105px' : '135px'
           }}
         >
           <div className="preloader-hairline-fill" />
         </div>
 
-        {/* Text exactly matching the user's design */}
+        {/* Status text cleanly centered */}
         {displayText && (
           <div className="preloader-status-text">
             {displayText}

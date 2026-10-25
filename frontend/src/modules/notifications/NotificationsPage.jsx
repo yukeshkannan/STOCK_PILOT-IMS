@@ -19,7 +19,6 @@ import {
   X,
   ShieldAlert,
   Info,
-  Sparkles,
   ExternalLink,
   ArrowRight,
   Check,

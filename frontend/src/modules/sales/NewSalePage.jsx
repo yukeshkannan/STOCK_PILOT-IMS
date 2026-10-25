@@ -33,7 +33,6 @@ import {
   CheckCircle2,
   Calculator,
   ArrowRight,
-  Sparkles,
   RotateCcw
 } from 'lucide-react';
 

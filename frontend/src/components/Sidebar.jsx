@@ -21,7 +21,6 @@ import {
   ChevronRight,
   LogOut,
   ShieldCheck,
-  Sparkles,
   Store,
   LifeBuoy,
   Download,
@@ -278,7 +277,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
         {
           label: 'Subscription & Plans',
           to: '/subscription',
-          icon: Sparkles
+          icon: CreditCard
         },
         {
           label: 'Company Settings',

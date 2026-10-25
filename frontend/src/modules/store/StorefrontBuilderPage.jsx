@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import {
   Store,
   Palette,
-  Sparkles,
+  LayoutTemplate,
   Phone,
   CheckCircle2,
   ExternalLink,
@@ -139,7 +139,7 @@ export const AVAILABLE_BLOCK_TYPES = [
     type: 'HERO_BANNER',
     name: 'Hero Banner',
     category: 'Header & Intro',
-    icon: Sparkles,
+    icon: LayoutTemplate,
     badgeText: 'Essential',
     description: 'Cinematic hero banner with title, description, CTA button, and background image overlay.',
     defaultData: {
@@ -323,7 +323,7 @@ export const INDUSTRY_TEMPLATES = [
     tagline: 'Minimalist editorial aesthetics for designer wear, apparel & accessories',
     badgeText: 'Editorial Luxe',
     theme: 'MINIMAL_WHITE',
-    icon: Sparkles,
+    icon: ShoppingBag,
     bannerImage: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80',
     palette: {
       primary: '#0f172a',
@@ -1651,7 +1651,7 @@ export default function StorefrontBuilderPage() {
             onClick={() => setIsTemplateModalOpen(true)}
             className="btn btn-secondary btn-sm"
           >
-            <Sparkles size={14} color="#982A86" /> <span>1-Click Themes</span>
+            <Palette size={14} color="#982A86" /> <span>1-Click Themes</span>
           </button>
 
           <button
@@ -3995,7 +3995,7 @@ export default function StorefrontBuilderPage() {
                 {/* Store Announcement Bar */}
                 {config.announcement?.enabled !== false && config.announcement?.text && (
                   <div className="clean-announcement-strip" style={{ background: primaryColor }}>
-                    <Sparkles size={13} />
+                    <Tag size={13} />
                     <span>{config.announcement.text}</span>
                   </div>
                 )}
@@ -4554,7 +4554,7 @@ export default function StorefrontBuilderPage() {
                               <div className="clean-carousel-header-row">
                                 <div>
                                   <div className="clean-pill-tag" style={{ color: accentColor }}>
-                                    <Sparkles size={13} /> Curated Picks
+                                    <Star size={13} /> Curated Picks
                                   </div>
                                   <h2 className="clean-section-title">{sData.title || 'Trending Highlights'}</h2>
                                   <p className="clean-section-subtitle">{sData.subtitle || 'Top-selling picks delivered directly'}</p>
@@ -4745,7 +4745,7 @@ export default function StorefrontBuilderPage() {
                           <section className="clean-newsletter-bar-section">
                             <div className="clean-newsletter-card" style={{ borderLeft: `4px solid ${primaryColor}` }}>
                               <div className="clean-newsletter-info">
-                                <div className="clean-pill-tag" style={{ color: accentColor }}><Sparkles size={13} /> Exclusive Offer</div>
+                                <div className="clean-pill-tag" style={{ color: accentColor }}><Tag size={13} /> Exclusive Offer</div>
                                 <h3>{sData.title || 'Unlock 10% Off Your Next Purchase'}</h3>
                                 <p>{sData.subtitle || 'Use this special code during checkout'}</p>
                               </div>

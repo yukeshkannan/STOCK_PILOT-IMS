@@ -40,7 +40,7 @@ import {
   CheckSquare,
   Send,
   Copy,
-  Sparkles
+  RefreshCw
 } from 'lucide-react';
 import './SalesFulfillment.css';
 import { WhatsAppBrandIcon } from '../store/PublicStorePage';
@@ -2773,7 +2773,7 @@ export default function SalesPage() {
                       onClick={() => setOrderStatusForm(prev => ({ ...prev, trackingNumber: `AWB-${Date.now().toString().slice(-8)}` }))}
                       className="fulfillment-chip-btn"
                     >
-                      <Sparkles size={11} style={{ display: 'inline', marginRight: '3px' }} /> Auto AWB
+                      <RefreshCw size={11} style={{ display: 'inline', marginRight: '3px' }} /> Auto AWB
                     </button>
                     {orderStatusForm.trackingNumber && (
                       <button

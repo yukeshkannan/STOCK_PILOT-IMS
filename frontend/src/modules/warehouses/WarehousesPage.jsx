@@ -47,7 +47,6 @@ import {
   SlidersHorizontal,
   RefreshCw,
   ExternalLink,
-  Sparkles,
   ArrowDownLeft,
   CheckCheck,
   Info,

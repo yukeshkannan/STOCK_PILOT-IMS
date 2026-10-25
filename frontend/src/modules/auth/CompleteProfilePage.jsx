@@ -15,7 +15,7 @@ import {
   LogOut,
   ArrowLeft,
   CheckCircle2,
-  Sparkles
+  ShieldCheck
 } from 'lucide-react';
 
 const POPULAR_CITIES = [
@@ -613,7 +613,7 @@ export default function CompleteProfilePage() {
                     boxShadow: '0 4px 12px rgba(152, 42, 134, 0.3)'
                   }}
                 >
-                  <Sparkles size={20} />
+                  <ShieldCheck size={20} />
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>

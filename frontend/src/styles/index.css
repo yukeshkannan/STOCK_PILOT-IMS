@@ -90,7 +90,7 @@
 }
 
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
   width: 100%;
 }
@@ -553,6 +553,8 @@ body.sidebar-is-collapsed .sidebar {
 
 .page-body {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   padding: 1.75rem 2rem;
   max-width: 1720px;
   margin: 0 auto;
@@ -2395,6 +2397,19 @@ table.invoice-receipt-table,
   align-items: center;
   justify-content: center;
   text-align: center;
+  user-select: none;
+  animation: preloaderFadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes preloaderFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .preloader-logo-container {
@@ -2404,16 +2419,17 @@ table.invoice-receipt-table,
 }
 
 .preloader-logo-container img {
-  width: 150px;
+  width: 142px;
   height: auto;
   max-width: 100%;
   object-fit: contain;
   display: block;
+  filter: drop-shadow(0 4px 14px rgba(152, 42, 134, 0.08));
 }
 
 .preloader-hairline-track {
-  width: 140px;
-  height: 3.5px;
+  width: 130px;
+  height: 3px;
   background: #f1f5f9;
   border-radius: 9999px;
   overflow: hidden;
@@ -2425,17 +2441,19 @@ table.invoice-receipt-table,
   position: absolute;
   height: 100%;
   width: 45%;
-  background: #982A86;
+  background: linear-gradient(90deg, #982A86 0%, #c026d3 100%);
   border-radius: 9999px;
-  animation: stockpilotHairlineGlide 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: stockpilotHairlineGlide 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .preloader-status-text {
-  font-size: 0.85rem;
+  font-size: 0.835rem;
   color: #64748b;
   font-weight: 500;
-  margin-top: 0.75rem;
+  margin-top: 0.85rem;
   letter-spacing: -0.01em;
+  max-width: 360px;
+  line-height: 1.45;
 }
 
 @keyframes stockpilotHairlineGlide {
