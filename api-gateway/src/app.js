@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { SERVICES } = require('./config/services');
@@ -11,28 +12,86 @@ const app = express();
 
 // Security & Logging Middlewares
 app.use(helmet());
+
+// Dynamic Production CORS
+const corsOrigin = process.env.CORS_ORIGIN
+  ? (process.env.CORS_ORIGIN.includes(',') ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : process.env.CORS_ORIGIN)
+  : '*';
+
 app.use(cors({
-  origin: '*',
+  origin: corsOrigin,
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'x-idempotency-key', 'Idempotency-Key', 'x-user-role', 'x-user-permissions'],
-  exposedHeaders: ['X-Idempotent-Replayed', 'X-Idempotency-Key']
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'x-tenant-id',
+    'x-idempotency-key',
+    'Idempotency-Key',
+    'x-user-role',
+    'x-user-permissions',
+    'x-request-id'
+  ],
+  exposedHeaders: ['X-Idempotent-Replayed', 'X-Idempotency-Key', 'X-Request-Id']
 }));
+
+// Distributed Tracing: Inject unique Request ID
+app.use((req, res, next) => {
+  const requestId = req.headers['x-request-id'] || `sp-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  req.headers['x-request-id'] = requestId;
+  res.setHeader('X-Request-Id', requestId);
+  next();
+});
+
 app.use(morgan('dev'));
 
-// Rate Limiter
-const limiter = rateLimit({
+// Strict Rate Limiting for Auth & Public OTP (Brute-force & Brevo OTP spam protection)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many authentication or OTP attempts from this IP. Please try again after 15 minutes.',
+    errorCode: 'AUTH_RATE_LIMIT_EXCEEDED'
+  }
+});
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/sales/public/otp', authLimiter);
+
+// General IP Rate Limiter
+const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.',
     errorCode: 'RATE_LIMIT_EXCEEDED'
   }
 });
-app.use('/api/', limiter);
+app.use('/api/', globalLimiter);
 
 // Attach JWT Context Header Forwarding
 app.use(authGatewayMiddleware);
+
+// Tenant-Aware Rate Limiting (Prevents noisy-neighbor SaaS degradation)
+const tenantLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 600,
+  keyGenerator: (req) => req.headers['x-tenant-id'] || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => !req.headers['x-tenant-id'],
+  message: {
+    success: false,
+    message: 'Tenant API rate limit exceeded (600 req/min). Please throttle requests.',
+    errorCode: 'TENANT_RATE_LIMIT_EXCEEDED'
+  }
+});
+app.use('/api/', tenantLimiter);
 
 // Health Check
 app.get('/health', (req, res) => {

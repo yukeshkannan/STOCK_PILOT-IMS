@@ -47,9 +47,9 @@ sequenceDiagram
     participant DB as Service Database (sales_db)
 
     Client->>GW: POST /api/v1/sales (Headers: Authorization Bearer JWT)
-    Note over GW: 1. Helmet & CORS check<br/>2. Rate Limiting verification<br/>3. Decode & Verify JWT Secret
-    GW->>GW: Inject headers (x-tenant-id, x-user-id, x-user-role)
-    GW->>Auth: Forward request with enriched headers
+    Note over GW: 1. Helmet & Dynamic CORS check<br/>2. x-request-id Generation & Tracing<br/>3. Dual-Tier Rate Limiting (IP + Tenant)<br/>4. Decode & Verify JWT Secret
+    GW->>GW: Inject headers (x-request-id, x-tenant-id, x-user-id, x-user-role)
+    GW->>Auth: Forward request with enriched context headers
     Note over Auth: enforceTenantIsolation middleware:<br/>Extracts req.tenantId from header
     Auth->>DB: Query filtered by WHERE tenant_id = req.tenantId
     DB-->>Auth: Scoped data records

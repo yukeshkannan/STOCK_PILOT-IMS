@@ -43,13 +43,30 @@ Make sure to replace secrets:
 - Generate a strong `JWT_SECRET` (e.g. `openssl rand -hex 32`)
 - Set a complex `MYSQL_ROOT_PASSWORD`
 - Set secure credentials for `SUPERADMIN_PASSWORD`
+- Provide `BREVO_API_KEY` for transactional email delivery
+
+Run pre-flight configuration validation:
+```bash
+npm run validate:env
+```
 
 ### Step 2: Build & Start All Containers
 ```bash
 docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
+> [!NOTE]
+> Microservices feature built-in auto-retry loops (`waitForMysqlConnection`) during cold-starts to wait gracefully while MySQL initializes.
 
-### Step 3: Verify Container Health
+### Step 3: Configure Ingress Reverse Proxy
+Copy and apply the production Nginx configuration with SSL:
+```bash
+sudo cp deploy/nginx/stockpilot.conf /etc/nginx/sites-available/stockpilot
+sudo ln -s /etc/nginx/sites-available/stockpilot /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d yourdomain.com
+```
+
+### Step 4: Verify Container Health
 ```bash
 docker-compose -f docker-compose.prod.yml ps
 ```
@@ -71,6 +88,9 @@ docker-compose -f docker-compose.prod.yml ps
 | `RABBITMQ_URL` | AMQP connection string | `amqp://user:pass@rabbitmq:5672` or CloudAMQP URI |
 | `REDIS_URL` | Redis connection string | `redis://redis:6379` |
 | `CORS_ORIGIN` | Allowed web origins | `https://app.stockpilot.io` |
+| `BREVO_API_KEY` | Brevo REST API Key | `xkeysib-...` |
+| `BREVO_SENDER_EMAIL` | Brevo verified sender email | `orders@stockpilot.io` |
+| `BREVO_SENDER_NAME` | Brevo verified sender name | `StockPilot Orders` |
 
 ---
 

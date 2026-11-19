@@ -10,6 +10,7 @@ const response = require('./utils/response');
 const logger = require('./utils/logger');
 const sequence = require('./utils/sequence');
 const cache = require('./cache/cacheClient');
+const http = require('./utils/http');
 
 module.exports = {
   ...constants,
@@ -23,5 +24,6 @@ module.exports = {
   ...response,
   ...logger,
   ...sequence,
-  ...cache
+  ...cache,
+  ...http
 };

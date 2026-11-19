@@ -112,27 +112,56 @@ async function syncTableColumns(sequelize) {
   }
 }
 
+async function waitForMysqlConnection(dbName, maxRetries = 10, delayMs = 2000) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const connection = await mysql.createConnection({
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 3306,
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || 'rootpassword',
+        connectTimeout: 6000
+      });
+
+      await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+      await connection.end();
+      logger.info(`[DB Boot] Verified/created MySQL database [${dbName}] successfully.`);
+      return;
+    } catch (err) {
+      if (attempt === maxRetries) {
+        logger.warn(`[DB Boot] Could not verify/create MySQL DB [${dbName}] after ${maxRetries} attempts: ${err.message}`);
+        return;
+      }
+      logger.warn(`[DB Boot] MySQL service not ready for [${dbName}] (${err.code || err.message}). Retrying ${attempt}/${maxRetries} in ${delayMs / 1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
+async function authenticateWithRetry(sequelize, dbName, maxRetries = 6, delayMs = 2000) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await sequelize.authenticate();
+      return;
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      logger.warn(`[DB Boot] Sequelize connection failed for [${dbName}] (${err.message}). Retrying ${attempt}/${maxRetries} in ${delayMs / 1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 async function initDatabase(sequelize, dbName) {
   try {
     const dialect = process.env.DB_DIALECT || 'sqlite';
 
     if (dialect === 'mysql') {
-      try {
-        const connection = await mysql.createConnection({
-          host: process.env.DB_HOST || 'localhost',
-          port: process.env.DB_PORT || 3306,
-          user: process.env.DB_USER || 'root',
-          password: process.env.DB_PASSWORD || 'rootpassword'
-        });
-
-        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
-        await connection.end();
-      } catch (err) {
-        logger.warn(`Could not verify/create MySQL DB ${dbName} directly: ${err.message}`);
-      }
+      await waitForMysqlConnection(dbName);
+      await authenticateWithRetry(sequelize, dbName);
+    } else {
+      await sequelize.authenticate();
     }
 
-    await sequelize.authenticate();
     await syncTableColumns(sequelize);
     await sequelize.sync({ alter: false });
     await syncTableColumns(sequelize);

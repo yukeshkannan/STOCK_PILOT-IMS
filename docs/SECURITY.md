@@ -109,26 +109,35 @@ const items = await Product.findAll({
 
 ## 5. API Hardening & Abuse Prevention
 
-### 1. Rate Limiting
-- Configured at API Gateway via `express-rate-limit`.
-- Max **1,000 requests per 15-minute window** per client IP.
-- Returns `429 Too Many Requests` with code `RATE_LIMIT_EXCEEDED` on breach.
+### 1. Multi-Tier Rate Limiting
+- **Strict Auth & OTP Limiter**: Applies to `/api/v1/auth/login` and `/api/v1/sales/public/otp` (Max 30 requests per 15 minutes per IP). Blocks credential brute-forcing and prevents Brevo email relay credit exhaustion.
+- **Tenant-Aware Limiter**: Evaluated per organization keyed on verified `x-tenant-id` (Max 600 requests per minute). Prevents noisy-neighbor starvation where one tenant's load impacts other organizations.
+- **Global IP Limiter**: Gateway fallback (Max 1,000 requests per 15-minute window per IP) returning `429 Too Many Requests`.
 
-### 2. Idempotency Support
+### 2. Configurable Dynamic CORS
+- API Gateway parses `CORS_ORIGIN` environment variable (comma-separated origins).
+- Supports credentials while restricting cross-origin resource sharing to trusted tenant and storefront frontend domains in production.
+
+### 3. Distributed Tracing (`x-request-id`)
+- API Gateway automatically generates a cryptographically unique `x-request-id` (`sp-<timestamp>-<hex>`) if not provided by client.
+- Propagates throughout all downstream microservices and response headers for seamless end-to-end audit logging.
+
+### 4. Idempotency Support
 - POS checkout and financial transactions accept `Idempotency-Key` or `x-idempotency-key`.
 - Prevents double-billing or duplicate stock deduction if network retries occur.
 
-### 3. HTTP Security Headers
+### 5. HTTP Security Headers
 - Helmet enabled on Gateway to apply HSTS, X-Content-Type-Options, Frameguard, and X-XSS-Protection.
 
-### 4. Parameterized SQL Queries
+### 6. Parameterized SQL Queries
 - All databases use Sequelize ORM with prepared statements, preventing SQL injection vulnerabilities.
 
 ---
 
 ## 6. Production Security Checklist
 
+- [x] Run `npm run validate:env` (or `node scripts/validate-env.js`) to verify all production keys and secrets.
 - [ ] Change default `JWT_SECRET` and `JWT_REFRESH_SECRET` from `.env.example` defaults.
 - [ ] Ensure database root password is unique and not committed to git repository.
-- [ ] Enforce HTTPS termination via Nginx / Cloudflare reverse proxy in front of port 5000.
+- [ ] Enforce HTTPS termination via Nginx (`deploy/nginx/stockpilot.conf`) or Cloudflare reverse proxy in front of port 5000.
 - [ ] Rotate demo passwords (`password123`) before connecting to public networks.

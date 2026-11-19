@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { Notification, sequelize } = require('../models');
+const { resilientFetch } = require('@stockpilot/common');
 
 const WAREHOUSE_SERVICE_URL = process.env.WAREHOUSE_SERVICE_URL || 'http://localhost:5005';
 const PURCHASE_SERVICE_URL = process.env.PURCHASE_SERVICE_URL || 'http://localhost:5006';
@@ -17,7 +18,7 @@ async function fetchService(servicePath, defaultEnvUrl, dockerUrl, headers = {})
   for (const baseUrl of [...new Set(candidateUrls)]) {
     try {
       const url = `${baseUrl.replace(/\/$/, '')}${servicePath}`;
-      const res = await fetch(url, { headers });
+      const res = await resilientFetch(url, { headers, timeout: 6000, retries: 1 });
       if (res.ok) {
         return await res.json();
       }
@@ -39,13 +40,15 @@ async function httpPatch(serviceEnvUrl, dockerUrl, path, body = {}, headers = {}
   for (const baseUrl of [...new Set(candidateUrls)]) {
     try {
       const url = `${baseUrl.replace(/\/$/, '')}${path}`;
-      const res = await fetch(url, {
+      const res = await resilientFetch(url, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           ...headers
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        timeout: 8000,
+        retries: 1
       });
       if (!res.ok) {
         let errMessage = `HTTP request failed (${res.status})`;

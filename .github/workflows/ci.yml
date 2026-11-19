@@ -2,11 +2,50 @@ name: StockPilot CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
+  backend-validation:
+    name: Validate Backend & Microservices
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Root Dependencies
+        run: npm ci || npm install
+
+      - name: Sync Common Library
+        run: node scripts/sync-common.js
+
+      - name: Pre-Flight Environment Validation
+        run: node scripts/validate-env.js
+
+      - name: Verify Microservices Code Syntax
+        run: |
+          node -c api-gateway/src/app.js
+          node -c services/common/src/index.js
+          node -c services/common/src/db/connection.js
+          node -c services/common/src/utils/http.js
+          node -c services/auth-service/server.js
+          node -c services/tenant-service/server.js
+          node -c services/product-service/server.js
+          node -c services/inventory-service/server.js
+          node -c services/warehouse-service/server.js
+          node -c services/purchase-service/server.js
+          node -c services/sales-service/server.js
+          node -c services/finance-service/server.js
+          node -c services/notification-service/server.js
+          node -c services/ai-service/server.js
+
   frontend-build:
     name: Test Frontend Build
     runs-on: ubuntu-latest
@@ -21,12 +60,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package.json
 
-      - name: Install Dependencies
+      - name: Install Frontend Dependencies
         run: |
           cd frontend
           npm install
 
-      - name: Build Frontend
+      - name: Build Frontend SPA
         run: |
           cd frontend
           npm run build
