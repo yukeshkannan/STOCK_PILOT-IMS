@@ -19,7 +19,8 @@
     "dev:backend": "node scripts/start-all-services.js",
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "node scripts/start-all-dev.js",
-    "validate:env": "node scripts/validate-env.js"
+    "validate:env": "node scripts/validate-env.js",
+    "clean:demo": "node scripts/clean-demo-data.js"
   },
   "keywords": [
     "inventory",
