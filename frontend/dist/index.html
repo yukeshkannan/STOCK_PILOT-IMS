@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="shortcut icon" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>StockPilot — Multi-Tenant Inventory & Business Management SaaS</title>
+    <meta name="description" content="Production-ready multi-tenant inventory, sales, purchasing, warehouse transfers, and business management platform." />
+    <meta name="theme-color" content="#982A86" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="StockPilot" />
+    <!-- Modern Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      /* Standalone & Web App Preloader */
+      #initial-app-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #ffffff;
+        z-index: 999999;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        padding: max(env(safe-area-inset-top, 0px), 1rem) 1rem max(env(safe-area-inset-bottom, 0px), 1rem) 1rem;
+        box-sizing: border-box;
+      }
+      .init-minimal-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      .init-logo-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .init-logo-wrap img {
+        width: 150px;
+        height: auto;
+        max-width: 100%;
+        object-fit: contain;
+        display: block;
+      }
+      .init-hairline-track {
+        width: 140px;
+        height: 3.5px;
+        background: #f1f5f9;
+        border-radius: 9999px;
+        overflow: hidden;
+        position: relative;
+        margin-top: 1.25rem;
+      }
+      .init-hairline-fill {
+        position: absolute;
+        height: 100%;
+        width: 45%;
+        background: #982A86;
+        border-radius: 9999px;
+        animation: initHairlineGlide 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+      .init-status-text {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 500;
+        margin-top: 0.75rem;
+        letter-spacing: -0.01em;
+      }
+      @keyframes initHairlineGlide {
+        0% { left: -45%; }
+        100% { left: 100%; }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-Bz9wn4gl.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D0ZrgsTq.css">
+  <link rel="manifest" href="/manifest.webmanifest"></head>
+  <body>
+    <div id="root">
+      <!-- Instant Startup Preloader -->
+      <div id="initial-app-loader">
+        <div class="init-minimal-wrap">
+          <div class="init-logo-wrap">
+            <img src="/logo.png" alt="StockPilot" width="150" height="125" />
+          </div>
+          <div class="init-hairline-track">
+            <div class="init-hairline-fill"></div>
+          </div>
+          <div class="init-status-text">
+            Initializing Workspace
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

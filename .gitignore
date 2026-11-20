@@ -65,7 +65,8 @@ lerna-debug.log*
 # ------------------------------------------------------------------------------
 # 4. Build, Distribution & Runtime Outputs
 # ------------------------------------------------------------------------------
-dist/
+# dist/ (tracked for low-RAM server deployments)
+!frontend/dist/**
 build/
 dev-dist/
 out/
