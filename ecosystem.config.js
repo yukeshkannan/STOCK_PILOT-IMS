@@ -1,7 +1,7 @@
 const path = require('path');
 const dotenv = require('dotenv');
 
-// Automatically load root .env configuration
+// Automatically load secrets from the private server .env (which is NOT tracked by git)
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const baseEnv = {
@@ -10,17 +10,17 @@ const baseEnv = {
   DB_HOST: process.env.DB_HOST || 'localhost',
   DB_PORT: process.env.DB_PORT || 3306,
   DB_USER: process.env.DB_USER || 'root',
-  DB_PASSWORD: process.env.DB_PASSWORD || 'StockPilot@2026',
+  DB_PASSWORD: process.env.DB_PASSWORD,
   DB_LOGGING: 'false',
-  JWT_SECRET: process.env.JWT_SECRET || 'stockpilot_production_super_jwt_secret_key_2026_xyz',
-  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'stockpilot_production_refresh_jwt_secret_key_2026_xyz',
+  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '8h',
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-  RABBITMQ_URL: process.env.RABBITMQ_URL || 'amqps://vqdgdqtx:xd7PCYWVtmuxWXckoNbATAaCopfMr6ZE@warthog.lmq.cloudamqp.com/vqdgdqtx',
-  REDIS_URL: process.env.REDIS_URL || 'rediss://default:gQAAAAAABHljAAIgcDE5YzdlOTJiNDZiNjQ0YWE4YmM2YTM2MDMyNTViODU5YQ@upright-foal-293219.upstash.io:6379',
+  RABBITMQ_URL: process.env.RABBITMQ_URL,
+  REDIS_URL: process.env.REDIS_URL,
   BREVO_API_KEY: process.env.BREVO_API_KEY,
-  BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL || 'yukesh785.in@gmail.com',
-  BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME || 'StockPilot Orders',
+  BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL,
+  BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME,
   GROQ_API_KEY: process.env.GROQ_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   AUTH_SERVICE_URL: 'http://localhost:5001',
