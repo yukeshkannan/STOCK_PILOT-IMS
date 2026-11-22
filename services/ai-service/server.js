@@ -1,7 +1,6 @@
 const path = require('path');
 const assignedPort = process.env.PORT;
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: false });
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const app = require('./src/app');
 
 const PORT = (assignedPort && String(assignedPort) !== "5000") ? assignedPort : (process.env.PORT && String(process.env.PORT) !== "5000" ? process.env.PORT : 5010);

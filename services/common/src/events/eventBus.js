@@ -85,11 +85,12 @@ class EventBus {
         logger.info(`[RabbitMQ] Published event: ${routingKey}`);
         return true;
       } else {
-        throw new Error('RabbitMQ channel unavailable');
+        logger.warn(`[RabbitMQ] Channel unavailable, skipped event: ${routingKey}`);
+        return false;
       }
     } catch (error) {
-      logger.error(`[RabbitMQ Error] Failed to publish ${routingKey}:`, error.message);
-      throw error;
+      logger.warn(`[RabbitMQ Warning] Failed to publish ${routingKey}: ${error.message}`);
+      return false;
     }
   }
 
