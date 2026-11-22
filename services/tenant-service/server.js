@@ -1,10 +1,11 @@
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
+const assignedPort = process.env.PORT;
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: false });
 const app = require('./src/app');
 const { sequelize, Tenant, TenantUser, Role, Permission, SupportTicket, TicketMessage, SupportMember } = require('./src/models');
 const { initDatabase, eventBus, EVENTS, PERMISSIONS, ROLES, DEFAULT_ROLE_PERMISSIONS } = require('@stockpilot/common');
 
-const PORT = process.env.PORT || 5002;
+const PORT = (assignedPort && String(assignedPort) !== "5000") ? assignedPort : (process.env.PORT && String(process.env.PORT) !== "5000" ? process.env.PORT : 5002);
 
 async function seedDefaultRolesAndPermissions() {
   try {
