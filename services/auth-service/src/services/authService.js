@@ -10,8 +10,8 @@ const {
 } = require('@stockpilot/common');
 const { User, TenantLookup, RefreshToken } = require('../models');
 
-const TENANT_SERVICE_URL = process.env.TENANT_SERVICE_URL || 'http://localhost:5002';
-const WAREHOUSE_SERVICE_URL = process.env.WAREHOUSE_SERVICE_URL || 'http://localhost:5005';
+const TENANT_SERVICE_URL = (process.env.TENANT_SERVICE_URL || 'http://127.0.0.1:5002').replace('localhost', '127.0.0.1');
+const WAREHOUSE_SERVICE_URL = (process.env.WAREHOUSE_SERVICE_URL || 'http://127.0.0.1:5005').replace('localhost', '127.0.0.1');
 
 async function sendInternalPost(url, data) {
   try {
@@ -205,77 +205,22 @@ class AuthService {
       city: city || ''
     });
 
-    // 3. Fallback direct local require (for monolithic local run)
+    // 3. Publish EventBus Event
     try {
-      const tenantModels = require('../../../tenant-service/src/models');
-      if (tenantModels?.Tenant) {
-        const [liveTenant, created] = await tenantModels.Tenant.findOrCreate({
-          where: { id: tenantId },
-          defaults: {
-            id: tenantId,
-            company_code: formattedCode,
-            company_name: companyName.trim(),
-            email: user.email,
-            phone: phone || null,
-            status: 'ACTIVE',
-            plan: chosenPlan
-          }
-        });
-
-        if (!created) {
-          await liveTenant.update({
-            company_code: formattedCode,
-            company_name: companyName.trim(),
-            plan: chosenPlan,
-            status: 'ACTIVE'
-          });
-        }
-
-        await tenantModels.TenantUser.findOrCreate({
-          where: { tenant_id: tenantId, email: user.email },
-          defaults: {
-            tenant_id: tenantId,
-            first_name: user.first_name,
-            last_name: user.last_name || '',
-            email: user.email,
-            phone: phone || null,
-            role_name: ROLES.ADMIN,
-            status: 'ACTIVE'
-          }
+      if (EVENTS.TENANT_CREATED) {
+        await eventBus.publish(EVENTS.TENANT_CREATED, {
+          tenantId,
+          companyCode: formattedCode,
+          companyName: companyName.trim(),
+          email: user.email,
+          phone: phone || null,
+          plan: chosenPlan,
+          adminUserId: user.id
         });
       }
-
-      const warehouseModels = require('../../../warehouse-service/src/models');
-      if (warehouseModels?.Warehouse) {
-        await warehouseModels.Warehouse.findOrCreate({
-          where: { tenant_id: tenantId, code: 'WH-MAIN' },
-          defaults: {
-            tenant_id: tenantId,
-            name: `${companyName.trim()} Main Facility`,
-            code: 'WH-MAIN',
-            address: address || city || 'Primary Logistics Facility',
-            city: city || '',
-            capacity: null,
-            capacity_unit: null,
-            is_default: true,
-            status: 'ACTIVE'
-          }
-        });
-      }
-    } catch (e) {
-      // Safe to ignore in containerized microservices
+    } catch (evtErr) {
+      console.warn('[EventBus] TENANT_CREATED publish notification note:', evtErr.message);
     }
-
-    // 4. Publish EventBus Event
-    await eventBus.publish(EVENTS.TENANT_CREATED, {
-      tenantId,
-      companyCode: formattedCode,
-      companyName: companyName.trim(),
-      email: user.email,
-      phone: phone || null,
-      plan: chosenPlan,
-      adminUserId: user.id
-    });
 
 
     const permissions = DEFAULT_ROLE_PERMISSIONS[ROLES.ADMIN];

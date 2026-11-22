@@ -48,6 +48,7 @@ CREATE INDEX idx_tenant_created ON sales_invoices(tenant_id, created_at DESC);
   - `id`: INT (PK, Auto-increment)
   - `tenant_id`: INT (Nullable for Super Admin, otherwise Tenant ID)
   - `email`: VARCHAR(255) (Unique)
+  - `phone`: VARCHAR(50) (Nullable)
   - `password_hash`: VARCHAR(255)
   - `role_id`: INT
   - `status`: ENUM (`ACTIVE`, `SUSPENDED`, `INACTIVE`)

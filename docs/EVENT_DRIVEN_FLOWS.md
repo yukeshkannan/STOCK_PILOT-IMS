@@ -88,6 +88,7 @@ sequenceDiagram
 | `stock.low_alert` | Inventory Service | Notification Service | Sends banner alert to Managers & Admins. |
 | `transfer.dispatched`| Warehouse Service | Inventory Service | Moves stock from Source Warehouse to In-Transit. |
 | `transfer.completed` | Warehouse Service | Inventory Service, Notification Service | Deposits stock into Destination Warehouse. |
+| `tenant.created` | Auth Service | Tenant Service, Warehouse Service | Auto-provisions tenant schema & default warehouse facilities. |
 
 ---
 

@@ -202,23 +202,38 @@ const EXPENSE_CATEGORIES = {
 };
 
 const EVENTS = {
+  // Tenant
+  TENANT_CREATED: 'tenant.created',
+  // Stock & Inventory
   STOCK_LOW: 'stock.low',
   STOCK_OUT: 'stock.out',
   STOCK_ADJUSTMENT: 'stock.adjustment',
+  STOCK_UPDATED: 'stock.updated',
+  // Products
+  PRODUCT_CREATED: 'product.created',
+  PRODUCT_UPDATED: 'product.updated',
+  // Purchases
   PURCHASE_CREATED: 'purchase.created',
   PURCHASE_APPROVED: 'purchase.approved',
   PURCHASE_REJECTED: 'purchase.rejected',
+  PURCHASE_RETURN_CREATED: 'purchase_return.created',
+  PURCHASE_RETURN_APPROVED: 'purchase_return.approved',
+  PURCHASE_RETURN_REJECTED: 'purchase_return.rejected',
+  // Sales
   SALE_CREATED: 'sale.created',
   SALE_RETURNED: 'sale.returned',
+  // Finance & Payments
+  PAYMENT_RECEIVED: 'payment.received',
+  PAYMENT_RECORDED: 'payment.recorded',
   PAYMENT_OVERDUE: 'payment.overdue',
+  EXPENSE_CREATED: 'expense.created',
+  // Transfers
   TRANSFER_REQUESTED: 'transfer.requested',
   TRANSFER_APPROVED: 'transfer.approved',
   TRANSFER_REJECTED: 'transfer.rejected',
   TRANSFER_DISPATCHED: 'transfer.dispatched',
   TRANSFER_COMPLETED: 'transfer.completed',
-  PURCHASE_RETURN_CREATED: 'purchase_return.created',
-  PURCHASE_RETURN_APPROVED: 'purchase_return.approved',
-  PURCHASE_RETURN_REJECTED: 'purchase_return.rejected',
+  // System & Notification
   SYSTEM_BROADCAST: 'system.broadcast',
   NOTIFICATION_SEND: 'notification.send'
 };
