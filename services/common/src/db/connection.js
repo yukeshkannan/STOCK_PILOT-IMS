@@ -24,6 +24,11 @@ function getProjectDataDir() {
   return fallbackDir;
 }
 
+function resolveDbHost() {
+  const host = process.env.DB_HOST || '127.0.0.1';
+  return host === 'localhost' ? '127.0.0.1' : host;
+}
+
 function createDbConnection(dbName, options = {}) {
   const isMysql = process.env.DB_DIALECT === 'mysql' || Boolean(process.env.DB_HOST);
 
@@ -33,7 +38,7 @@ function createDbConnection(dbName, options = {}) {
       process.env.DB_USER || 'root',
       process.env.DB_PASSWORD || 'rootpassword',
       {
-        host: process.env.DB_HOST || 'localhost',
+        host: resolveDbHost(),
         port: process.env.DB_PORT || 3306,
         dialect: 'mysql',
         logging: process.env.DB_LOGGING === 'true' ? (msg) => logger.debug(msg) : false,
@@ -116,7 +121,7 @@ async function waitForMysqlConnection(dbName, maxRetries = 10, delayMs = 2000) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const connection = await mysql.createConnection({
-        host: process.env.DB_HOST || 'localhost',
+        host: resolveDbHost(),
         port: process.env.DB_PORT || 3306,
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || 'rootpassword',

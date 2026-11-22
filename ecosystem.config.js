@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 const baseEnv = {
   NODE_ENV: process.env.NODE_ENV || 'production',
   DB_DIALECT: process.env.DB_DIALECT || 'mysql',
-  DB_HOST: process.env.DB_HOST || 'localhost',
+  DB_HOST: (process.env.DB_HOST && process.env.DB_HOST !== 'localhost') ? process.env.DB_HOST : '127.0.0.1',
   DB_PORT: process.env.DB_PORT || 3306,
   DB_USER: process.env.DB_USER || 'root',
   DB_PASSWORD: process.env.DB_PASSWORD,
@@ -23,16 +23,16 @@ const baseEnv = {
   BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME,
   GROQ_API_KEY: process.env.GROQ_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-  AUTH_SERVICE_URL: 'http://localhost:5001',
-  TENANT_SERVICE_URL: 'http://localhost:5002',
-  PRODUCT_SERVICE_URL: 'http://localhost:5003',
-  INVENTORY_SERVICE_URL: 'http://localhost:5004',
-  WAREHOUSE_SERVICE_URL: 'http://localhost:5005',
-  PURCHASE_SERVICE_URL: 'http://localhost:5006',
-  SALES_SERVICE_URL: 'http://localhost:5007',
-  FINANCE_SERVICE_URL: 'http://localhost:5008',
-  NOTIFICATION_SERVICE_URL: 'http://localhost:5009',
-  AI_SERVICE_URL: 'http://localhost:5010'
+  AUTH_SERVICE_URL: 'http://127.0.0.1:5001',
+  TENANT_SERVICE_URL: 'http://127.0.0.1:5002',
+  PRODUCT_SERVICE_URL: 'http://127.0.0.1:5003',
+  INVENTORY_SERVICE_URL: 'http://127.0.0.1:5004',
+  WAREHOUSE_SERVICE_URL: 'http://127.0.0.1:5005',
+  PURCHASE_SERVICE_URL: 'http://127.0.0.1:5006',
+  SALES_SERVICE_URL: 'http://127.0.0.1:5007',
+  FINANCE_SERVICE_URL: 'http://127.0.0.1:5008',
+  NOTIFICATION_SERVICE_URL: 'http://127.0.0.1:5009',
+  AI_SERVICE_URL: 'http://127.0.0.1:5010'
 };
 
 module.exports = {
