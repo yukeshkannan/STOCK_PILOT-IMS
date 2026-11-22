@@ -7,14 +7,14 @@ const emailService = require('./emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'stockpilot_super_secret_jwt_key_2026';
 
-const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5009';
+const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://127.0.0.1:5004';
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://127.0.0.1:5009';
 
 async function dispatchNotification(tenantId, { title, message, type = 'RETURN', category = 'TRANSACTIONS', link = null, actionType = null, actionId = null, metadata = null }) {
   const urls = [
     process.env.NOTIFICATION_SERVICE_URL,
     'http://notification-service:5009',
-    'http://localhost:5009'
+    'http://127.0.0.1:5009'
   ].filter(Boolean);
 
   for (const url of [...new Set(urls)]) {
@@ -152,7 +152,7 @@ class SalesService {
     let companyPhone = null;
 
     try {
-      const TENANT_URL = process.env.TENANT_SERVICE_URL || 'http://localhost:5002';
+      const TENANT_URL = process.env.TENANT_SERVICE_URL || 'http://127.0.0.1:5002';
       const tRes = await axios.get(`${TENANT_URL}/api/v1/tenants/internal/${sale.tenant_id}`, { timeout: 2000 });
       const tData = tRes.data?.data;
       if (tData) {

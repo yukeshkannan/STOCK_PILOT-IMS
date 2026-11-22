@@ -2,7 +2,7 @@ const { Tenant, TenantUser, Role, Permission, AuditLog } = require('../models');
 const { ROLES, PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } = require('@stockpilot/common');
 
 const http = require('http');
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:5001';
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:5001';
 
 async function fetchFromAuth(endpoint, options = {}) {
   try {
@@ -742,7 +742,7 @@ class TenantService {
     // 3. HTTP sync with auth-service
     try {
       const http = require('http');
-      const authUrl = new URL(process.env.AUTH_SERVICE_URL || 'http://localhost:5001');
+      const authUrl = new URL(process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:5001');
       const reqData = JSON.stringify({ companyCode: tenant.company_code, status });
       const req = http.request({
         hostname: authUrl.hostname,
@@ -789,7 +789,7 @@ class TenantService {
     // 2. HTTP sync with auth-service
     try {
       const http = require('http');
-      const authUrl = new URL(process.env.AUTH_SERVICE_URL || 'http://localhost:5001');
+      const authUrl = new URL(process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:5001');
       const reqData = JSON.stringify({ companyCode: tenant.company_code, plan });
       const req = http.request({
         hostname: authUrl.hostname,

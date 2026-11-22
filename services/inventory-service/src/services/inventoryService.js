@@ -6,7 +6,7 @@ async function dispatchNotification(tenantId, { title, message, type = 'LOW_STOC
   const urls = [
     process.env.NOTIFICATION_SERVICE_URL,
     'http://notification-service:5009',
-    'http://localhost:5009'
+    'http://127.0.0.1:5009'
   ].filter(Boolean);
 
   for (const url of [...new Set(urls)]) {
@@ -41,7 +41,7 @@ class InventoryService {
   async getStocks(tenantId, { warehouseId, productId, lowStockOnly, outOfStockOnly, search, page = 1, limit = 50 }) {
     // Sync/cleanup catalog changes and ensure stock thresholds are always updated from catalog
     try {
-      const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL || 'http://localhost:5003';
+      const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL || 'http://127.0.0.1:5003';
       const pRes = await fetch(`${PRODUCT_SERVICE_URL}/api/v1/products?limit=1000`, {
         headers: {
           'x-tenant-id': String(tenantId),
@@ -548,7 +548,7 @@ class InventoryService {
 
       // Check if product still exists in catalog
       try {
-        const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL || 'http://localhost:5003';
+        const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL || 'http://127.0.0.1:5003';
         const pCheck = await fetch(`${PRODUCT_SERVICE_URL}/api/v1/products/${productId}`, {
           headers: {
             'x-tenant-id': String(tenantId),

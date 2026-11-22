@@ -221,7 +221,7 @@ class ProductService {
     }
 
     // Automatically initialize stock record in Inventory Service
-    const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || (process.env.NODE_ENV === 'production' ? 'http://inventory-service:5004' : 'http://localhost:5004');
+    const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || (process.env.NODE_ENV === 'production' ? 'http://inventory-service:5004' : 'http://127.0.0.1:5004');
     let stockInitSuccess = false;
     try {
       const res = await fetch(`${INVENTORY_SERVICE_URL}/api/v1/inventory/internal/init-stock`, {
@@ -357,7 +357,7 @@ class ProductService {
     }
 
     // Automatically sync updated product details to Inventory Service
-    const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
+    const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://127.0.0.1:5004';
     try {
       await fetch(`${INVENTORY_SERVICE_URL}/api/v1/inventory/internal/update-product-stock/${productId}`, {
         method: 'PUT',
@@ -391,7 +391,7 @@ class ProductService {
     await product.destroy();
 
     // Automatically remove orphaned stock record in Inventory Service
-    const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
+    const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://127.0.0.1:5004';
     try {
       await fetch(`${INVENTORY_SERVICE_URL}/api/v1/inventory/internal/remove-product-stock/${productId}`, {
         method: 'DELETE',

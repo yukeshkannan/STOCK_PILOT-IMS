@@ -2,17 +2,17 @@ const { Op } = require('sequelize');
 const { Notification, sequelize } = require('../models');
 const { resilientFetch } = require('@stockpilot/common');
 
-const WAREHOUSE_SERVICE_URL = process.env.WAREHOUSE_SERVICE_URL || 'http://localhost:5005';
-const PURCHASE_SERVICE_URL = process.env.PURCHASE_SERVICE_URL || 'http://localhost:5006';
-const SALES_SERVICE_URL = process.env.SALES_SERVICE_URL || 'http://localhost:5007';
-const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
-const TENANT_SERVICE_URL = process.env.TENANT_SERVICE_URL || 'http://localhost:5002';
+const WAREHOUSE_SERVICE_URL = process.env.WAREHOUSE_SERVICE_URL || 'http://127.0.0.1:5005';
+const PURCHASE_SERVICE_URL = process.env.PURCHASE_SERVICE_URL || 'http://127.0.0.1:5006';
+const SALES_SERVICE_URL = process.env.SALES_SERVICE_URL || 'http://127.0.0.1:5007';
+const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://127.0.0.1:5004';
+const TENANT_SERVICE_URL = process.env.TENANT_SERVICE_URL || 'http://127.0.0.1:5002';
 
 async function fetchService(servicePath, defaultEnvUrl, dockerUrl, headers = {}) {
   const candidateUrls = [
     defaultEnvUrl,
     dockerUrl,
-    `http://localhost:${dockerUrl.split(':').pop()}`
+    `http://127.0.0.1:${dockerUrl.split(':').pop()}`
   ].filter(Boolean);
 
   for (const baseUrl of [...new Set(candidateUrls)]) {
@@ -33,7 +33,7 @@ async function httpPatch(serviceEnvUrl, dockerUrl, path, body = {}, headers = {}
   const candidateUrls = [
     serviceEnvUrl,
     dockerUrl,
-    `http://localhost:${dockerUrl.split(':').pop()}`
+    `http://127.0.0.1:${dockerUrl.split(':').pop()}`
   ].filter(Boolean);
 
   let lastError = null;

@@ -2,14 +2,14 @@ const axios = require('axios');
 const { Supplier, Purchase, PurchaseItem, PurchaseReturn, PurchaseReturnItem, sequelize } = require('../models');
 const { PURCHASE_STATUS, PAYMENT_STATUS, STOCK_MOVEMENT_TYPES, eventBus, EVENTS, getNextSequenceNumber } = require('@stockpilot/common');
 
-const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5004';
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5009';
+const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://127.0.0.1:5004';
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://127.0.0.1:5009';
 
 async function dispatchNotification(tenantId, { title, message, type = 'PURCHASE', category = 'REQUESTS', link = null, actionType = null, actionId = null, metadata = null }) {
   const urls = [
     process.env.NOTIFICATION_SERVICE_URL,
     'http://notification-service:5009',
-    'http://localhost:5009'
+    'http://127.0.0.1:5009'
   ].filter(Boolean);
 
   for (const url of [...new Set(urls)]) {
