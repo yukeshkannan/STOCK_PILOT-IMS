@@ -20,7 +20,8 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "node scripts/start-all-dev.js",
     "validate:env": "node scripts/validate-env.js",
-    "clean:demo": "node scripts/clean-demo-data.js"
+    "clean:demo": "node scripts/clean-demo-data.js",
+    "flush:cache": "node scripts/flush-cache.js"
   },
   "keywords": [
     "inventory",
