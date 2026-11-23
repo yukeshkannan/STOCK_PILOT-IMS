@@ -31,6 +31,25 @@ async function sendInternalPost(url, data) {
   }
 }
 
+async function sendInternalGet(url) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json?.data !== undefined ? json.data : json;
+  } catch (err) {
+    console.warn(`[Internal HTTP Get] ${url}:`, err.message);
+    return null;
+  }
+}
+
 class AuthService {
   async registerUser({ firstName, lastName, email, password }) {
     const cleanEmail = email.toLowerCase().trim();
@@ -174,6 +193,7 @@ class AuthService {
     await user.update({
       tenant_id: tenantId,
       company_code: formattedCode,
+      phone: phone || user.phone || null,
       status: 'ACTIVE'
     });
 
@@ -257,6 +277,7 @@ class AuthService {
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
+        phone: user.phone || phone || null,
         roleName: ROLES.ADMIN,
         isSuperAdmin: false,
         isProfileCompleted: true,
@@ -297,31 +318,27 @@ class AuthService {
     if (!user) {
       // Fallback: Check if user exists in tenant_db.TenantUser (e.g. created previously before sync)
       try {
-        const tenantModels = require('../../../tenant-service/src/models');
-        if (tenantModels?.TenantUser) {
-          const tenantUser = await tenantModels.TenantUser.findOne({
-            where: { email: cleanEmail }
+        const tenantUser = await sendInternalGet(`${TENANT_SERVICE_URL}/api/v1/tenants/internal/user-by-email/${encodeURIComponent(cleanEmail)}`);
+        if (tenantUser) {
+          const tenant = await sendInternalGet(`${TENANT_SERVICE_URL}/api/v1/tenants/internal/${tenantUser.tenant_id}`);
+          const salt = await bcrypt.genSalt(10);
+          const defaultHash = await bcrypt.hash(password || 'password123', salt);
+          user = await User.create({
+            tenant_id: tenantUser.tenant_id,
+            company_code: tenant ? tenant.company_code : '',
+            first_name: tenantUser.first_name,
+            last_name: tenantUser.last_name || '',
+            email: cleanEmail,
+            phone: tenantUser.phone || null,
+            password: defaultHash,
+            role_name: tenantUser.role_name || ROLES.STAFF,
+            warehouse_id: tenantUser.warehouse_id || null,
+            warehouse_name: tenantUser.warehouse_name || null,
+            is_super_admin: false,
+            status: tenantUser.status || 'ACTIVE'
           });
-          if (tenantUser) {
-            const tenant = await tenantModels.Tenant.findByPk(tenantUser.tenant_id);
-            const salt = await bcrypt.genSalt(10);
-            const defaultHash = await bcrypt.hash(password || 'password123', salt);
-            user = await User.create({
-              tenant_id: tenantUser.tenant_id,
-              company_code: tenant ? tenant.company_code : '',
-              first_name: tenantUser.first_name,
-              last_name: tenantUser.last_name || '',
-              email: cleanEmail,
-              password: defaultHash,
-              role_name: tenantUser.role_name || ROLES.STAFF,
-              warehouse_id: tenantUser.warehouse_id || null,
-              warehouse_name: tenantUser.warehouse_name || null,
-              is_super_admin: false,
-              status: tenantUser.status || 'ACTIVE'
-            });
-            if (user && user.tenant_id) {
-              tenantInfo = await TenantLookup.findOne({ where: { tenant_id: user.tenant_id } });
-            }
+          if (user && user.tenant_id) {
+            tenantInfo = await TenantLookup.findOne({ where: { tenant_id: user.tenant_id } });
           }
         }
       } catch (e) {
@@ -356,20 +373,17 @@ class AuthService {
 
       // Cross-verify with tenant_db for live sync
       try {
-        const tenantModels = require('../../../tenant-service/src/models');
-        if (tenantModels?.Tenant) {
-          const liveTenant = await tenantModels.Tenant.findOne({ where: { company_code: tenantInfo.company_code } });
-          if (liveTenant) {
-            if (liveTenant.status !== 'ACTIVE') {
-              await tenantInfo.update({ status: liveTenant.status });
-              throw { statusCode: 403, message: `Your company access is ${liveTenant.status}. Reason: Administrative / Subscription lock. Please contact platform support at support@stockpilot.io.` };
-            }
-            if (liveTenant.plan) {
-              const livePlan = liveTenant.plan.toString().trim().toUpperCase();
-              if (livePlan !== (tenantInfo.plan || '').toString().trim().toUpperCase()) {
-                await tenantInfo.update({ plan: livePlan });
-                tenantInfo.plan = livePlan;
-              }
+        const liveTenant = await sendInternalGet(`${TENANT_SERVICE_URL}/api/v1/tenants/internal/by-code/${encodeURIComponent(tenantInfo.company_code)}`);
+        if (liveTenant) {
+          if (liveTenant.status !== 'ACTIVE') {
+            await tenantInfo.update({ status: liveTenant.status });
+            throw { statusCode: 403, message: `Your company access is ${liveTenant.status}. Reason: Administrative / Subscription lock. Please contact platform support at support@stockpilot.io.` };
+          }
+          if (liveTenant.plan) {
+            const livePlan = liveTenant.plan.toString().trim().toUpperCase();
+            if (livePlan !== (tenantInfo.plan || '').toString().trim().toUpperCase()) {
+              await tenantInfo.update({ plan: livePlan });
+              tenantInfo.plan = livePlan;
             }
           }
         }
@@ -478,15 +492,12 @@ class AuthService {
 
     if (tenantInfo) {
       try {
-        const tenantModels = require('../../../tenant-service/src/models');
-        if (tenantModels?.Tenant) {
-          const liveTenant = await tenantModels.Tenant.findOne({ where: { company_code: tenantInfo.company_code } });
-          if (liveTenant?.plan) {
-            const livePlan = liveTenant.plan.toString().trim().toUpperCase();
-            if (livePlan !== (tenantInfo.plan || '').toString().trim().toUpperCase()) {
-              await tenantInfo.update({ plan: livePlan });
-              tenantInfo.plan = livePlan;
-            }
+        const liveTenant = await sendInternalGet(`${TENANT_SERVICE_URL}/api/v1/tenants/internal/by-code/${encodeURIComponent(tenantInfo.company_code)}`);
+        if (liveTenant?.plan) {
+          const livePlan = liveTenant.plan.toString().trim().toUpperCase();
+          if (livePlan !== (tenantInfo.plan || '').toString().trim().toUpperCase()) {
+            await tenantInfo.update({ plan: livePlan });
+            tenantInfo.plan = livePlan;
           }
         }
       } catch {}
@@ -550,15 +561,12 @@ class AuthService {
     // Cross-verify with tenant_db
     if (tenantInfo) {
       try {
-        const tenantModels = require('../../../tenant-service/src/models');
-        if (tenantModels?.Tenant) {
-          const liveTenant = await tenantModels.Tenant.findOne({ where: { company_code: tenantInfo.company_code } });
-          if (liveTenant?.plan) {
-            const livePlan = liveTenant.plan.toString().trim().toUpperCase();
-            if (livePlan !== (tenantInfo.plan || '').toString().trim().toUpperCase()) {
-              await tenantInfo.update({ plan: livePlan });
-              tenantInfo.plan = livePlan;
-            }
+        const liveTenant = await sendInternalGet(`${TENANT_SERVICE_URL}/api/v1/tenants/internal/by-code/${encodeURIComponent(tenantInfo.company_code)}`);
+        if (liveTenant?.plan) {
+          const livePlan = liveTenant.plan.toString().trim().toUpperCase();
+          if (livePlan !== (tenantInfo.plan || '').toString().trim().toUpperCase()) {
+            await tenantInfo.update({ plan: livePlan });
+            tenantInfo.plan = livePlan;
           }
         }
       } catch {}
@@ -726,12 +734,7 @@ class AuthService {
 
     let devMember = null;
     try {
-      const tenantModels = require('../../../tenant-service/src/models');
-      if (tenantModels?.SupportMember) {
-        devMember = await tenantModels.SupportMember.findOne({
-          where: { email: cleanEmail }
-        });
-      }
+      devMember = await sendInternalGet(`${TENANT_SERVICE_URL}/api/v1/tenants/internal/support-member/${encodeURIComponent(cleanEmail)}`);
     } catch (e) {
       console.warn('[devLogin] Error fetching SupportMember:', e.message);
     }

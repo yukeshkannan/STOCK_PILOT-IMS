@@ -83,6 +83,11 @@ All microservices adhere to standard JSON response envelopes to simplify client 
 | `PATCH` | `/api/v1/admin/tenants/:id/status` | Suspend or activate tenant company | `SUPER_ADMIN` |
 | `GET` | `/api/v1/admin/tickets` | Helpdesk ticket queue for devs and superadmin | `SUPER_ADMIN / DEV` |
 | `GET` | `/api/v1/admin/team` | Developer & support team directory | `SUPER_ADMIN / DEV` |
+| `GET` | `/api/v1/tenants/internal/:id` | Internal fetch tenant by ID | Internal |
+| `GET` | `/api/v1/tenants/internal/by-code/:code` | Internal fetch tenant by company code | Internal |
+| `GET` | `/api/v1/tenants/internal/support-member/:email` | Internal fetch developer/support member | Internal |
+| `GET` | `/api/v1/tenants/internal/user-by-email/:email` | Internal fetch tenant user by email | Internal |
+| `POST` | `/api/v1/tenants/internal/provision` | Internal provision tenant profile & admin | Internal |
 
 ### 📦 3. Product Service (`/api/v1/...`)
 | Method | Route | Description | Min Role |

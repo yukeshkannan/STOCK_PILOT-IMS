@@ -15,6 +15,9 @@ const {
 // Tenant Routes (/api/v1/tenants)
 const tenantRouter = express.Router();
 tenantRouter.get('/internal/:id', (req, res, next) => tenantController.getTenantInternal(req, res, next));
+tenantRouter.get('/internal/by-code/:code', (req, res, next) => tenantController.getTenantByCodeInternal(req, res, next));
+tenantRouter.get('/internal/support-member/:email', (req, res, next) => tenantController.getSupportMemberInternal(req, res, next));
+tenantRouter.get('/internal/user-by-email/:email', (req, res, next) => tenantController.getUserByEmailInternal(req, res, next));
 tenantRouter.post('/internal/provision', (req, res, next) => tenantController.provisionTenantInternal(req, res, next));
 tenantRouter.use(authenticateToken, requireTenant);
 

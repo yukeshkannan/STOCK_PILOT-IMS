@@ -21,6 +21,33 @@ class TenantController {
     }
   }
 
+  async getTenantByCodeInternal(req, res, next) {
+    try {
+      const tenant = await tenantService.getTenantByCode(req.params.code);
+      return ApiResponse.success(res, tenant, 'Tenant details');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getSupportMemberInternal(req, res, next) {
+    try {
+      const member = await tenantService.getSupportMemberByEmail(req.params.email);
+      return ApiResponse.success(res, member, 'Support member details');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getUserByEmailInternal(req, res, next) {
+    try {
+      const user = await tenantService.getUserByEmail(req.params.email);
+      return ApiResponse.success(res, user, 'Tenant user details');
+    } catch (err) {
+      next(err);
+    }
+  }
+
 
   async getMe(req, res, next) {
     try {

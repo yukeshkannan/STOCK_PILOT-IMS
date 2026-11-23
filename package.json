@@ -21,7 +21,8 @@
     "dev": "node scripts/start-all-dev.js",
     "validate:env": "node scripts/validate-env.js",
     "clean:demo": "node scripts/clean-demo-data.js",
-    "flush:cache": "node scripts/flush-cache.js"
+    "flush:cache": "node scripts/flush-cache.js",
+    "optimize:server": "bash scripts/optimize-server.sh"
   },
   "keywords": [
     "inventory",

@@ -1,4 +1,4 @@
-const { Tenant, TenantUser, Role, Permission, AuditLog } = require('../models');
+const { Tenant, TenantUser, Role, Permission, AuditLog, SupportMember } = require('../models');
 const { ROLES, PERMISSIONS, DEFAULT_ROLE_PERMISSIONS } = require('@stockpilot/common');
 
 const http = require('http');
@@ -191,6 +191,21 @@ class TenantService {
     } catch {}
 
     return tenant;
+  }
+
+  async getTenantByCode(companyCode) {
+    if (!companyCode) return null;
+    return await Tenant.findOne({ where: { company_code: companyCode.toUpperCase() } });
+  }
+
+  async getSupportMemberByEmail(email) {
+    if (!email) return null;
+    return await SupportMember.findOne({ where: { email: email.toLowerCase().trim() } });
+  }
+
+  async getUserByEmail(email) {
+    if (!email) return null;
+    return await TenantUser.findOne({ where: { email: email.toLowerCase().trim() } });
   }
 
   async getTenant(tenantId) {
