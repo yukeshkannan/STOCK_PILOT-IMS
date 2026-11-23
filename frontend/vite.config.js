@@ -114,6 +114,19 @@ export default defineConfig({
         proxyTimeout: 60000
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-core': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-redux': ['react-redux', '@reduxjs/toolkit'],
+          'vendor-ui': ['lucide-react', 'react-toastify'],
+          'vendor-charts': ['recharts']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 800
   }
 });
 

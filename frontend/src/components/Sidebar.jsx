@@ -142,7 +142,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
   useEffect(() => {
     loadSidebarTenants();
     syncBadgeCounts();
-    const interval = setInterval(syncBadgeCounts, 20000);
+    const interval = setInterval(syncBadgeCounts, 60000);
     window.addEventListener('stockpilot_tenants_changed', loadSidebarTenants);
 
     let ticketInterval = null;
@@ -156,7 +156,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
 
     if (isSuper) {
       syncSuperAdminTicketCount();
-      ticketInterval = setInterval(syncSuperAdminTicketCount, 5000);
+      ticketInterval = setInterval(syncSuperAdminTicketCount, 30000);
       window.addEventListener('stockpilot_ticket_created', handleTicketSync);
       window.addEventListener('stockpilot_ticket_updated', handleTicketSync);
       window.addEventListener('stockpilot_tickets_changed', handleTicketSync);

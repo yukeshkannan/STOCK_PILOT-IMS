@@ -43,9 +43,9 @@ function createDbConnection(dbName, options = {}) {
         dialect: 'mysql',
         logging: process.env.DB_LOGGING === 'true' ? (msg) => logger.debug(msg) : false,
         pool: {
-          max: 10,
-          min: 0,
-          acquire: 30000,
+          max: 4,
+          min: 1,
+          acquire: 20000,
           idle: 10000
         },
         ...options

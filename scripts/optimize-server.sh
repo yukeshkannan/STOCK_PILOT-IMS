@@ -13,15 +13,16 @@ echo "=========================================================="
 echo "Root directory: $ROOT_DIR"
 
 # 1. Frontend Static Assets to /var/www/stockpilot/dist
-echo "[1/6] Deploying frontend build to /var/www/stockpilot/dist..."
+echo "[1/7] Deploying code-split frontend build to /var/www/stockpilot/dist..."
 sudo mkdir -p /var/www/stockpilot/dist
+sudo rm -rf /var/www/stockpilot/dist/*
 sudo cp -r "$ROOT_DIR/frontend/dist"/* /var/www/stockpilot/dist/
 sudo chown -R www-data:www-data /var/www/stockpilot
 sudo chmod -R 755 /var/www/stockpilot
-echo "  ✓ Frontend assets successfully deployed."
+echo "  ✓ Frontend assets successfully deployed (lazy-loaded chunks active)."
 
 # 2. Update Nginx Configuration
-echo "[2/6] Configuring Nginx with Gzip & 1-Year Asset Caching..."
+echo "[2/7] Configuring Nginx with Gzip & 1-Year Asset Caching..."
 sudo cp "$ROOT_DIR/deploy/nginx/stockpilot.conf" /etc/nginx/sites-available/stockpilot
 sudo ln -sf /etc/nginx/sites-available/stockpilot /etc/nginx/sites-enabled/stockpilot
 sudo rm -f /etc/nginx/sites-enabled/default
@@ -32,27 +33,48 @@ sudo systemctl restart nginx
 echo "  ✓ Nginx configuration active and reloaded."
 
 # 3. Kernel Swappiness Optimization (Reduce VM I/O thrashing on 1GB RAM)
-echo "[3/6] Tuning OS swappiness (vm.swappiness=10)..."
+echo "[3/7] Tuning OS swappiness (vm.swappiness=10)..."
 sudo sysctl vm.swappiness=10 > /dev/null
 if ! grep -q "vm.swappiness=10" /etc/sysctl.conf 2>/dev/null; then
     echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf > /dev/null
 fi
 echo "  ✓ Swappiness set to 10."
 
-# 4. Flush Redis Cloud Cache
-echo "[4/6] Flushing Upstash Redis cache..."
+# 4. MySQL Low-Memory & Fast Disk I/O Tuning for 1GB RAM instance
+echo "[4/7] Tuning MySQL memory & transaction I/O..."
+sudo mkdir -p /etc/mysql/conf.d
+MYSQL_CONF="/etc/mysql/conf.d/stockpilot-lowmem.cnf"
+cat << 'MEOF' | sudo tee "$MYSQL_CONF" > /dev/null
+[mysqld]
+# Disable performance_schema to save ~150MB physical RAM
+performance_schema = OFF
+# Right-size InnoDB buffer pool for 1GB RAM VM
+innodb_buffer_pool_size = 48M
+innodb_log_buffer_size = 4M
+# Flush transaction log to OS cache every commit, disk every 1s (10x faster write I/O)
+innodb_flush_log_at_trx_commit = 2
+# Cap maximum concurrent connections
+max_connections = 60
+table_open_cache = 400
+MEOF
+
+sudo systemctl restart mysql
+echo "  ✓ MySQL optimized (performance_schema=OFF, innodb_flush_log=2)."
+
+# 5. Flush Redis Cloud Cache
+echo "[5/7] Flushing Upstash Redis cache..."
 cd "$ROOT_DIR"
 node scripts/flush-cache.js || true
 echo "  ✓ Cache flushed."
 
-# 5. Restart PM2 Microservices with clean environment
-echo "[5/6] Flushing PM2 logs and restarting services..."
+# 6. Restart PM2 Microservices with clean environment & 96M heap limit
+echo "[6/7] Flushing PM2 logs and restarting services..."
 pm2 flush || true
 pm2 restart all --update-env
-echo "  ✓ Microservices restarted."
+echo "  ✓ Microservices restarted with aggressive V8 GC."
 
-# 6. Verify Health of all 11 ports
-echo "[6/6] Verifying all service endpoints..."
+# 7. Verify Health of all 11 ports
+echo "[7/7] Verifying all service endpoints..."
 sleep 4
 echo "----------------------------------------------------------"
 printf "%-8s %-25s %-10s\n" "PORT" "SERVICE" "STATUS"
@@ -86,9 +108,9 @@ done
 
 echo "----------------------------------------------------------"
 if [ "$ALL_HEALTHY" = true ]; then
-    echo "🎉 ALL 11 MICROSERVICES ARE UP AND HEALTHY!"
+    echo "🎉 ALL 11 MICROSERVICES ARE UP AND RUNNING LIGHTNING FAST!"
     echo "✨ Platform URL: http://140.245.244.215"
-    echo "⚡ Gzip & Browser Caching Active (Lightning Fast Load)"
+    echo "⚡ Code Splitting + Gzip + MySQL LowMem Active"
 else
     echo "⚠️ Some services reported DOWN. Check 'pm2 logs --err --lines 20 --nostream'."
 fi
