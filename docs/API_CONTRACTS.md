@@ -116,11 +116,13 @@ All microservices adhere to standard JSON response envelopes to simplify client 
 | `POST` | `/api/v1/warehouses` | Add warehouse facility | `ADMIN` |
 | `PUT` | `/api/v1/warehouses/:id` | Update warehouse details / set status to `INACTIVE` | `ADMIN` |
 | `DELETE` | `/api/v1/warehouses/:id` | Remove warehouse (supports `?force=true` to purge test transfers with stock rollback) | `ADMIN` |
-| `GET` | `/api/v1/transfers` | List stock transfer requests | `STAFF` |
+| `GET` | `/api/v1/transfers` | List stock transfer requests (read-only visibility) | `STAFF` |
 | `POST` | `/api/v1/transfers` | Initiate inter-warehouse stock transfer | `MANAGER` |
-| `PATCH` | `/api/v1/transfers/:id/status` | Approve / Dispatch transfer | `MANAGER` |
-| `POST` | `/api/v1/warehouses/transfers/:id/receive` | Record destination inward receipt (strictly destination staff or HQ Clearance) | `STAFF` |
-| `DELETE` | `/api/v1/warehouses/transfers/:id` | Delete transfer record (rolls back in-transit stock to origin) | `ADMIN` |
+| `PATCH` | `/api/v1/transfers/:id/approve` | Approve transfer requisition | `MANAGER` |
+| `PATCH` | `/api/v1/transfers/:id/dispatch` | Assign fleet & dispatch shipment in-transit | `MANAGER` |
+| `PATCH` | `/api/v1/transfers/:id/receive` | Record destination inward receipt (Destination Manager or HQ Clearance only) | `MANAGER` |
+| `PATCH` | `/api/v1/transfers/:id/reject` | Decline transfer requisition | `MANAGER` |
+| `DELETE` | `/api/v1/transfers/:id` | Delete transfer record (rolls back in-transit stock to origin) | `MANAGER` |
 
 ### 🛒 6. Purchase Service (`/api/v1/...`)
 | Method | Route | Description | Min Role |

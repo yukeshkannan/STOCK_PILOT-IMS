@@ -101,7 +101,7 @@ const items = await Product.findAll({
 | **Product Catalog (Create/Edit)** |  Full |  Full |  Full | 👁️ View | 👁️ View |
 | **Inventory & Stock Adjustments** |  Full |  Full |  Full | ❌ | 👁️ View |
 | **Warehouse Transfers** |  Full |  Full |  Full | ❌ | ❌ |
-| **Transfer Inward Receipt (GRN)** |  Full | ⚠️ HQ Override |  Destination Only | 👁️ Assigned Only | ❌ |
+| **Transfer Inward Receipt (GRN)** |  Full | ⚠️ HQ Override |  Destination Only | ❌ (Sign-Off Locked) | ❌ |
 | **Purchase Orders & Intake** |  Full |  Full |  Full | ❌ | 👁️ View |
 | **Sales & POS Invoicing** |  Full |  Full |  Full |  Full | 👁️ View |
 | **Financial Ledger & Expenses** |  Full |  Full | 👁️ View | ❌ |  Full |
@@ -109,6 +109,7 @@ const items = await Product.findAll({
 ### 🔒 Inter-Hub Transfers: Segregation of Duties
 - **Origin Dispatch Protection**: Personnel or managers assigned to the origin warehouse who dispatched a transfer are prohibited from confirming destination goods receipt (`Receive Goods into Stock`).
 - **Destination Verification**: Only users assigned to the destination facility (`warehouse_id === transfer.to_warehouse_id`) can physically accept items into local stock.
+- **Staff vs Manager Boundary**: Store Associates & Cashiers (`STAFF`) are limited to POS billing, invoicing, and read-only transfer tracking. They cannot initiate, dispatch, or confirm inward stock intake into the inventory valuation ledger. Inward intake requires `MANAGER` or `ADMIN` authority.
 - **HQ Central Override**: Global Admins (`warehouse_id: null`) can perform an explicit audited clearance (`HQ Inward Clearance`) on behalf of a destination hub when authorized, with an explicit confirmation modal preventing accidental cross-hub receipt.
 
 ---

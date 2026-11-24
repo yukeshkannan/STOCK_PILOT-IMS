@@ -106,9 +106,12 @@ class TransferController {
   async dispatchTransfer(req, res, next) {
     try {
       const userName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+      const userRole = (req.user.roleName || req.user.role || '').toUpperCase();
       const transfer = await warehouseService.dispatchTransfer(req.user.tenantId, req.params.id, {
         ...req.body,
-        dispatchedBy: userName
+        dispatchedBy: userName,
+        userRole,
+        userWarehouseId: req.user.warehouseId || null
       });
       return ApiResponse.success(res, transfer, 'Stock transfer dispatched and in transit');
     } catch (err) {
@@ -119,9 +122,11 @@ class TransferController {
   async receiveTransfer(req, res, next) {
     try {
       const userName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+      const userRole = (req.user.roleName || req.user.role || '').toUpperCase();
       const transfer = await warehouseService.receiveTransfer(req.user.tenantId, req.params.id, {
         ...req.body,
         receivedBy: userName,
+        userRole,
         userWarehouseId: req.user.warehouseId || null,
         isGlobalAdmin: Boolean(!req.user.warehouseId && (req.user.roleName === 'ADMIN' || req.user.isSuperAdmin))
       });
@@ -134,9 +139,11 @@ class TransferController {
   async completeTransfer(req, res, next) {
     try {
       const userName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+      const userRole = (req.user.roleName || req.user.role || '').toUpperCase();
       const transfer = await warehouseService.completeTransfer(req.user.tenantId, req.params.id, {
         ...req.body,
         receivedBy: userName,
+        userRole,
         userWarehouseId: req.user.warehouseId || null,
         isGlobalAdmin: Boolean(!req.user.warehouseId && (req.user.roleName === 'ADMIN' || req.user.isSuperAdmin))
       });

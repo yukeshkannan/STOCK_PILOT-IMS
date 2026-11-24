@@ -311,11 +311,11 @@ export default function UsersPage() {
                           fontWeight: 700,
                           padding: '0.2rem 0.6rem',
                           borderRadius: '5px',
-                          background: u.role_name === 'ADMIN' ? '#ede9fe' : '#f1f5f9',
-                          color: u.role_name === 'ADMIN' ? '#6d28d9' : '#334155'
+                          background: u.role_name === 'ADMIN' ? '#ede9fe' : u.role_name === 'MANAGER' ? '#e0f2fe' : '#f1f5f9',
+                          color: u.role_name === 'ADMIN' ? '#6d28d9' : u.role_name === 'MANAGER' ? '#0369a1' : '#334155'
                         }}
                       >
-                        {u.role_name === 'ADMIN' ? 'Admin' : u.role_name === 'STAFF' ? 'Staff / POS' : u.role_name}
+                        {u.role_name === 'ADMIN' ? 'Admin' : u.role_name === 'MANAGER' ? 'Manager' : u.role_name === 'STAFF' ? 'Staff / POS' : u.role_name}
                       </span>
                     </td>
                     <td>
@@ -457,8 +457,9 @@ export default function UsersPage() {
                 value={userForm.roleName}
                 onChange={(e) => setUserForm({ ...userForm, roleName: e.target.value })}
                 options={[
-                  { value: 'ADMIN', label: 'ADMIN (Full Warehouse Operations, Stock Transfers, Sourcing & Reports)' },
-                  { value: 'STAFF', label: 'STAFF (Point of Sale, Billing Terminal & Stock Lookup)' }
+                  { value: 'ADMIN', label: 'ADMIN — Full Company & Branch Admin (Transfers, Receiving, Purchases, Team & Settings)' },
+                  { value: 'MANAGER', label: 'MANAGER — Warehouse & Branch Supervisor (Approve Transfers, Fleet Dispatch, Inward Receiving & Audits)' },
+                  { value: 'STAFF', label: 'STAFF — Floor Associate & Cashier (POS Billing, Invoicing & Stock Lookup — Read-Only for Transfers)' }
                 ]}
               />
             </div>
@@ -538,8 +539,9 @@ export default function UsersPage() {
                 value={editForm.roleName}
                 onChange={(e) => setEditForm({ ...editForm, roleName: e.target.value })}
                 options={[
-                  { value: 'ADMIN', label: 'ADMIN (Full Warehouse Operations, Stock Transfers, Sourcing & Reports)' },
-                  { value: 'STAFF', label: 'STAFF (Point of Sale, Billing Terminal & Stock Lookup)' }
+                  { value: 'ADMIN', label: 'ADMIN — Full Company & Branch Admin (Transfers, Receiving, Purchases, Team & Settings)' },
+                  { value: 'MANAGER', label: 'MANAGER — Warehouse & Branch Supervisor (Approve Transfers, Fleet Dispatch, Inward Receiving & Audits)' },
+                  { value: 'STAFF', label: 'STAFF — Floor Associate & Cashier (POS Billing, Invoicing & Stock Lookup — Read-Only for Transfers)' }
                 ]}
               />
             </div>

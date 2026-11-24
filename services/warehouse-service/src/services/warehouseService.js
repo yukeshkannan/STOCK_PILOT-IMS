@@ -496,6 +496,14 @@ class WarehouseService {
       throw { statusCode: 400, message: `Cannot dispatch transfer in ${transfer.status} status` };
     }
 
+    // Role check: Floor staff cannot dispatch fleet shipments
+    if (dispatchData.userRole === 'STAFF') {
+      throw {
+        statusCode: 403,
+        message: 'Forbidden: Store and floor staff are not authorized to dispatch fleet shipments. Requires Branch Manager or Admin approval.'
+      };
+    }
+
     // 1. Deduct stock from source warehouse and put in transit
     for (const item of transfer.items) {
       try {
@@ -563,11 +571,19 @@ class WarehouseService {
     }
 
     // Segregation of Duties & Destination Authorization:
-    // If receiving user has a warehouse scope, it must match destination warehouse
+    // 1. Role Check: Floor staff cannot confirm inward goods intake
+    if (receiveData.userRole === 'STAFF') {
+      throw {
+        statusCode: 403,
+        message: 'Forbidden: Floor/store staff are not authorized to record inward stock receipt into the balance ledger. Requires Branch Manager or Admin approval.'
+      };
+    }
+
+    // 2. Location Scoping Check: If receiving user has a warehouse scope, it must match destination warehouse
     if (receiveData.userWarehouseId && String(receiveData.userWarehouseId) !== String(transfer.to_warehouse_id)) {
       throw {
         statusCode: 403,
-        message: `Forbidden: Only staff/managers assigned to destination facility [${transfer.toWarehouse?.name || 'Destination Hub'}] can confirm inward receipt.`
+        message: `Forbidden: Only managers assigned to destination facility [${transfer.toWarehouse?.name || 'Destination Hub'}] can confirm inward receipt.`
       };
     }
 

@@ -73,17 +73,18 @@ export default function WarehousesPage() {
   const userRole = (currentUser?.roleName || currentUser?.role || '').toUpperCase();
   const isSuperAdmin = Boolean(currentUser?.isSuperAdmin) || userRole === 'SUPER_ADMIN';
   const isAdmin = userRole === 'ADMIN' || isSuperAdmin;
+  const isManager = userRole === 'MANAGER';
   const isGlobalAdmin = isSuperAdmin || (userRole === 'ADMIN' && !assignedWhId);
   const isBranchScoped = Boolean(assignedWhId) && !isGlobalAdmin;
-  const isBranchAdmin = userRole === 'ADMIN' && isBranchScoped;
+  const isBranchAdmin = (isAdmin || isManager) && isBranchScoped;
   const isStaff = userRole === 'STAFF';
 
   // Permission capabilities
   const canManageWarehouse = isGlobalAdmin; // Only Global Admin can register new warehouse hubs
   const canDeleteWarehouse = isGlobalAdmin; // Only Global Admin can delete warehouses
   const canEditWarehouse = isGlobalAdmin || (isBranchAdmin && isBranchScoped); // Global Admin & Branch Admin can configure their facility
-  const canInitiateTransfer = true; // Operational movements
-  const canApproveTransfer = isGlobalAdmin || isBranchAdmin; // Governance
+  const canInitiateTransfer = isGlobalAdmin || isBranchAdmin || isManager; // Operational movements (Admin & Manager only)
+  const canApproveTransfer = isGlobalAdmin || isBranchAdmin || isManager; // Governance
 
   // Top Tabs: 'warehouses' (Facilities Directory) | 'inventory' (Stock Matrix) | 'transfers' (Logistics & Movements)
   const [activeTab, setActiveTab] = useState('warehouses');
@@ -2193,7 +2194,26 @@ export default function WarehousesPage() {
 
                         {/* Receive at Destination Hub (Segregation of Duties Enforced) */}
                         {isInTransit && (
-                          isDestinationStaff ? (
+                          isStaff ? (
+                            <span
+                              style={{
+                                fontSize: '0.74rem',
+                                fontWeight: 600,
+                                background: '#f8fafc',
+                                color: '#64748b',
+                                border: '1px solid #cbd5e1',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                              }}
+                              title="Floor and store staff cannot confirm inventory intake. Requires Branch Manager or Admin sign-off."
+                            >
+                              <Lock size={12} style={{ color: '#94a3b8' }} />
+                              Awaiting Manager Inward Sign-Off ({t.toWarehouse?.name || 'Destination Hub'})
+                            </span>
+                          ) : isDestinationStaff && (isAdmin || isManager) ? (
                             <button
                               onClick={() => handleReceiveTransfer(t)}
                               className="btn btn-success btn-xs"
@@ -2273,24 +2293,26 @@ export default function WarehousesPage() {
                           )
                         )}
 
-                        {/* Delete Transfer Option */}
-                        <button
-                          onClick={() => setDeletingTransfer(t)}
-                          className="btn btn-ghost btn-xs"
-                          style={{
-                            color: '#dc2626',
-                            border: '1px solid #fee2e2',
-                            background: '#fef2f2',
-                            borderRadius: '6px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontWeight: 600
-                          }}
-                          title="Delete this transfer record"
-                        >
-                          <Trash2 size={12} /> Delete
-                        </button>
+                        {/* Delete Transfer Option (Manager & Admin Only) */}
+                        {(isAdmin || isManager) && (
+                          <button
+                            onClick={() => setDeletingTransfer(t)}
+                            className="btn btn-ghost btn-xs"
+                            style={{
+                              color: '#dc2626',
+                              border: '1px solid #fee2e2',
+                              background: '#fef2f2',
+                              borderRadius: '6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontWeight: 600
+                            }}
+                            title="Delete this transfer record"
+                          >
+                            <Trash2 size={12} /> Delete
+                          </button>
+                        )}
                       </div>
                     </div>
 

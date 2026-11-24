@@ -184,8 +184,10 @@ export default function Navbar({ onMenuToggle }) {
                 ? 'System Administrator'
                 : user?.roleName === 'ADMIN'
                 ? (user?.warehouseName ? `Admin (${user.warehouseName})` : 'Admin')
+                : user?.roleName === 'MANAGER'
+                ? (user?.warehouseName ? `Manager (${user.warehouseName})` : 'Branch Manager')
                 : user?.roleName === 'STAFF'
-                ? 'Staff / POS'
+                ? (user?.warehouseName ? `Staff (${user.warehouseName})` : 'Staff / POS')
                 : (user?.roleName || 'User')}
             </span>
           </div>
