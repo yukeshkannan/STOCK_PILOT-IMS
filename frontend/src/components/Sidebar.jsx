@@ -50,7 +50,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
   const handleLogout = () => {
     if (onClose) onClose();
     dispatch(logout());
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const handleNavClick = () => {
@@ -201,7 +201,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
 
   const userRole = (user?.roleName || user?.role || 'ADMIN').toUpperCase();
   const assignedWhId = user?.warehouseId || user?.warehouse_id ? String(user.warehouseId || user.warehouse_id) : null;
-  const isGlobalAdmin = Boolean(isSuper) || (userRole === 'ADMIN' && !assignedWhId);
+  const isGlobalAdmin = Boolean(isSuper) || userRole === 'ADMIN' || !assignedWhId;
   const isBranchScoped = Boolean(assignedWhId) && !isGlobalAdmin;
   const isBranchAdmin = userRole === 'ADMIN' && isBranchScoped;
 

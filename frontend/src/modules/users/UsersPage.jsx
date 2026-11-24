@@ -98,14 +98,16 @@ export default function UsersPage() {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (!userForm.warehouseId) {
-      toast.error('Please assign a specific warehouse/branch for this team member');
+    if (userForm.roleName !== 'ADMIN' && !userForm.warehouseId) {
+      toast.error('Please assign a specific warehouse/branch for this staff or manager');
       return;
     }
     try {
       setCreating(true);
       await api.post('/users', {
         ...userForm,
+        warehouseId: userForm.warehouseId ? Number(userForm.warehouseId) : null,
+        warehouseName: userForm.warehouseId ? userForm.warehouseName : null,
         password: userForm.password ? userForm.password.trim() : 'password123'
       });
       toast.success('Team member created successfully');
@@ -117,7 +119,7 @@ export default function UsersPage() {
         phone: '',
         password: '',
         roleName: 'STAFF',
-        warehouseId: warehouses[0]?.id || '',
+        warehouseId: warehouses[0]?.id ? String(warehouses[0].id) : '',
         warehouseName: warehouses[0]?.name || ''
       });
       fetchUsers();
@@ -136,8 +138,8 @@ export default function UsersPage() {
       phone: u.phone || '',
       password: '',
       roleName: u.role_name || 'STAFF',
-      warehouseId: u.warehouse_id ? String(u.warehouse_id) : (warehouses[0]?.id ? String(warehouses[0].id) : ''),
-      warehouseName: u.warehouse_name || (warehouses[0]?.name || '')
+      warehouseId: u.warehouse_id ? String(u.warehouse_id) : '',
+      warehouseName: u.warehouse_name || ''
     });
     setIsEditModalOpen(true);
   };
@@ -145,13 +147,17 @@ export default function UsersPage() {
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     if (!editingUserId) return;
-    if (!editForm.warehouseId) {
-      toast.error('Please assign a specific warehouse/branch for this team member');
+    if (editForm.roleName !== 'ADMIN' && !editForm.warehouseId) {
+      toast.error('Please assign a specific warehouse/branch for this staff or manager');
       return;
     }
     try {
       setUpdating(true);
-      await api.put(`/users/${editingUserId}`, editForm);
+      await api.put(`/users/${editingUserId}`, {
+        ...editForm,
+        warehouseId: editForm.warehouseId ? Number(editForm.warehouseId) : null,
+        warehouseName: editForm.warehouseId ? editForm.warehouseName : null
+      });
       toast.success('Team member updated successfully');
       setIsEditModalOpen(false);
       fetchUsers();
@@ -188,10 +194,13 @@ export default function UsersPage() {
     }
   };
 
-  const warehouseOptions = warehouses.map(w => ({
-    value: String(w.id),
-    label: `${w.name} (${w.code}) ${w.city ? `- ${w.city}` : ''}`
-  }));
+  const warehouseOptions = [
+    { value: '', label: '🌐 All Facilities / Global HQ Access (Company-Wide)' },
+    ...warehouses.map(w => ({
+      value: String(w.id),
+      label: `${w.name} (${w.code}) ${w.city ? `- ${w.city}` : ''}`
+    }))
+  ];
 
   return (
     <div>
@@ -465,12 +474,14 @@ export default function UsersPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Assigned Facility / Branch *</label>
+              <label className="form-label">
+                Assigned Facility / Branch {userForm.roleName === 'ADMIN' ? '(Optional - Global HQ by Default)' : '*'}
+              </label>
               <CustomSelect
                 value={userForm.warehouseId ? String(userForm.warehouseId) : ''}
                 onChange={(e) => handleWarehouseSelect(e.target.value, false)}
                 options={warehouseOptions}
-                placeholder="Select Assigned Branch *"
+                placeholder="Select Assigned Branch..."
               />
             </div>
           </div>
@@ -548,12 +559,14 @@ export default function UsersPage() {
           </div>
 
           <div className="form-group" style={{ marginBottom: '1rem' }}>
-            <label className="form-label">Assigned Facility / Branch *</label>
+            <label className="form-label">
+              Assigned Facility / Branch {editForm.roleName === 'ADMIN' ? '(Optional - Global HQ by Default)' : '*'}
+            </label>
             <CustomSelect
               value={editForm.warehouseId ? String(editForm.warehouseId) : ''}
               onChange={(e) => handleWarehouseSelect(e.target.value, true)}
               options={warehouseOptions}
-              placeholder="Select Assigned Branch *"
+              placeholder="Select Assigned Branch..."
             />
           </div>
 

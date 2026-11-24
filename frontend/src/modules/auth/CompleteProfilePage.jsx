@@ -172,7 +172,7 @@ export default function CompleteProfilePage() {
 
   const handleSignOut = () => {
     dispatch(logout());
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   // 1. Center Prompt Landing View

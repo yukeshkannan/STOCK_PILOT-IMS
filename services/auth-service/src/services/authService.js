@@ -405,6 +405,8 @@ class AuthService {
 
     const isProfileCompleted = Boolean(user.is_super_admin || user.tenant_id);
 
+    const isGlobalRole = user.is_super_admin || user.role_name === 'ADMIN';
+
     const tokenPayload = {
       userId: user.id,
       tenantId: user.is_super_admin ? null : user.tenant_id,
@@ -416,8 +418,8 @@ class AuthService {
       roleName: user.is_super_admin ? 'SUPER_ADMIN' : user.role_name,
       isSuperAdmin: !!user.is_super_admin,
       isProfileCompleted,
-      warehouseId: user.is_super_admin ? null : (user.warehouse_id || null),
-      warehouseName: user.is_super_admin ? null : (user.warehouse_name || null),
+      warehouseId: isGlobalRole ? null : (user.warehouse_id || null),
+      warehouseName: isGlobalRole ? null : (user.warehouse_name || null),
       permissions,
       plan: activePlan,
       tenantCreatedAt: tenantInfo?.created_at || tenantInfo?.createdAt || user.created_at || null
@@ -446,8 +448,8 @@ class AuthService {
         tenantId: user.is_super_admin ? null : user.tenant_id,
         companyCode: user.is_super_admin ? null : (tenantInfo ? tenantInfo.company_code : null),
         companyName: user.is_super_admin ? 'StockPilot Platform' : (tenantInfo ? tenantInfo.company_name : null),
-        warehouseId: user.is_super_admin ? null : (user.warehouse_id || null),
-        warehouseName: user.is_super_admin ? null : (user.warehouse_name || null),
+        warehouseId: isGlobalRole ? null : (user.warehouse_id || null),
+        warehouseName: isGlobalRole ? null : (user.warehouse_name || null),
         permissions,
         plan: activePlan,
         tenantCreatedAt: tenantInfo?.created_at || tenantInfo?.createdAt || user.created_at || null
@@ -510,6 +512,8 @@ class AuthService {
     const rawPlan = tenantInfo?.plan || 'TRIAL';
     const activePlan = user.is_super_admin ? null : rawPlan.toString().trim().toUpperCase();
 
+    const isGlobalRole = user.is_super_admin || user.role_name === 'ADMIN';
+
     const tokenPayload = {
       userId: user.id,
       tenantId: user.is_super_admin ? null : user.tenant_id,
@@ -520,8 +524,8 @@ class AuthService {
       lastName: user.last_name,
       roleName: user.is_super_admin ? 'SUPER_ADMIN' : user.role_name,
       isSuperAdmin: !!user.is_super_admin,
-      warehouseId: user.is_super_admin ? null : (user.warehouse_id || null),
-      warehouseName: user.is_super_admin ? null : (user.warehouse_name || null),
+      warehouseId: isGlobalRole ? null : (user.warehouse_id || null),
+      warehouseName: isGlobalRole ? null : (user.warehouse_name || null),
       permissions,
       plan: activePlan
     };
@@ -579,6 +583,8 @@ class AuthService {
     const rawPlan = tenantInfo?.plan || 'TRIAL';
     const activePlan = user.is_super_admin ? null : rawPlan.toString().trim().toUpperCase();
 
+    const isGlobalRole = user.is_super_admin || user.role_name === 'ADMIN';
+
     return {
       id: user.id,
       email: user.email,
@@ -590,8 +596,8 @@ class AuthService {
       tenantId: user.is_super_admin ? null : user.tenant_id,
       companyCode: user.is_super_admin ? null : (tenantInfo ? tenantInfo.company_code : null),
       companyName: user.is_super_admin ? 'StockPilot Platform' : (tenantInfo ? tenantInfo.company_name : null),
-      warehouseId: user.is_super_admin ? null : (user.warehouse_id || null),
-      warehouseName: user.is_super_admin ? null : (user.warehouse_name || null),
+      warehouseId: isGlobalRole ? null : (user.warehouse_id || null),
+      warehouseName: isGlobalRole ? null : (user.warehouse_name || null),
       permissions,
       plan: activePlan
     };
@@ -705,8 +711,12 @@ class AuthService {
     if (data.firstName !== undefined) updateFields.first_name = data.firstName;
     if (data.lastName !== undefined) updateFields.last_name = data.lastName;
     if (data.roleName !== undefined) updateFields.role_name = data.roleName;
-    if (data.warehouseId !== undefined) updateFields.warehouse_id = data.warehouseId;
-    if (data.warehouseName !== undefined) updateFields.warehouse_name = data.warehouseName;
+    if (data.warehouseId !== undefined) {
+      updateFields.warehouse_id = data.warehouseId ? Number(data.warehouseId) : null;
+      updateFields.warehouse_name = data.warehouseId ? (data.warehouseName || null) : null;
+    } else if (data.warehouseName !== undefined) {
+      updateFields.warehouse_name = data.warehouseName || null;
+    }
     if (data.status !== undefined) updateFields.status = data.status;
 
     if (data.password && data.password.trim().length >= 4) {

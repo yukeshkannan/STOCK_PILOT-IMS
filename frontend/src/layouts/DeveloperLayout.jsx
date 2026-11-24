@@ -23,7 +23,7 @@ export default function DeveloperLayout() {
 
   const handleLogout = () => {
     dispatch(logout());
-    navigate('/dev/login');
+    window.location.href = '/dev/login';
   };
 
   const devDisplayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email || 'Engineer';

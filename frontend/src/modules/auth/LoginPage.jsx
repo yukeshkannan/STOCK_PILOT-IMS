@@ -37,15 +37,17 @@ export default function LoginPage() {
         dispatch(setCredentials(res.data));
         const loggedUser = res.data.user;
 
-        // Dynamic Role-Based Landing Page Routing
+        // Dynamic Role-Based Landing Page Routing with Clean Page Mount
         if (loggedUser?.isSuperAdmin) {
-          navigate('/admin');
+          window.location.href = '/admin';
         } else if (!loggedUser?.tenantId || loggedUser?.isProfileCompleted === false) {
-          navigate('/complete-profile');
+          window.location.href = '/complete-profile';
         } else if (loggedUser?.roleName === 'STAFF') {
-          navigate('/sales/new'); // Direct POS Billing Terminal for Staff / Cashier
+          window.location.href = '/sales/new'; // Direct POS Billing Terminal for Staff / Cashier
+        } else if (loggedUser?.roleName === 'MANAGER' && loggedUser?.warehouseId) {
+          window.location.href = '/warehouses'; // Direct Facility Logistics Hub for Warehouse Manager
         } else {
-          navigate('/dashboard'); // Executive & Warehouse Admin Dashboard
+          window.location.href = '/dashboard'; // Executive Shop Admin Dashboard
         }
       }
     } catch (err) {

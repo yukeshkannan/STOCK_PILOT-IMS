@@ -107,6 +107,7 @@ const items = await Product.findAll({
 | **Financial Ledger & Expenses** |  Full |  Full | 👁️ View | ❌ |  Full |
 
 ### 🔒 Inter-Hub Transfers: Segregation of Duties
+- **Global HQ Jurisdiction for Tenant Admin**: The Tenant Administrator (`role: ADMIN`) represents the business owner and retains company-wide Global HQ jurisdiction (`warehouseId: null` in JWT token payloads) across all facilities, storefront builder, finance, user management, and settings. Branch scoping strictly binds only operational facility personnel (`role: MANAGER` and `role: STAFF`) to specific warehouse IDs.
 - **Origin Dispatch Protection**: Personnel or managers assigned to the origin warehouse who dispatched a transfer are prohibited from confirming destination goods receipt (`Receive Goods into Stock`).
 - **Destination Verification**: Only users assigned to the destination facility (`warehouse_id === transfer.to_warehouse_id`) can physically accept items into local stock.
 - **Staff vs Manager Boundary**: Store Associates & Cashiers (`STAFF`) are limited to POS billing, invoicing, and read-only transfer tracking. They cannot initiate, dispatch, or confirm inward stock intake into the inventory valuation ledger. Inward intake requires `MANAGER` or `ADMIN` authority.

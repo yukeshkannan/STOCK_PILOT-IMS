@@ -125,14 +125,22 @@ class UserService {
 
   async updateUser(tenantId, userId, updateData) {
     const user = await this.getUserById(tenantId, userId);
+
+    let nextWhId = user.warehouse_id;
+    let nextWhName = user.warehouse_name;
+    if (updateData.warehouseId !== undefined) {
+      nextWhId = (updateData.warehouseId && updateData.warehouseId !== '') ? Number(updateData.warehouseId) : null;
+      nextWhName = nextWhId ? (updateData.warehouseName || null) : null;
+    }
+
     await user.update({
       first_name: updateData.firstName !== undefined ? updateData.firstName : user.first_name,
       last_name: updateData.lastName !== undefined ? updateData.lastName : user.last_name,
       phone: updateData.phone !== undefined ? updateData.phone : user.phone,
       role_id: updateData.roleId !== undefined ? updateData.roleId : user.role_id,
       role_name: updateData.roleName !== undefined ? updateData.roleName : user.role_name,
-      warehouse_id: updateData.warehouseId !== undefined ? updateData.warehouseId : user.warehouse_id,
-      warehouse_name: updateData.warehouseName !== undefined ? updateData.warehouseName : user.warehouse_name,
+      warehouse_id: nextWhId,
+      warehouse_name: nextWhName,
       status: updateData.status !== undefined ? updateData.status : user.status
     });
 
