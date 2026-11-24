@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://savor-deferred-monogram.ngrok-free.dev/api/:path*"
+      "destination": "http://stockpilot-ims.duckdns.org/api/:path*"
     },
     {
       "source": "/health",
-      "destination": "https://savor-deferred-monogram.ngrok-free.dev/health"
+      "destination": "http://stockpilot-ims.duckdns.org/health"
     },
     {
       "source": "/(.*)",

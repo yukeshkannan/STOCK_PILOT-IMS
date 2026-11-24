@@ -17,10 +17,10 @@ const app = express();
 // Security & Logging Middlewares
 app.use(helmet());
 
-// Dynamic Production CORS
+// Dynamic Production CORS: Allow specific origins or dynamically reflect incoming request origin (supports Vercel, DuckDNS, Localhost)
 const corsOrigin = process.env.CORS_ORIGIN
   ? (process.env.CORS_ORIGIN.includes(',') ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : process.env.CORS_ORIGIN)
-  : '*';
+  : true;
 
 app.use(cors({
   origin: corsOrigin,

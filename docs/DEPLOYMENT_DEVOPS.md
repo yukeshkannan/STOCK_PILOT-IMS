@@ -136,3 +136,38 @@ docker-compose -f docker-compose.prod.yml up -d --no-deps --build inventory-serv
 # 3. Clean up dangling images
 docker image prune -f
 ```
+
+---
+
+## 6. AWS EC2 Dynamic DNS & Free Let's Encrypt SSL
+
+For EC2 instances running with dynamic IPs:
+1. **DuckDNS Setup**:
+   ```bash
+   sudo bash scripts/setup-duckdns.sh stockpilot-ims <DUCKDNS_TOKEN>
+   ```
+2. **Free Let's Encrypt HTTPS (Port 443 SSL)**:
+   Ensure AWS EC2 Security Group allows Inbound Port 443 (HTTPS) & Port 80 (HTTP). Then execute:
+   ```bash
+   sudo bash scripts/setup-ssl.sh stockpilot-ims.duckdns.org <YOUR_EMAIL>
+   ```
+
+---
+
+## 7. Vercel Frontend Deployment (Optional Jamstack Separation)
+
+To host the React SPA frontend on Vercel while running microservices on AWS EC2:
+1. Connect the GitHub repository in the Vercel dashboard.
+2. Select Root Directory: `frontend`.
+3. Set Framework Preset: `Vite`.
+4. `frontend/vercel.json` provides an Edge proxy rewrite to prevent browser Mixed Content (HTTPS -> HTTP) blocks:
+   ```json
+   {
+     "rewrites": [
+       { "source": "/api/:path*", "destination": "http://stockpilot-ims.duckdns.org/api/:path*" },
+       { "source": "/health", "destination": "http://stockpilot-ims.duckdns.org/health" },
+       { "source": "/(.*)", "destination": "/index.html" }
+     ]
+   }
+   ```
+
