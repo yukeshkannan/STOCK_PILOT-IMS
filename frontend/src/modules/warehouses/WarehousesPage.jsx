@@ -108,12 +108,18 @@ export default function WarehousesPage() {
   const [configuringWarehouse, setConfiguringWarehouse] = useState(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [deletingWarehouse, setDeletingWarehouse] = useState(null);
+  const [warehouseConflict, setWarehouseConflict] = useState(null);
+  const [hqReceiveTransfer, setHqReceiveTransfer] = useState(null);
+  const [operatingFacilityId, setOperatingFacilityId] = useState(assignedWhId ? String(assignedWhId) : 'ALL');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [rejectingTransfer, setRejectingTransfer] = useState(null);
   const [isRejecting, setIsRejecting] = useState(false);
   const [deletingTransfer, setDeletingTransfer] = useState(null);
   const [isDeletingTransfer, setIsDeletingTransfer] = useState(false);
+
+  // Active facility scope: either user's assigned warehouse or selected context by Global Admin
+  const activeScopeWhId = assignedWhId || (operatingFacilityId !== 'ALL' ? operatingFacilityId : null);
 
   // Logistics & Transport Modals
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
@@ -532,23 +538,51 @@ export default function WarehousesPage() {
     toast.info('Form reverted to current saved settings');
   };
 
-  const handleDeleteWarehouse = async () => {
-    if (!deletingWarehouse) return;
+  const handleDeleteWarehouse = async (force = false) => {
+    const targetWh = warehouseConflict?.warehouse || deletingWarehouse;
+    if (!targetWh) return;
     try {
       setIsDeleting(true);
-      await api.delete(`/warehouses/${deletingWarehouse.id}`);
-      toast.success('Warehouse facility removed successfully');
+      await api.delete(`/warehouses/${targetWh.id}${force ? '?force=true' : ''}`);
+      toast.success(force ? 'Warehouse and test transfer records purged successfully' : 'Warehouse facility removed successfully');
       setDeletingWarehouse(null);
-      if (configuringWarehouse?.id === deletingWarehouse.id) {
+      setWarehouseConflict(null);
+      if (configuringWarehouse?.id === targetWh.id) {
         setIsEditModalOpen(false);
         setConfiguringWarehouse(null);
       }
-      if (selectedInventoryWhId === String(deletingWarehouse.id)) {
+      if (selectedInventoryWhId === String(targetWh.id)) {
         setSelectedInventoryWhId('ALL');
+      }
+      if (operatingFacilityId === String(targetWh.id)) {
+        setOperatingFacilityId('ALL');
       }
       fetchData();
     } catch (err) {
-      toast.error(err.message || 'Failed to delete warehouse');
+      if (err.response?.data?.code === 'WAREHOUSE_HAS_TRANSFERS' || err.message?.includes('stock transfer records')) {
+        setWarehouseConflict({
+          warehouse: targetWh,
+          message: err.message || err.response?.data?.message || 'Warehouse is linked to stock transfer records.'
+        });
+        setDeletingWarehouse(null);
+      } else {
+        toast.error(err.message || 'Failed to delete warehouse');
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeactivateWarehouse = async (whId) => {
+    try {
+      setIsDeleting(true);
+      await api.put(`/warehouses/${whId}`, { status: 'INACTIVE' });
+      toast.success('Warehouse facility set to INACTIVE. Business audit trail preserved.');
+      setWarehouseConflict(null);
+      setDeletingWarehouse(null);
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to deactivate warehouse');
     } finally {
       setIsDeleting(false);
     }
@@ -914,8 +948,10 @@ export default function WarehousesPage() {
         <div
           style={{
             display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            gap: '0.5rem',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
             borderTop: '1px solid #f1f5f9',
             paddingTop: '0.85rem'
           }}
@@ -992,6 +1028,52 @@ export default function WarehousesPage() {
               <Truck size={15} /> Logistics & Transfers ({transfers.length})
             </button>
           </div>
+
+          {/* Operating Facility Context Switcher (for Global Admin) */}
+          {isGlobalAdmin && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.55rem',
+                background: '#f8fafc',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                fontSize: '0.8rem'
+              }}
+            >
+              <Building2 size={14} style={{ color: 'var(--primary)' }} />
+              <span style={{ fontWeight: 600, color: '#475569' }}>Active Scope:</span>
+              <select
+                value={operatingFacilityId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setOperatingFacilityId(val);
+                  if (val !== 'ALL') {
+                    setSelectedInventoryWhId(val);
+                  }
+                }}
+                style={{
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  color: '#0f172a',
+                  background: '#ffffff',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="ALL">🏢 All Facilities (HQ Overview)</option>
+                {warehouses.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    📍 {w.name} ({w.code}){w.is_default ? ' - Main' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2012,25 +2094,10 @@ export default function WarehousesPage() {
                     })
                   : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-                // Multi-hub ownership & receiver permissions check
-                const userEmail = (currentUser?.email || '').toLowerCase().trim();
-                const userName = (currentUser?.name || currentUser?.username || '').toLowerCase().trim();
-                const requesterIdentifier = (t.requested_by || '').toLowerCase().trim();
-
-                const isRequester = Boolean(
-                  requesterIdentifier && (
-                    requesterIdentifier === userEmail ||
-                    requesterIdentifier === userName ||
-                    userEmail.includes(requesterIdentifier) ||
-                    requesterIdentifier.includes(userEmail)
-                  )
-                );
-
-                const isDestinationStaff = Boolean(assignedWhId && String(t.to_warehouse_id) === String(assignedWhId));
-                const isOriginSender = Boolean(assignedWhId && String(t.from_warehouse_id) === String(assignedWhId));
-
-                // The origin admin/sender fulfilled the shipment; inward receipt belongs strictly to destination or requester
-                const canReceiveGoods = isInTransit && (isDestinationStaff || isRequester);
+                // Segregation of Duties: Multi-hub permissions check based on active scope
+                const isDestinationStaff = Boolean(activeScopeWhId && String(t.to_warehouse_id) === String(activeScopeWhId));
+                const isOriginSender = Boolean(activeScopeWhId && String(t.from_warehouse_id) === String(activeScopeWhId));
+                const isHqOverview = isGlobalAdmin && !activeScopeWhId;
 
                 return (
                   <div
@@ -2094,7 +2161,7 @@ export default function WarehousesPage() {
                         )}
 
                         {/* Approve/Reject (Source Hub Admin / Global Admin only) */}
-                        {isPending && (isGlobalAdmin || (isBranchAdmin && String(t.from_warehouse_id) === String(assignedWhId))) && (
+                        {isPending && (isGlobalAdmin || (isBranchAdmin && String(t.from_warehouse_id) === String(activeScopeWhId))) && (
                           <>
                             <button
                               onClick={() => confirmRejectTransfer(t)}
@@ -2114,7 +2181,7 @@ export default function WarehousesPage() {
                         )}
 
                         {/* Dispatch (Source Hub Manager / Global Admin) */}
-                        {isApproved && (isGlobalAdmin || String(t.from_warehouse_id) === String(assignedWhId)) && (
+                        {isApproved && (isGlobalAdmin || String(t.from_warehouse_id) === String(activeScopeWhId)) && (
                           <button
                             onClick={() => handleOpenDispatchModal(t)}
                             className="btn btn-primary btn-xs"
@@ -2124,9 +2191,9 @@ export default function WarehousesPage() {
                           </button>
                         )}
 
-                        {/* Receive at Destination Hub (Destination Branch User / Requester) */}
+                        {/* Receive at Destination Hub (Segregation of Duties Enforced) */}
                         {isInTransit && (
-                          canReceiveGoods ? (
+                          isDestinationStaff ? (
                             <button
                               onClick={() => handleReceiveTransfer(t)}
                               className="btn btn-success btn-xs"
@@ -2144,7 +2211,7 @@ export default function WarehousesPage() {
                             >
                               <CheckCheck size={13} /> Receive Goods into Stock
                             </button>
-                          ) : (
+                          ) : isOriginSender ? (
                             <span
                               style={{
                                 fontSize: '0.74rem',
@@ -2159,9 +2226,50 @@ export default function WarehousesPage() {
                                 gap: '5px'
                               }}
                             >
-                              <Clock size={12} style={{ color: 'var(--primary)' }} />
-                              Awaiting Inward Receipt at {t.toWarehouse?.name || 'Destination Hub'} ({t.requested_by || 'Requester'})
+                              <Truck size={12} style={{ color: 'var(--primary)' }} />
+                              Dispatched &bull; En Route to {t.toWarehouse?.name || 'Destination Hub'}
                             </span>
+                          ) : (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span
+                                style={{
+                                  fontSize: '0.74rem',
+                                  fontWeight: 600,
+                                  background: '#f8fafc',
+                                  color: '#475569',
+                                  border: '1px solid #cbd5e1',
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px'
+                                }}
+                              >
+                                <Clock size={12} style={{ color: 'var(--primary)' }} />
+                                Awaiting Inward Receipt at {t.toWarehouse?.name || 'Destination Hub'}
+                              </span>
+                              {isHqOverview && (
+                                <button
+                                  onClick={() => setHqReceiveTransfer(t)}
+                                  className="btn btn-xs"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontWeight: 700,
+                                    background: '#fffbeb',
+                                    color: '#b45309',
+                                    border: '1px solid #fde68a',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Central HQ Inward Clearance Override"
+                                >
+                                  <ShieldAlert size={12} /> HQ Inward Clearance
+                                </button>
+                              )}
+                            </div>
                           )
                         )}
 
@@ -3399,11 +3507,117 @@ export default function WarehousesPage() {
         onClose={() => setDeletingTransfer(null)}
         onConfirm={handleDeleteTransfer}
         title="Delete Stock Transfer Record"
-        message={`Are you sure you want to delete stock transfer record "${deletingTransfer?.transfer_number}"?`}
+        message={`Are you sure you want to delete stock transfer record "${deletingTransfer?.transfer_number}"? If this shipment is in-transit, reserved units will be safely restored to the origin warehouse.`}
         confirmText="Yes, Delete Transfer"
         confirmVariant="danger"
         isLoading={isDeletingTransfer}
       />
+
+      {/* Warehouse Deletion Conflict Modal */}
+      <Modal
+        isOpen={Boolean(warehouseConflict)}
+        onClose={() => setWarehouseConflict(null)}
+        title="Facility Linked to Transfer History"
+      >
+        <div style={{ padding: '0.5rem 0' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem' }}>
+            <AlertTriangle size={22} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ fontSize: '0.85rem' }}>
+              <div style={{ fontWeight: 700, color: '#92400e', marginBottom: '4px' }}>
+                Cannot Hard-Delete [{warehouseConflict?.warehouse?.name}]
+              </div>
+              <div style={{ color: '#78350f', lineHeight: 1.5 }}>
+                {warehouseConflict?.message}
+              </div>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '0.825rem', color: '#64748b', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+            In an enterprise ERP system, facilities with transaction history are marked INACTIVE to protect audit integrity and accounting history. If this was only a temporary test hub, you can force-purge it and its associated test transfers.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={() => handleDeactivateWarehouse(warehouseConflict?.warehouse?.id)}
+              className="btn btn-primary"
+              disabled={isDeleting}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0.65rem 1rem' }}
+            >
+              <Lock size={15} /> Set Status to INACTIVE (Recommended - Safe)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDeleteWarehouse(true)}
+              className="btn btn-danger"
+              disabled={isDeleting}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0.65rem 1rem', background: '#dc2626', borderColor: '#dc2626', color: '#ffffff' }}
+            >
+              <Trash2 size={15} /> Force Delete & Purge Test Records
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setWarehouseConflict(null)}
+              className="btn btn-ghost"
+              disabled={isDeleting}
+              style={{ padding: '0.5rem 1rem' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* HQ Inward Clearance Override Modal */}
+      <Modal
+        isOpen={Boolean(hqReceiveTransfer)}
+        onClose={() => setHqReceiveTransfer(null)}
+        title={`HQ Central Inward Clearance — #${hqReceiveTransfer?.transfer_number}`}
+      >
+        <div style={{ padding: '0.5rem 0' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem' }}>
+            <ShieldAlert size={22} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ fontSize: '0.85rem' }}>
+              <div style={{ fontWeight: 700, color: '#92400e', marginBottom: '4px' }}>
+                Segregation of Duties Override
+              </div>
+              <p style={{ margin: 0, color: '#78350f', lineHeight: 1.5 }}>
+                In standard supply chain workflows, physical inward receipt is recorded by staff at destination <strong>{hqReceiveTransfer?.toWarehouse?.name}</strong>.
+                As Central HQ Admin, confirming this clearance will deposit these goods directly into <strong>{hqReceiveTransfer?.toWarehouse?.name}</strong>'s live inventory and complete transfer <strong>{hqReceiveTransfer?.transfer_number}</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.25rem', fontSize: '0.85rem' }}>
+            <div style={{ marginBottom: '6px' }}><strong>Destination Facility:</strong> {hqReceiveTransfer?.toWarehouse?.name} ({hqReceiveTransfer?.toWarehouse?.code})</div>
+            <div style={{ marginBottom: '6px' }}><strong>Origin Facility:</strong> {hqReceiveTransfer?.fromWarehouse?.name}</div>
+            <div><strong>Items to be Inwarded:</strong> {(hqReceiveTransfer?.items || []).reduce((acc, i) => acc + (i.quantity || 0), 0)} Units ({hqReceiveTransfer?.items?.length || 0} SKUs)</div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setHqReceiveTransfer(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-success"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              onClick={() => {
+                handleReceiveTransfer(hqReceiveTransfer);
+                setHqReceiveTransfer(null);
+              }}
+            >
+              <CheckCheck size={14} /> Confirm Inward at {hqReceiveTransfer?.toWarehouse?.name}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

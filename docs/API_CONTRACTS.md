@@ -114,9 +114,13 @@ All microservices adhere to standard JSON response envelopes to simplify client 
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/warehouses` | List storage warehouses | `STAFF` |
 | `POST` | `/api/v1/warehouses` | Add warehouse facility | `ADMIN` |
+| `PUT` | `/api/v1/warehouses/:id` | Update warehouse details / set status to `INACTIVE` | `ADMIN` |
+| `DELETE` | `/api/v1/warehouses/:id` | Remove warehouse (supports `?force=true` to purge test transfers with stock rollback) | `ADMIN` |
 | `GET` | `/api/v1/transfers` | List stock transfer requests | `STAFF` |
 | `POST` | `/api/v1/transfers` | Initiate inter-warehouse stock transfer | `MANAGER` |
-| `PATCH` | `/api/v1/transfers/:id/status` | Approve / Dispatch / Receive transfer | `MANAGER` |
+| `PATCH` | `/api/v1/transfers/:id/status` | Approve / Dispatch transfer | `MANAGER` |
+| `POST` | `/api/v1/warehouses/transfers/:id/receive` | Record destination inward receipt (strictly destination staff or HQ Clearance) | `STAFF` |
+| `DELETE` | `/api/v1/warehouses/transfers/:id` | Delete transfer record (rolls back in-transit stock to origin) | `ADMIN` |
 
 ### 🛒 6. Purchase Service (`/api/v1/...`)
 | Method | Route | Description | Min Role |

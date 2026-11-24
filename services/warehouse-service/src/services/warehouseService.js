@@ -225,7 +225,7 @@ class WarehouseService {
     return warehouse;
   }
 
-  async deleteWarehouse(tenantId, id) {
+  async deleteWarehouse(tenantId, id, { force = false } = {}) {
     const warehouse = await this.getWarehouseById(tenantId, id);
     if (warehouse.is_default) {
       const count = await Warehouse.count({ where: { tenant_id: tenantId } });
@@ -247,10 +247,54 @@ class WarehouseService {
     });
 
     if (transferCount > 0) {
-      throw {
-        statusCode: 400,
-        message: `Cannot delete warehouse [${warehouse.name}] because it is linked to ${transferCount} stock transfer records. Please set its status to INACTIVE instead to retain audit trail.`
-      };
+      if (!force) {
+        throw {
+          statusCode: 400,
+          code: 'WAREHOUSE_HAS_TRANSFERS',
+          transferCount,
+          message: `Cannot delete warehouse [${warehouse.name}] because it is linked to ${transferCount} stock transfer records. Please set its status to INACTIVE instead to retain audit trail, or force delete if this is test data.`
+        };
+      }
+
+      // Purge linked transfers if forced by Admin
+      const linkedTransfers = await StockTransfer.findAll({
+        where: {
+          tenant_id: tenantId,
+          [Op.or]: [
+            { from_warehouse_id: warehouse.id },
+            { to_warehouse_id: warehouse.id }
+          ]
+        },
+        include: [{ model: StockTransferItem, as: 'items' }]
+      });
+
+      for (const t of linkedTransfers) {
+        // If shipment was in-transit, restore stock to source warehouse if source is a different active warehouse
+        if (t.status === TRANSFER_STATUS.IN_TRANSIT && t.from_warehouse_id !== warehouse.id) {
+          for (const item of (t.items || [])) {
+            try {
+              await axios.post(`${INVENTORY_SERVICE_URL}/api/v1/inventory/internal/increase-stock`, {
+                productId: item.product_id,
+                productCode: item.product_code,
+                productName: item.product_name,
+                warehouseId: t.from_warehouse_id,
+                quantity: item.quantity,
+                movementType: STOCK_MOVEMENT_TYPES.ADJUSTMENT_IN,
+                referenceType: 'TRANSFER_CANCEL',
+                referenceId: t.transfer_number,
+                notes: `Warehouse ${warehouse.name} force-deleted: returned in-transit stock to origin`,
+                createdBy: 'System (Warehouse Purge)'
+              }, {
+                headers: { 'x-tenant-id': String(tenantId) }
+              });
+            } catch (err) {
+              console.warn('Restore stock on warehouse force delete warning:', err.message);
+            }
+          }
+        }
+        await StockTransferItem.destroy({ where: { transfer_id: t.id } });
+        await t.destroy();
+      }
     }
 
     try {
@@ -518,6 +562,17 @@ class WarehouseService {
       throw { statusCode: 400, message: 'Cannot receive a rejected transfer' };
     }
 
+    // Segregation of Duties & Destination Authorization:
+    // If receiving user has a warehouse scope, it must match destination warehouse
+    if (receiveData.userWarehouseId && String(receiveData.userWarehouseId) !== String(transfer.to_warehouse_id)) {
+      throw {
+        statusCode: 403,
+        message: `Forbidden: Only staff/managers assigned to destination facility [${transfer.toWarehouse?.name || 'Destination Hub'}] can confirm inward receipt.`
+      };
+    }
+
+    const receiverDisplay = receiveData.receivedBy || (receiveData.isGlobalAdmin ? 'Central HQ Admin' : 'Warehouse Receiver');
+
     // If it skipped the IN_TRANSIT dispatch step, deduct from source first
     if (transfer.status !== TRANSFER_STATUS.IN_TRANSIT) {
       for (const item of transfer.items) {
@@ -554,7 +609,7 @@ class WarehouseService {
           referenceType: 'TRANSFER',
           referenceId: transfer.transfer_number,
           notes: `Received from ${transfer.fromWarehouse ? transfer.fromWarehouse.name : 'Warehouse ' + transfer.from_warehouse_id} via ${transfer.vehicle_no || 'Fleet'}`,
-          createdBy: receiveData.receivedBy || transfer.approved_by || transfer.requested_by
+          createdBy: receiverDisplay
         }, {
           headers: { 'x-tenant-id': String(tenantId) }
         });
@@ -565,7 +620,7 @@ class WarehouseService {
 
     await transfer.update({
       status: TRANSFER_STATUS.COMPLETED,
-      received_by: receiveData.receivedBy || 'Warehouse Manager',
+      received_by: receiverDisplay,
       received_at: new Date(),
       completed_at: new Date()
     });
@@ -575,12 +630,13 @@ class WarehouseService {
       transferId: transfer.id,
       transferNumber: transfer.transfer_number,
       fromWarehouse: transfer.fromWarehouse ? transfer.fromWarehouse.name : '',
-      toWarehouse: transfer.toWarehouse ? transfer.toWarehouse.name : ''
+      toWarehouse: transfer.toWarehouse ? transfer.toWarehouse.name : '',
+      receivedBy: receiverDisplay
     });
 
     await dispatchTransferNotification(tenantId, {
       title: `Stock Transfer Received: #${transfer.transfer_number}`,
-      message: `Transfer #${transfer.transfer_number} has arrived safely and received into live inventory at ${transfer.toWarehouse?.name || 'Destination Hub'} by ${receiveData.receivedBy || 'Staff'}.`,
+      message: `Transfer #${transfer.transfer_number} has arrived safely and received into live inventory at ${transfer.toWarehouse?.name || 'Destination Hub'} by ${receiverDisplay}.`,
       type: 'TRANSFER',
       category: 'TRANSACTIONS',
       metadata: { transferId: transfer.id, transferNumber: transfer.transfer_number },
@@ -620,6 +676,33 @@ class WarehouseService {
 
   async deleteTransfer(tenantId, transferId) {
     const transfer = await this.getTransferById(tenantId, transferId);
+
+    // If transfer was IN_TRANSIT, stock was already deducted from source warehouse!
+    // Safely restore stock back to origin warehouse so units are not permanently lost.
+    if (transfer.status === TRANSFER_STATUS.IN_TRANSIT) {
+      for (const item of (transfer.items || [])) {
+        try {
+          await axios.post(`${INVENTORY_SERVICE_URL}/api/v1/inventory/internal/increase-stock`, {
+            productId: item.product_id,
+            productCode: item.product_code,
+            productName: item.product_name,
+            warehouseId: transfer.from_warehouse_id,
+            warehouseName: transfer.fromWarehouse ? transfer.fromWarehouse.name : `Warehouse ${transfer.from_warehouse_id}`,
+            quantity: item.quantity,
+            movementType: STOCK_MOVEMENT_TYPES.ADJUSTMENT_IN,
+            referenceType: 'TRANSFER_CANCEL',
+            referenceId: transfer.transfer_number,
+            notes: `Transfer ${transfer.transfer_number} cancelled/deleted in-transit: restored stock to origin warehouse`,
+            createdBy: 'System (Transfer Deletion)'
+          }, {
+            headers: { 'x-tenant-id': String(tenantId) }
+          });
+        } catch (err) {
+          console.warn('Rollback stock on transfer delete warning:', err.message);
+        }
+      }
+    }
+
     const transaction = await sequelize.transaction();
     try {
       await StockTransferItem.destroy({ where: { transfer_id: transfer.id }, transaction });

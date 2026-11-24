@@ -40,7 +40,8 @@ class WarehouseController {
 
   async deleteWarehouse(req, res, next) {
     try {
-      await warehouseService.deleteWarehouse(req.user.tenantId, req.params.id);
+      const force = req.query.force === 'true' || req.body?.force === true;
+      await warehouseService.deleteWarehouse(req.user.tenantId, req.params.id, { force });
       return ApiResponse.success(res, null, 'Warehouse deleted successfully');
     } catch (err) {
       next(err);
@@ -120,7 +121,9 @@ class TransferController {
       const userName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
       const transfer = await warehouseService.receiveTransfer(req.user.tenantId, req.params.id, {
         ...req.body,
-        receivedBy: userName
+        receivedBy: userName,
+        userWarehouseId: req.user.warehouseId || null,
+        isGlobalAdmin: Boolean(!req.user.warehouseId && (req.user.roleName === 'ADMIN' || req.user.isSuperAdmin))
       });
       return ApiResponse.success(res, transfer, 'Stock transfer received and added to destination warehouse');
     } catch (err) {
@@ -133,7 +136,9 @@ class TransferController {
       const userName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
       const transfer = await warehouseService.completeTransfer(req.user.tenantId, req.params.id, {
         ...req.body,
-        receivedBy: userName
+        receivedBy: userName,
+        userWarehouseId: req.user.warehouseId || null,
+        isGlobalAdmin: Boolean(!req.user.warehouseId && (req.user.roleName === 'ADMIN' || req.user.isSuperAdmin))
       });
       return ApiResponse.success(res, transfer, 'Stock transfer completed and inventory updated');
     } catch (err) {
