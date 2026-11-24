@@ -110,6 +110,8 @@ All microservices adhere to standard JSON response envelopes to simplify client 
 | `GET` | `/api/v1/inventory/low-stock` | Retrieve SKUs falling below reorder point | `STAFF` |
 
 ### 🏭 5. Warehouse Service (`/api/v1/...`)
+> **Facility Infrastructure & Personnel Isolation**: Warehouse facilities manage physical infrastructure properties (`name`, `code`, `address`, `city`, `capacity`, `capacityUnit`). Facility managers and operational personnel are decoupled from warehouse master forms and assigned securely via User Management (`/api/v1/auth/users`) with role-based credentials (`role: MANAGER/STAFF`, `warehouse_id: X`).
+
 | Method | Route | Description | Min Role |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/warehouses` | List storage warehouses | `STAFF` |

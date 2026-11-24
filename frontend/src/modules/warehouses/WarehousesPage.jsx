@@ -146,8 +146,6 @@ export default function WarehousesPage() {
     code: '',
     address: '',
     city: '',
-    managerName: '',
-    phone: '',
     capacity: '',
     capacityUnit: '',
     isDefault: false,
@@ -160,8 +158,6 @@ export default function WarehousesPage() {
     code: '',
     address: '',
     city: '',
-    managerName: '',
-    phone: '',
     capacity: '',
     capacityUnit: '',
     isDefault: false,
@@ -232,8 +228,6 @@ export default function WarehousesPage() {
         code: configuringWarehouse.code || '',
         address: configuringWarehouse.address || '',
         city: configuringWarehouse.city || '',
-        managerName: configuringWarehouse.manager_name || '',
-        phone: configuringWarehouse.phone || '',
         capacity: (configuringWarehouse.capacity !== null && configuringWarehouse.capacity !== undefined && configuringWarehouse.capacity !== '') ? configuringWarehouse.capacity : '',
         capacityUnit: configuringWarehouse.capacity_unit || '',
         isDefault: Boolean(configuringWarehouse.is_default),
@@ -445,8 +439,6 @@ export default function WarehousesPage() {
       (editForm.code || '').trim().toUpperCase() !== (configuringWarehouse.code || '').trim().toUpperCase() ||
       (editForm.address || '').trim() !== (configuringWarehouse.address || '').trim() ||
       (editForm.city || '').trim() !== (configuringWarehouse.city || '').trim() ||
-      (editForm.managerName || '').trim() !== (configuringWarehouse.manager_name || '').trim() ||
-      (editForm.phone || '').trim() !== (configuringWarehouse.phone || '').trim() ||
       String(editForm.capacity ?? '') !== String(configuringWarehouse.capacity ?? '') ||
       String(editForm.capacityUnit ?? '') !== String(configuringWarehouse.capacity_unit ?? '') ||
       Boolean(editForm.isDefault) !== Boolean(configuringWarehouse.is_default) ||
@@ -485,8 +477,6 @@ export default function WarehousesPage() {
         code: '',
         address: '',
         city: '',
-        managerName: '',
-        phone: '',
         capacity: '',
         capacityUnit: '',
         isDefault: false,
@@ -529,8 +519,6 @@ export default function WarehousesPage() {
       code: configuringWarehouse.code || '',
       address: configuringWarehouse.address || '',
       city: configuringWarehouse.city || '',
-      managerName: configuringWarehouse.manager_name || '',
-      phone: configuringWarehouse.phone || '',
       capacity: (configuringWarehouse.capacity !== null && configuringWarehouse.capacity !== undefined && configuringWarehouse.capacity !== '') ? configuringWarehouse.capacity : '',
       capacityUnit: configuringWarehouse.capacity_unit || '',
       isDefault: Boolean(configuringWarehouse.is_default),
@@ -2582,10 +2570,10 @@ export default function WarehousesPage() {
               </div>
             </div>
 
-            {/* Section 3: Location & Incharge */}
+            {/* Section 3: Facility Location & Address */}
             <div style={{ marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', fontWeight: 700, color: '#334155', marginBottom: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <MapPin size={15} style={{ color: 'var(--primary)' }} /> Location & Operational Contact
+                <MapPin size={15} style={{ color: 'var(--primary)' }} /> Facility Location & Address
               </div>
               <div className="form-row">
                 <div className="form-group" style={{ flex: 2 }}>
@@ -2610,27 +2598,9 @@ export default function WarehousesPage() {
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Facility Manager / Incharge</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={whForm.managerName}
-                    onChange={(e) => setWhForm({ ...whForm, managerName: e.target.value })}
-                    placeholder="e.g. Rajesh Kumar"
-                  />
-                </div>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Contact Phone</label>
-                  <input
-                    type="tel"
-                    className="form-input"
-                    value={whForm.phone}
-                    onChange={(e) => setWhForm({ ...whForm, phone: e.target.value })}
-                    placeholder="e.g. +91 98765 43210"
-                  />
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.65rem 0.85rem', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.785rem', color: '#64748b', marginTop: '0.5rem' }}>
+                <ShieldCheck size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                <span>Facility managers & operational staff are securely assigned via <strong>User Management</strong> with role-based credentials.</span>
               </div>
             </div>
 
@@ -2726,10 +2696,10 @@ export default function WarehousesPage() {
               </div>
             </div>
 
-            {/* Section 3: Location & Incharge */}
+            {/* Section 3: Facility Location & Address */}
             <div style={{ marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', fontWeight: 700, color: '#334155', marginBottom: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <MapPin size={15} style={{ color: 'var(--primary)' }} /> Location & Operational Contact
+                <MapPin size={15} style={{ color: 'var(--primary)' }} /> Facility Location & Address
               </div>
               <div className="form-row">
                 <div className="form-group" style={{ flex: 2 }}>
@@ -2754,27 +2724,9 @@ export default function WarehousesPage() {
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Facility Manager</label>
-                  <input
-                    type="text"
-                    disabled={!canEditWarehouse}
-                    className="form-input"
-                    value={editForm.managerName}
-                    onChange={(e) => setEditForm({ ...editForm, managerName: e.target.value })}
-                  />
-                </div>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Contact Phone</label>
-                  <input
-                    type="tel"
-                    disabled={!canEditWarehouse}
-                    className="form-input"
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  />
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.65rem 0.85rem', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.785rem', color: '#64748b', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                <ShieldCheck size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                <span>Assigned managers and staff for this facility are administered in <strong>User Management</strong>.</span>
               </div>
 
               <div className="form-group" style={{ marginTop: '0.5rem' }}>

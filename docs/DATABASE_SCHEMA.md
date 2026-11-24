@@ -117,9 +117,15 @@ CREATE INDEX idx_tenant_created ON sales_invoices(tenant_id, created_at DESC);
 - **`warehouses`**:
   - `id`: INT (PK)
   - `tenant_id`: INT
-  - `name`: VARCHAR(255)
-  - `location`: VARCHAR(255)
-  - `is_primary`: BOOLEAN
+  - `name`: VARCHAR(150)
+  - `code`: VARCHAR(30) (Unique per tenant)
+  - `address`: TEXT
+  - `city`: VARCHAR(100)
+  - `capacity`: INT (Nullable)
+  - `capacity_unit`: VARCHAR(50) (Nullable)
+  - `is_default`: BOOLEAN
+  - `status`: ENUM (`ACTIVE`, `INACTIVE`)
+  - *(Note: Warehouse managers and staff are associated relationally via `auth_db.users.warehouse_id`)*
 - **`transfers`**:
   - `id`: INT (PK)
   - `tenant_id`: INT
