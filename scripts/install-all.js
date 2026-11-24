@@ -14,6 +14,7 @@ const dirs = [
   'services/sales-service',
   'services/finance-service',
   'services/notification-service',
+  'services/ai-service',
   'frontend'
 ];
 
