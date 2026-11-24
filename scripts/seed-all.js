@@ -1,7 +1,12 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 process.env.DB_DIALECT = process.env.DB_DIALECT || 'sqlite';
-const bcrypt = require('../services/auth-service/node_modules/bcryptjs');
+let bcrypt;
+try {
+  bcrypt = require('bcryptjs');
+} catch (e) {
+  bcrypt = require('../services/auth-service/node_modules/bcryptjs');
+}
 const { ROLES, DEFAULT_ROLE_PERMISSIONS, STOCK_MOVEMENT_TYPES, TRANSFER_STATUS, PURCHASE_STATUS, SALE_STATUS, PAYMENT_STATUS, PAYMENT_METHODS } = require('../services/common/src/constants');
 
 // Models

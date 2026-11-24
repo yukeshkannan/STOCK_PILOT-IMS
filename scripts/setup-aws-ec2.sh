@@ -36,24 +36,25 @@ sudo systemctl start mysql
 sudo systemctl enable mysql
 
 # Configure MySQL root password and create microservice databases
-echo "  ↳ Provisioning 9 microservice databases..."
-sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'rootpassword'; FLUSH PRIVILEGES;" 2>/dev/null || true
+echo "  ↳ Provisioning 9 microservice databases & configuring user permissions..."
+sudo mysql << 'SQLEOF'
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'rootpassword';
+CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED BY 'rootpassword';
+ALTER USER 'root'@'127.0.0.1' IDENTIFIED BY 'rootpassword';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION;
 
-DATABASES=(
-    "auth_db"
-    "tenant_db"
-    "product_db"
-    "inventory_db"
-    "warehouse_db"
-    "purchase_db"
-    "sales_db"
-    "finance_db"
-    "notification_db"
-)
-
-for db in "${DATABASES[@]}"; do
-    mysql -u root -prootpassword -e "CREATE DATABASE IF NOT EXISTS \`$db\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null || true
-done
+CREATE DATABASE IF NOT EXISTS `auth_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `tenant_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `product_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `inventory_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `warehouse_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `purchase_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `sales_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `finance_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `notification_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+FLUSH PRIVILEGES;
+SQLEOF
 echo "  ✓ All 9 MySQL databases created and verified."
 
 # 5. Install Nginx
