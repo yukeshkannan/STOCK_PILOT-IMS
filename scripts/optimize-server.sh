@@ -68,10 +68,15 @@ node scripts/flush-cache.js || true
 echo "  ✓ Cache flushed."
 
 # 6. Restart PM2 Microservices with clean environment & 96M heap limit
-echo "[6/7] Flushing PM2 logs and restarting services..."
+echo "[6/7] Starting/Restarting PM2 microservices with 96M heap limit..."
 pm2 flush || true
-pm2 restart all --update-env
-echo "  ✓ Microservices restarted with aggressive V8 GC."
+if pm2 list | grep -q -E "gateway|auth-svc|online"; then
+    pm2 restart all --update-env
+else
+    pm2 start ecosystem.config.js
+fi
+pm2 save || true
+echo "  ✓ Microservices active with aggressive V8 GC."
 
 # 7. Verify Health of all 11 ports
 echo "[7/7] Verifying all service endpoints..."
