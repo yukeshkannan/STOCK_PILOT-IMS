@@ -23,7 +23,8 @@
     "clean:demo": "node scripts/clean-demo-data.js",
     "init:prod": "node scripts/init-production-db.js",
     "flush:cache": "node scripts/flush-cache.js",
-    "optimize:server": "bash scripts/optimize-server.sh"
+    "optimize:server": "bash scripts/optimize-server.sh",
+    "set-demo-ip": "node scripts/set-demo-ip.js"
   },
   "keywords": [
     "inventory",
