@@ -146,6 +146,8 @@ class UserService {
 
     // 1. HTTP sync to auth-service
     await sendAuthSync('PUT', `/api/v1/auth/internal/sync-user/${userId}`, {
+      email: user.email,
+      tenantId: tenantId,
       firstName: user.first_name,
       lastName: user.last_name,
       roleName: user.role_name,
@@ -188,7 +190,11 @@ class UserService {
   async toggleUserStatus(tenantId, userId, status) {
     const user = await this.getUserById(tenantId, userId);
     await user.update({ status });
-    await sendAuthSync('PUT', `/api/v1/auth/internal/sync-user/${userId}`, { status });
+    await sendAuthSync('PUT', `/api/v1/auth/internal/sync-user/${userId}`, {
+      email: user.email,
+      tenantId: tenantId,
+      status
+    });
     return user;
   }
 
@@ -198,7 +204,7 @@ class UserService {
     await user.destroy();
 
     // 1. HTTP sync to auth-service
-    await sendAuthSync('DELETE', `/api/v1/auth/internal/sync-user/${userId}?tenantId=${tenantId}`);
+    await sendAuthSync('DELETE', `/api/v1/auth/internal/sync-user/${userId}?tenantId=${tenantId}&email=${encodeURIComponent(userEmail)}`);
 
     // 2. Fallback to local require
     try {

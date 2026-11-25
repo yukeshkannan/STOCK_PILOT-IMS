@@ -74,8 +74,8 @@ export default function WarehousesPage() {
   const isSuperAdmin = Boolean(currentUser?.isSuperAdmin) || userRole === 'SUPER_ADMIN';
   const isAdmin = userRole === 'ADMIN' || isSuperAdmin;
   const isManager = userRole === 'MANAGER';
-  const isGlobalAdmin = isSuperAdmin || userRole === 'ADMIN' || !assignedWhId;
-  const isBranchScoped = Boolean(assignedWhId) && !isGlobalAdmin;
+  const isGlobalAdmin = isSuperAdmin || (userRole === 'ADMIN' && !assignedWhId);
+  const isBranchScoped = Boolean(assignedWhId);
   const isBranchAdmin = (isAdmin || isManager) && isBranchScoped;
   const isStaff = userRole === 'STAFF';
 

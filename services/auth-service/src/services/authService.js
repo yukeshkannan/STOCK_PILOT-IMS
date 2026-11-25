@@ -386,6 +386,16 @@ class AuthService {
               tenantInfo.plan = livePlan;
             }
           }
+
+          // Production Integrity: If this user is the registered Tenant Owner / Primary Business Admin,
+          // they MUST ALWAYS have Global HQ Access (warehouse_id: null). Automatically heal any accidental branch binding.
+          if (liveTenant.email && cleanEmail === liveTenant.email.toLowerCase().trim()) {
+            if (user.warehouse_id !== null || user.warehouse_name !== null) {
+              await user.update({ warehouse_id: null, warehouse_name: null });
+              user.warehouse_id = null;
+              user.warehouse_name = null;
+            }
+          }
         }
       } catch (err) {
         if (err.statusCode === 403) throw err;
@@ -405,7 +415,11 @@ class AuthService {
 
     const isProfileCompleted = Boolean(user.is_super_admin || user.tenant_id);
 
-    const isGlobalRole = user.is_super_admin || user.role_name === 'ADMIN';
+    // Dynamic facility scoping:
+    // Platform SuperAdmin has no warehouse binding.
+    // Tenant users have their explicitly assigned warehouse_id (null for Global HQ Shop Admin, or integer ID for Branch Admin / Staff).
+    const assignedWhId = user.is_super_admin ? null : (user.warehouse_id || null);
+    const assignedWhName = user.is_super_admin ? null : (user.warehouse_name || null);
 
     const tokenPayload = {
       userId: user.id,
@@ -418,8 +432,8 @@ class AuthService {
       roleName: user.is_super_admin ? 'SUPER_ADMIN' : user.role_name,
       isSuperAdmin: !!user.is_super_admin,
       isProfileCompleted,
-      warehouseId: isGlobalRole ? null : (user.warehouse_id || null),
-      warehouseName: isGlobalRole ? null : (user.warehouse_name || null),
+      warehouseId: assignedWhId,
+      warehouseName: assignedWhName,
       permissions,
       plan: activePlan,
       tenantCreatedAt: tenantInfo?.created_at || tenantInfo?.createdAt || user.created_at || null
@@ -448,8 +462,8 @@ class AuthService {
         tenantId: user.is_super_admin ? null : user.tenant_id,
         companyCode: user.is_super_admin ? null : (tenantInfo ? tenantInfo.company_code : null),
         companyName: user.is_super_admin ? 'StockPilot Platform' : (tenantInfo ? tenantInfo.company_name : null),
-        warehouseId: isGlobalRole ? null : (user.warehouse_id || null),
-        warehouseName: isGlobalRole ? null : (user.warehouse_name || null),
+        warehouseId: assignedWhId,
+        warehouseName: assignedWhName,
         permissions,
         plan: activePlan,
         tenantCreatedAt: tenantInfo?.created_at || tenantInfo?.createdAt || user.created_at || null
@@ -512,7 +526,8 @@ class AuthService {
     const rawPlan = tenantInfo?.plan || 'TRIAL';
     const activePlan = user.is_super_admin ? null : rawPlan.toString().trim().toUpperCase();
 
-    const isGlobalRole = user.is_super_admin || user.role_name === 'ADMIN';
+    const assignedWhId = user.is_super_admin ? null : (user.warehouse_id || null);
+    const assignedWhName = user.is_super_admin ? null : (user.warehouse_name || null);
 
     const tokenPayload = {
       userId: user.id,
@@ -524,8 +539,8 @@ class AuthService {
       lastName: user.last_name,
       roleName: user.is_super_admin ? 'SUPER_ADMIN' : user.role_name,
       isSuperAdmin: !!user.is_super_admin,
-      warehouseId: isGlobalRole ? null : (user.warehouse_id || null),
-      warehouseName: isGlobalRole ? null : (user.warehouse_name || null),
+      warehouseId: assignedWhId,
+      warehouseName: assignedWhName,
       permissions,
       plan: activePlan
     };
@@ -583,7 +598,8 @@ class AuthService {
     const rawPlan = tenantInfo?.plan || 'TRIAL';
     const activePlan = user.is_super_admin ? null : rawPlan.toString().trim().toUpperCase();
 
-    const isGlobalRole = user.is_super_admin || user.role_name === 'ADMIN';
+    const assignedWhId = user.is_super_admin ? null : (user.warehouse_id || null);
+    const assignedWhName = user.is_super_admin ? null : (user.warehouse_name || null);
 
     return {
       id: user.id,
@@ -596,8 +612,8 @@ class AuthService {
       tenantId: user.is_super_admin ? null : user.tenant_id,
       companyCode: user.is_super_admin ? null : (tenantInfo ? tenantInfo.company_code : null),
       companyName: user.is_super_admin ? 'StockPilot Platform' : (tenantInfo ? tenantInfo.company_name : null),
-      warehouseId: isGlobalRole ? null : (user.warehouse_id || null),
-      warehouseName: isGlobalRole ? null : (user.warehouse_name || null),
+      warehouseId: assignedWhId,
+      warehouseName: assignedWhName,
       permissions,
       plan: activePlan
     };
@@ -704,7 +720,13 @@ class AuthService {
   }
 
   async updateInternalUser(userId, data) {
-    const user = await User.findByPk(userId);
+    let user = null;
+    if (data.email) {
+      user = await User.findOne({ where: { email: data.email.toLowerCase().trim() } });
+    }
+    if (!user && userId) {
+      user = await User.findByPk(userId);
+    }
     if (!user) return null;
 
     const updateFields = {};
@@ -728,11 +750,22 @@ class AuthService {
     return user;
   }
 
-  async deleteInternalUser(userId, tenantId) {
-    const where = { id: userId };
-    if (tenantId) where.tenant_id = tenantId;
-    await RefreshToken.destroy({ where: { user_id: userId } });
-    await User.destroy({ where });
+  async deleteInternalUser(userId, tenantId, email) {
+    let user = null;
+    if (email) {
+      const whereEmail = { email: email.toLowerCase().trim() };
+      if (tenantId) whereEmail.tenant_id = tenantId;
+      user = await User.findOne({ where: whereEmail });
+    }
+    if (!user && userId) {
+      const whereId = { id: userId };
+      if (tenantId) whereId.tenant_id = tenantId;
+      user = await User.findOne({ where: whereId });
+    }
+    if (user) {
+      await RefreshToken.destroy({ where: { user_id: user.id } });
+      await user.destroy();
+    }
     return true;
   }
 

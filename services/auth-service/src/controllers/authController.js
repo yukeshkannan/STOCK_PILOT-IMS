@@ -178,7 +178,7 @@ class AuthController {
 
   async syncUserDeleteInternal(req, res, next) {
     try {
-      const result = await authService.deleteInternalUser(req.params.id, req.query.tenantId);
+      const result = await authService.deleteInternalUser(req.params.id, req.query.tenantId, req.query.email);
       return ApiResponse.success(res, result, 'User deleted from auth_db');
     } catch (err) {
       next(err);

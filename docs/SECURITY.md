@@ -106,8 +106,22 @@ const items = await Product.findAll({
 | **Sales & POS Invoicing** |  Full |  Full |  Full |  Full | 👁️ View |
 | **Financial Ledger & Expenses** |  Full |  Full | 👁️ View | ❌ |  Full |
 
+### 🔒 Central HQ Admin vs. Facility Branch Admin Scoping
+StockPilot enforces clean segregation between Central Business Executives and Facility Incharges:
+- **Central Shop Admin (Business Owner / Global HQ)**:
+  - Identified by `role: ADMIN` with `warehouse_id: null`.
+  - Retains full Global HQ jurisdiction across all fulfillment hubs, storefront builder, multi-branch finances, organization-wide user management, and company subscription settings.
+  - Automatically lands on `/dashboard` (Executive Multi-Warehouse Overview).
+- **Branch Admin / Facility Incharge (Location Admin)**:
+  - Identified by `role: ADMIN` or `role: MANAGER` with an explicitly assigned `warehouse_id: INTEGER` (e.g., Chennai HUB, Karur Depot).
+  - Navigation is strictly scoped to physical facility operations: *Inventory & Hub Logistics*, *Operations & Invoicing*, and facility-level *Reports & Alerts*.
+  - Global executive functions (Storefront Builder, Users & RBAC, Company Settings, Subscription & Billing, Company Finances) are completely hidden and inaccessible.
+  - Automatically lands on `/warehouses` (Facility Logistics Hub).
+- **Store Staff / Cashier**:
+  - Identified by `role: STAFF` with `warehouse_id: INTEGER`.
+  - Limited to POS billing counter (`/sales/new`), inventory lookup, and view-only transfer telemetry. Prohibited from confirming inventory intake or stock adjustments.
+
 ### 🔒 Inter-Hub Transfers: Segregation of Duties
-- **Global HQ Jurisdiction for Tenant Admin**: The Tenant Administrator (`role: ADMIN`) represents the business owner and retains company-wide Global HQ jurisdiction (`warehouseId: null` in JWT token payloads) across all facilities, storefront builder, finance, user management, and settings. Branch scoping strictly binds only operational facility personnel (`role: MANAGER` and `role: STAFF`) to specific warehouse IDs.
 - **Origin Dispatch Protection**: Personnel or managers assigned to the origin warehouse who dispatched a transfer are prohibited from confirming destination goods receipt (`Receive Goods into Stock`).
 - **Destination Verification**: Only users assigned to the destination facility (`warehouse_id === transfer.to_warehouse_id`) can physically accept items into local stock.
 - **Staff vs Manager Boundary**: Store Associates & Cashiers (`STAFF`) are limited to POS billing, invoicing, and read-only transfer tracking. They cannot initiate, dispatch, or confirm inward stock intake into the inventory valuation ledger. Inward intake requires `MANAGER` or `ADMIN` authority.

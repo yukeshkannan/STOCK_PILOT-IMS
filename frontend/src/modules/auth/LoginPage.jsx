@@ -44,10 +44,10 @@ export default function LoginPage() {
           window.location.href = '/complete-profile';
         } else if (loggedUser?.roleName === 'STAFF') {
           window.location.href = '/sales/new'; // Direct POS Billing Terminal for Staff / Cashier
-        } else if (loggedUser?.roleName === 'MANAGER' && loggedUser?.warehouseId) {
-          window.location.href = '/warehouses'; // Direct Facility Logistics Hub for Warehouse Manager
+        } else if (loggedUser?.warehouseId) {
+          window.location.href = '/warehouses'; // Direct Facility Logistics Hub for Branch Admin & Warehouse Incharge
         } else {
-          window.location.href = '/dashboard'; // Executive Shop Admin Dashboard
+          window.location.href = '/dashboard'; // Executive Central Shop Admin Dashboard (Global HQ)
         }
       }
     } catch (err) {

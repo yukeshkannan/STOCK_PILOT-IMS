@@ -74,8 +74,8 @@ export default function DashboardPage() {
   const isSuperAdmin = Boolean(user?.isSuperAdmin) || userRole === 'SUPER_ADMIN';
   const assignedWhId = user?.warehouseId || user?.warehouse_id ? String(user.warehouseId || user.warehouse_id) : null;
   const assignedWhName = user?.warehouseName || user?.warehouse_name || null;
-  const isGlobalAdmin = isSuperAdmin || userRole === 'ADMIN' || !assignedWhId;
-  const isBranchScoped = Boolean(assignedWhId) && !isGlobalAdmin;
+  const isGlobalAdmin = isSuperAdmin || (userRole === 'ADMIN' && !assignedWhId);
+  const isBranchScoped = Boolean(assignedWhId);
   const isStaff = userRole === 'STAFF';
 
   const fetchDashboardData = async () => {
