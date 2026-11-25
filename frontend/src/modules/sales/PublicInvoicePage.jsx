@@ -20,6 +20,11 @@ export default function PublicInvoicePage() {
 
   useEffect(() => {
     const fetchPublicInvoice = async () => {
+      if (!invoiceNumber || invoiceNumber === 'undefined' || invoiceNumber === 'null') {
+        setError('Invoice number is missing or invalid.');
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         setError(null);
@@ -32,9 +37,7 @@ export default function PublicInvoicePage() {
       }
     };
 
-    if (invoiceNumber) {
-      fetchPublicInvoice();
-    }
+    fetchPublicInvoice();
   }, [invoiceNumber]);
 
   const handlePrint = () => {

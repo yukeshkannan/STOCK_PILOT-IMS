@@ -851,32 +851,72 @@ class SalesService {
       limit: 50
     });
 
-    return sales.map(s => ({
-      id: s.id,
-      invoiceNumber: s.invoice_number,
-      saleDate: s.sale_date,
-      createdAt: s.created_at,
-      grandTotal: s.grand_total,
-      subtotal: s.subtotal,
-      taxAmount: s.tax_amount,
-      orderStatus: s.order_status || 'PLACED',
-      paymentMethod: s.payment_method,
-      paymentStatus: s.payment_status,
-      deliveryAddress: s.delivery_address,
-      trackingNumber: s.tracking_number,
-      courierName: s.courier_name,
-      itemsCount: (s.items || []).length,
-      items: (s.items || []).map(i => ({
-        id: i.id,
-        productId: i.product_id,
-        productName: i.product_name,
-        productCode: i.product_code,
-        quantity: i.quantity,
-        unitPrice: i.unit_price,
-        totalAmount: i.total_amount
-      })),
-      ebillUrl: `/e-bill/${s.invoice_number}`
-    }));
+    return sales.map(s => {
+      const invNum = s.invoice_number || s.invoiceNumber;
+      const orderDate = s.created_at || s.createdAt || s.sale_date || s.saleDate || new Date().toISOString();
+      const grandTot = s.grand_total !== undefined ? Number(s.grand_total) : (s.grandTotal !== undefined ? Number(s.grandTotal) : 0);
+      const subTot = s.subtotal !== undefined ? Number(s.subtotal) : 0;
+      const taxAmt = s.tax_amount !== undefined ? Number(s.tax_amount) : 0;
+      const ordStatus = s.order_status || s.orderStatus || 'PLACED';
+      const payMethod = s.payment_method || s.paymentMethod || 'CASH';
+      const payStatus = s.payment_status || s.paymentStatus || 'UNPAID';
+      const delivAddr = s.delivery_address || s.deliveryAddress || null;
+      const trackNum = s.tracking_number || s.trackingNumber || null;
+      const courName = s.courier_name || s.courierName || null;
+      const saleItems = (s.items || []).map(i => {
+        const prodName = i.product_name || i.productName || 'Item';
+        const prodCode = i.product_code || i.productCode || '';
+        const prodId = i.product_id || i.productId;
+        const uPrice = i.unit_price !== undefined ? Number(i.unit_price) : (i.unitPrice !== undefined ? Number(i.unitPrice) : 0);
+        const tAmount = i.total_amount !== undefined ? Number(i.total_amount) : (i.totalAmount !== undefined ? Number(i.totalAmount) : 0);
+        return {
+          id: i.id,
+          productId: prodId,
+          product_id: prodId,
+          productName: prodName,
+          product_name: prodName,
+          productCode: prodCode,
+          product_code: prodCode,
+          quantity: i.quantity || 1,
+          unitPrice: uPrice,
+          unit_price: uPrice,
+          totalAmount: tAmount,
+          total_amount: tAmount
+        };
+      });
+
+      return {
+        id: s.id,
+        // Dual-casing aliases for zero-breakdown API contracts across legacy and modern callers
+        invoiceNumber: invNum,
+        invoice_number: invNum,
+        saleDate: s.sale_date || orderDate,
+        sale_date: s.sale_date || orderDate,
+        createdAt: orderDate,
+        created_at: orderDate,
+        grandTotal: grandTot,
+        grand_total: grandTot,
+        subtotal: subTot,
+        taxAmount: taxAmt,
+        tax_amount: taxAmt,
+        orderStatus: ordStatus,
+        order_status: ordStatus,
+        paymentMethod: payMethod,
+        payment_method: payMethod,
+        paymentStatus: payStatus,
+        payment_status: payStatus,
+        deliveryAddress: delivAddr,
+        delivery_address: delivAddr,
+        trackingNumber: trackNum,
+        tracking_number: trackNum,
+        courierName: courName,
+        courier_name: courName,
+        itemsCount: saleItems.length,
+        items_count: saleItems.length,
+        items: saleItems,
+        ebillUrl: `/e-bill/${invNum}`
+      };
+    });
   }
 
   /**

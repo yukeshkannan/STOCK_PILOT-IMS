@@ -3853,73 +3853,102 @@ export default function PublicStorePage() {
                     </div>
                   ) : (
                     <div className="drawer-orders-list">
-                      {customerOrders.map((ord) => (
-                        <div key={ord.id || ord.invoice_number} className="drawer-order-card">
-                          <div className="order-card-top">
-                            <div>
-                              <span className="order-inv-num">#{ord.invoice_number}</span>
-                              <span className="order-date-text">
-                                {new Date(ord.createdAt || ord.sale_date).toLocaleDateString('en-IN', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: 'numeric'
-                                })}
-                              </span>
+                      {customerOrders.map((ord) => {
+                        const inv = ord.invoiceNumber || ord.invoice_number || '';
+                        const dateRaw = ord.createdAt || ord.created_at || ord.saleDate || ord.sale_date;
+                        const dateObj = dateRaw ? new Date(dateRaw) : null;
+                        const isValidDate = dateObj && !isNaN(dateObj.getTime());
+                        const formattedDate = isValidDate
+                          ? dateObj.toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })
+                          : 'Recent Order';
+                        const totalAmount = parseFloat(ord.grandTotal ?? ord.grand_total ?? 0);
+                        const ordStatus = ord.orderStatus || ord.order_status || 'PLACED';
+                        const payMethod = ord.paymentMethod || ord.payment_method || 'CASH';
+                        const isPaid = (ord.paymentStatus || ord.payment_status) === 'PAID';
+                        const orderItems = ord.items || [];
+                        const trackNum = ord.trackingNumber || ord.tracking_number;
+                        const courier = ord.courierName || ord.courier_name;
+
+                        return (
+                          <div key={ord.id || inv} className="drawer-order-card">
+                            <div className="order-card-top">
+                              <div>
+                                <span className="order-inv-num">#{inv || 'INV'}</span>
+                                <span className="order-date-text">{formattedDate}</span>
+                              </div>
+                              <div className={`order-status-badge status-${ordStatus.toLowerCase()}`}>
+                                {ordStatus}
+                              </div>
                             </div>
-                            <div
-                              className={`order-status-badge status-${(ord.order_status || 'PLACED').toLowerCase()}`}
-                            >
-                              {ord.order_status || 'PLACED'}
+
+                            <div className="order-card-middle">
+                              <div className="order-total-amount">
+                                ₹{totalAmount.toLocaleString('en-IN')}
+                              </div>
+                              <div className="order-pay-method">
+                                {payMethod} • {isPaid ? 'Paid' : 'Unpaid'}
+                              </div>
+                            </div>
+
+                            {orderItems.length > 0 && (
+                              <p className="order-items-brief">
+                                {orderItems
+                                  .map((it) => `${it.productName || it.product_name || 'Item'} (${it.quantity || 1})`)
+                                  .join(', ')}
+                              </p>
+                            )}
+
+                            {trackNum && (
+                              <div className="order-tracking-hint">
+                                <Truck size={12} />
+                                <span>
+                                  Tracking: <strong>{trackNum}</strong> {courier ? `via ${courier}` : ''}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="order-card-actions">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsCustomerAccountOpen(false);
+                                  if (inv) handleTrackOrder(inv);
+                                }}
+                                className="btn-order-track-card"
+                                style={{ background: `${primaryColor}15`, color: primaryColor }}
+                              >
+                                <Truck size={14} />
+                                <span>Track Live Status</span>
+                              </button>
+                              {inv ? (
+                                <Link
+                                  to={`/e-bill/${encodeURIComponent(inv)}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="btn-order-ebill-card"
+                                >
+                                  <FileText size={14} />
+                                  <span>E-Bill</span>
+                                </Link>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="btn-order-ebill-card disabled"
+                                  style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                                >
+                                  <FileText size={14} />
+                                  <span>E-Bill</span>
+                                </button>
+                              )}
                             </div>
                           </div>
-
-                          <div className="order-card-middle">
-                            <div className="order-total-amount">
-                              ₹{parseFloat(ord.grand_total || 0).toLocaleString('en-IN')}
-                            </div>
-                            <div className="order-pay-method">
-                              {ord.payment_method || 'CASH'} • {ord.payment_status === 'PAID' ? 'Paid' : 'Unpaid'}
-                            </div>
-                          </div>
-
-                          {ord.items && ord.items.length > 0 && (
-                            <p className="order-items-brief">
-                              {ord.items.map((it) => `${it.product_name} (${it.quantity})`).join(', ')}
-                            </p>
-                          )}
-
-                          {ord.tracking_number && (
-                            <div className="order-tracking-hint">
-                              <Truck size={12} />
-                              <span>Tracking: <strong>{ord.tracking_number}</strong> {ord.courier_name ? `via ${ord.courier_name}` : ''}</span>
-                            </div>
-                          )}
-
-                          <div className="order-card-actions">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsCustomerAccountOpen(false);
-                                handleTrackOrder(ord.invoice_number);
-                              }}
-                              className="btn-order-track-card"
-                              style={{ background: `${primaryColor}15`, color: primaryColor }}
-                            >
-                              <Truck size={14} />
-                              <span>Track Live Status</span>
-                            </button>
-                            <Link
-                              to={`/e-bill/${ord.invoice_number}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="btn-order-ebill-card"
-                            >
-                              <FileText size={14} />
-                              <span>E-Bill</span>
-                            </Link>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </>

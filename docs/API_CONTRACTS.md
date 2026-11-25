@@ -152,7 +152,7 @@ All microservices adhere to standard JSON response envelopes to simplify client 
 | `POST` | `/api/v1/sales/public/customer/register` | Register customer account with structured doorstep address (Street, City, State, PIN) & default delivery address | `PUBLIC` |
 | `POST` | `/api/v1/sales/public/customer/login` | Customer login with mobile/email and password (returns saved addresses) | `PUBLIC` |
 | `PUT` | `/api/v1/sales/public/customer/profile` | Update customer profile and manage saved multi-address book | `PUBLIC` |
-| `GET` | `/api/v1/sales/public/customer/orders` | Fetch customer order history with live fulfillment statuses | `PUBLIC` |
+| `GET` | `/api/v1/sales/public/customer/orders` | Fetch customer order history with live fulfillment statuses (returns normalized dual-casing `invoiceNumber`/`invoice_number`, `grandTotal`/`grand_total`, `createdAt`/`created_at`, `ebillUrl`) | `PUBLIC` |
 | `GET` | `/api/v1/sales/public/order/track/:invoiceNumber` | Real-time 6-stage order tracking & courier details | `PUBLIC` |
 | `GET` | `/api/v1/sales/public/invoice/:invoiceNumber` | Public E-bill / tax invoice lookup | `PUBLIC` |
 

@@ -19,3 +19,10 @@ To save token context and immediately understand the project, read the documenta
 3. System ports, services, proxy routes ➔ Update [ARCHITECTURE.md](file:///e:/STOCK_PILOT-IMS/docs/ARCHITECTURE.md) & [AI_CONTEXT.md](file:///e:/STOCK_PILOT-IMS/docs/AI_CONTEXT.md).
 4. Roles, permissions, token payloads, isolation logic ➔ Update [SECURITY.md](file:///e:/STOCK_PILOT-IMS/docs/SECURITY.md).
 5. RabbitMQ publishers/subscribers/topics ➔ Update [EVENT_DRIVEN_FLOWS.md](file:///e:/STOCK_PILOT-IMS/docs/EVENT_DRIVEN_FLOWS.md).
+
+## 🛑 Strict Development & Deployment Workflow
+To ensure production quality, stability, and developer alignment, ALWAYS follow this 4-step protocol:
+1. **Analyze & Plan**: When the user requests a task/fix/feature, analyze it thoroughly and present a clear, production-grade **Implementation Plan** first. (Do not write plans for simple queries or quick lookups).
+2. **Approval Gate**: Do NOT edit or write code until the user explicitly reviews and approves the plan.
+3. **Execution & Review**: Implement the changes cleanly, verify the build/syntax, and summarize what was done for the user to review.
+4. **Push Confirmation Gate**: NEVER push to GitHub (`git push`) automatically. Only push when the user explicitly instructs to do so.

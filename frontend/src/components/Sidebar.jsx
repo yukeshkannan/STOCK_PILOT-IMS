@@ -201,6 +201,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
 
   const userRole = (user?.roleName || user?.role || 'ADMIN').toUpperCase();
   const assignedWhId = user?.warehouseId || user?.warehouse_id ? String(user.warehouseId || user.warehouse_id) : null;
+  const isStaff = userRole === 'STAFF';
   const isGlobalAdmin = Boolean(isSuper) || (userRole === 'ADMIN' && !assignedWhId);
   const isBranchScoped = Boolean(assignedWhId);
   const isBranchAdmin = (userRole === 'ADMIN' || userRole === 'MANAGER') && isBranchScoped;
@@ -294,6 +295,48 @@ export default function Sidebar({ isOpen = false, onClose }) {
   ];
 
   const getFilteredNavItems = () => {
+    // 1. Staff Role: Focused strictly on Sales/POS and Stock lookup
+    if (isStaff) {
+      return [
+        {
+          group: 'Operations',
+          items: [
+            {
+              label: 'Sales & POS Invoicing',
+              to: '/sales',
+              icon: ShoppingBag
+            }
+          ]
+        },
+        {
+          group: 'Catalog & Stock',
+          items: [
+            {
+              label: 'Products & Catalog',
+              to: '/products',
+              icon: Package
+            },
+            {
+              label: 'Live Stock & History',
+              to: '/inventory',
+              icon: Layers
+            }
+          ]
+        },
+        {
+          group: 'Account',
+          items: [
+            {
+              label: 'Notifications',
+              to: '/notifications',
+              icon: Bell
+            }
+          ]
+        }
+      ];
+    }
+
+    // 2. Branch Scoped Admin/Manager: Operations Hub for their specific warehouse
     if (isBranchScoped) {
       return [
         {
@@ -339,51 +382,6 @@ export default function Sidebar({ isOpen = false, onClose }) {
               to: '/reports',
               icon: BarChart3
             },
-            {
-              label: 'Notifications',
-              to: '/notifications',
-              icon: Bell
-            }
-          ]
-        }
-      ];
-    }
-
-    if (userRole === 'STAFF') {
-      return [
-        {
-          group: 'Operations',
-          items: [
-            {
-              label: 'Sales & POS Invoicing',
-              to: '/sales',
-              icon: ShoppingBag
-            }
-          ]
-        },
-        {
-          group: 'Catalog & Stock',
-          items: [
-            {
-              label: 'Products & Catalog',
-              to: '/products',
-              icon: Package
-            },
-            {
-              label: 'Live Stock & History',
-              to: '/inventory',
-              icon: Layers
-            },
-            {
-              label: 'Warehouses & Transfers',
-              to: '/warehouses',
-              icon: Warehouse
-            }
-          ]
-        },
-        {
-          group: 'Account',
-          items: [
             {
               label: 'Notifications',
               to: '/notifications',
