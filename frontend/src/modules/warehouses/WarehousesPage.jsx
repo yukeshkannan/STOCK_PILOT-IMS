@@ -119,8 +119,8 @@ export default function WarehousesPage() {
   const [deletingTransfer, setDeletingTransfer] = useState(null);
   const [isDeletingTransfer, setIsDeletingTransfer] = useState(false);
 
-  // Active facility scope: either user's assigned warehouse or selected context by Global Admin
-  const activeScopeWhId = assignedWhId || (operatingFacilityId !== 'ALL' ? operatingFacilityId : null);
+  // Active facility scope: user's assigned warehouse (for branch managers/staff) or full overview (for Global Admin)
+  const activeScopeWhId = assignedWhId || null;
 
   // Logistics & Transport Modals
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
@@ -1017,52 +1017,6 @@ export default function WarehousesPage() {
               <Truck size={15} /> Logistics & Transfers ({transfers.length})
             </button>
           </div>
-
-          {/* Operating Facility Context Switcher (for Global Admin) */}
-          {isGlobalAdmin && (
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.55rem',
-                background: '#f8fafc',
-                padding: '4px 10px',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                fontSize: '0.8rem'
-              }}
-            >
-              <Building2 size={14} style={{ color: 'var(--primary)' }} />
-              <span style={{ fontWeight: 600, color: '#475569' }}>Active Scope:</span>
-              <select
-                value={operatingFacilityId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setOperatingFacilityId(val);
-                  if (val !== 'ALL') {
-                    setSelectedInventoryWhId(val);
-                  }
-                }}
-                style={{
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  padding: '3px 8px',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  color: '#0f172a',
-                  background: '#ffffff',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="ALL">🏢 All Facilities (HQ Overview)</option>
-                {warehouses.map((w) => (
-                  <option key={w.id} value={String(w.id)}>
-                    📍 {w.name} ({w.code}){w.is_default ? ' - Main' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
       </div>
 

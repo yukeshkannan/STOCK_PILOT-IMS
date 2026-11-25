@@ -8,6 +8,8 @@ router.use(authenticateToken);
 router.use(enforceTenantIsolation);
 
 router.post('/chat', aiController.chat);
+router.post('/copilot', aiController.chat);
+router.post('/ask', aiController.chat);
 router.get('/suggested-prompts', aiController.getSuggestedPrompts);
 
 module.exports = router;

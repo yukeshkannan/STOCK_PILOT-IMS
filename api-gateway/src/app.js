@@ -139,6 +139,14 @@ Object.entries(SERVICES).forEach(([name, config]) => {
         error: (err, req, res) => {
           console.error(`[Gateway Proxy Error] ${name} (${config.url}):`, err.message);
           if (res && !res.headersSent) {
+            if (name === 'ai') {
+              return res.status(200).json({
+                success: true,
+                data: {
+                  reply: "StockPilot AI Assistant is temporarily connecting to the workspace database. Please check your network or try again in a few seconds."
+                }
+              });
+            }
             res.status(503).json({
               success: false,
               message: `Service [${name}] is currently unavailable. Please ensure the service is running.`,
@@ -151,6 +159,14 @@ Object.entries(SERVICES).forEach(([name, config]) => {
       onError: (err, req, res) => {
         console.error(`[Gateway Proxy Error] ${name} (${config.url}):`, err.message);
         if (res && !res.headersSent) {
+          if (name === 'ai') {
+            return res.status(200).json({
+              success: true,
+              data: {
+                reply: "StockPilot AI Assistant is temporarily connecting to the workspace database. Please check your network or try again in a few seconds."
+              }
+            });
+          }
           res.status(503).json({
             success: false,
             message: `Service [${name}] is currently unavailable. Please ensure the service is running.`,

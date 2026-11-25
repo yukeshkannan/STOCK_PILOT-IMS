@@ -233,11 +233,21 @@ export default function CopilotDrawer() {
     setLoading(true);
 
     try {
-      const response = await api.post('/ai/copilot', { message });
+      let response;
+      try {
+        response = await api.post('/ai/chat', { message, history: messages });
+      } catch (chatErr) {
+        if (chatErr?.response?.status === 404) {
+          response = await api.post('/ai/copilot', { message, history: messages });
+        } else {
+          throw chatErr;
+        }
+      }
       const botReply =
         response?.data?.reply ||
+        response?.reply ||
         response?.data?.data?.reply ||
-        response?.data?.message ||
+        response?.message ||
         "I've received your request. Let me know if you need any other operational metrics.";
 
       setMessages((prev) => [

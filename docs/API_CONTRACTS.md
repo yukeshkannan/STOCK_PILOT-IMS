@@ -176,4 +176,6 @@ All microservices adhere to standard JSON response envelopes to simplify client 
 | Method | Route | Description | Min Role |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/ai/suggested-prompts` | Prompt suggestions for smart copilot | `STAFF` |
+| `POST` | `/api/v1/ai/chat` | AI Copilot conversational assistant (Groq/Gemini/Smart Local Engine) | `STAFF` |
+| `POST` | `/api/v1/ai/copilot` | Dedicated Copilot drawer query endpoint (alias to chat) | `STAFF` |
 | `POST` | `/api/v1/ai/ask` | Natural language store analytics query | `STAFF` |

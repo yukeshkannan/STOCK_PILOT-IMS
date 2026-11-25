@@ -1660,7 +1660,7 @@ export default function PublicStorePage() {
       }
 
       case 'BRAND_STORY': {
-        const storeBrand = config?.branding?.storeName || 'Our Store';
+        const storeBrand = storeConfig?.branding?.storeName || branding?.storeName || storeTitle || 'Our Store';
         const storyTitle = sData.title || `Crafted for ${storeBrand}`;
         const storyTag = sData.badge || 'OUR HERITAGE';
         const storyText = sData.narrative || `Founded with a clear vision: to bring authenticated, premium-grade products directly to our community at ${storeBrand}. Every single item in our inventory is inspected, certified, and dispatched from verified facilities to guarantee genuine quality.`;
