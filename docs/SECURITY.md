@@ -116,7 +116,8 @@ StockPilot enforces clean segregation between Central Business Executives and Fa
   - Identified by `role: ADMIN` with an explicitly assigned `warehouse_id: INTEGER` (e.g., Chennai HUB, Karur Depot).
   - Navigation is strictly scoped to physical facility operations: *Inventory & Hub Logistics*, *Operations & Invoicing*, and facility-level *Reports & Alerts*.
   - Global executive functions (Storefront Builder, Users & RBAC, Company Settings, Subscription & Billing, Company Finances) are completely hidden and guarded by automatic URL redirects to `/warehouses`.
-  - Automatically lands on `/warehouses` (Facility Logistics Hub).
+  - Automatically lands on `/warehouses` (Dedicated Branch Operations Hub).
+  - **Tailored Terminal Experience**: The `/warehouses` page renders a dedicated **Branch Operations Hub** styled after StockPilot's signature two-column card architecture (facility avatar, terminal code, active status badge, registered address, usable capacity, incharge details, and quick stock operations), with balanced responsive KPI grids (4 columns on desktop, 2x2 on tablet) eliminating multi-facility HQ clutter.
 - **Store Staff / Cashier**:
   - Identified by `role: STAFF` with `warehouse_id: INTEGER`.
   - Limited to POS billing counter (`/sales/new`), inventory lookup, and view-only transfer telemetry. Prohibited from confirming inventory intake, stock adjustments, or accessing dashboard/settings.

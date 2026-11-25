@@ -6,6 +6,7 @@ import Modal from '../../components/Modal';
 import Badge from '../../components/Badge';
 import CustomSelect from '../../components/CustomSelect';
 import ConfirmModal from '../../components/ConfirmModal';
+import './WarehousesPage.css';
 import {
   Warehouse,
   ArrowRightLeft,
@@ -52,7 +53,8 @@ import {
   Info,
   Building,
   Maximize2,
-  Calendar
+  Calendar,
+  Hash
 } from 'lucide-react';
 
 const CAPACITY_UNIT_OPTIONS = [
@@ -63,6 +65,15 @@ const CAPACITY_UNIT_OPTIONS = [
   { value: 'Metric Tons (MT)', label: 'Metric Tons (MT) - Heavy Load Limit' },
   { value: 'Total Units / Pcs', label: 'Total Units / Pcs - Unit Volume' }
 ];
+
+const getInitials = (name) => {
+  if (!name) return 'WH';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
 
 export default function WarehousesPage() {
   const { user: currentUser } = useSelector((state) => state.auth);
@@ -341,6 +352,28 @@ export default function WarehousesPage() {
       optimalCount
     };
   }, [visibleWarehouses, stocks, products]);
+
+  // Current branch warehouse for branch-scoped operators
+  const currentBranchWarehouse = useMemo(() => {
+    if (isBranchScoped && assignedWhId) {
+      return warehouses.find((w) => String(w.id) === String(assignedWhId)) || visibleWarehouses[0] || null;
+    }
+    return null;
+  }, [warehouses, isBranchScoped, assignedWhId, visibleWarehouses]);
+
+  // Specific warehouse stats for branch facility
+  const branchStats = useMemo(() => {
+    if (!currentBranchWarehouse) return null;
+    return getWarehouseStats(currentBranchWarehouse);
+  }, [currentBranchWarehouse, stocks, products]);
+
+  // Pending inbound shipments consigned specifically to this branch
+  const pendingInboundTransfers = useMemo(() => {
+    if (!isBranchScoped || !assignedWhId) return [];
+    return transfers.filter(
+      (t) => String(t.to_warehouse_id) === String(assignedWhId) && ['PENDING', 'APPROVED', 'IN_TRANSIT'].includes(t.status)
+    );
+  }, [transfers, isBranchScoped, assignedWhId]);
 
   // Active facility object in Tab 2 (Stock Matrix)
   const activeInventoryWarehouse = useMemo(() => {
@@ -800,24 +833,34 @@ export default function WarehousesPage() {
                 width: '46px',
                 height: '46px',
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, var(--primary-light), #f3c7ec)',
-                border: '1px solid var(--primary-border)',
-                color: 'var(--primary)',
+                background: isBranchScoped
+                  ? 'linear-gradient(135deg, #982A86 0%, #6e165f 100%)'
+                  : 'linear-gradient(135deg, var(--primary-light), #f3c7ec)',
+                border: isBranchScoped ? 'none' : '1px solid var(--primary-border)',
+                color: isBranchScoped ? '#ffffff' : 'var(--primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 2px 8px var(--primary-glow)'
+                boxShadow: '0 2px 8px var(--primary-glow)',
+                fontSize: isBranchScoped ? '1.15rem' : 'inherit',
+                fontWeight: isBranchScoped ? 800 : 'inherit'
               }}
             >
-              <Warehouse size={24} />
+              {isBranchScoped ? (
+                getInitials(assignedWhName || currentBranchWarehouse?.name)
+              ) : (
+                <Warehouse size={24} />
+              )}
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <h1 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-                  Warehouse Hubs & Fulfillment Network
+                  {isBranchScoped
+                    ? `${assignedWhName || currentBranchWarehouse?.name || 'Branch'} Operations Hub`
+                    : 'Warehouse Hubs & Fulfillment Network'}
                 </h1>
 
-                {currentUser?.warehouseName && (
+                {isBranchScoped ? (
                   <span
                     style={{
                       fontSize: '0.725rem',
@@ -833,12 +876,34 @@ export default function WarehousesPage() {
                     }}
                   >
                     <Building2 size={12} />
-                    <span>Branch: {currentUser.warehouseName}</span>
+                    <span>Branch Terminal: {assignedWhName || currentBranchWarehouse?.name || 'Assigned'}</span>
                   </span>
+                ) : (
+                  currentUser?.warehouseName && (
+                    <span
+                      style={{
+                        fontSize: '0.725rem',
+                        fontWeight: 700,
+                        background: '#fdf2f8',
+                        color: '#982A86',
+                        border: '1px solid #fbcfe8',
+                        padding: '2px 9px',
+                        borderRadius: '8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Building2 size={12} />
+                      <span>Branch: {currentUser.warehouseName}</span>
+                    </span>
+                  )
                 )}
               </div>
               <p style={{ margin: 0, color: '#64748b', fontSize: '0.825rem', marginTop: '2px' }}>
-                Enterprise distribution centers, live SKU ledger by location, and inter-facility transit pipeline
+                {isBranchScoped
+                  ? 'Dedicated facility terminal for stock movements, inbound replenishment receipts, and live SKU storage'
+                  : 'Enterprise distribution centers, live SKU ledger by location, and inter-facility transit pipeline'}
               </p>
             </div>
           </div>
@@ -871,7 +936,7 @@ export default function WarehousesPage() {
 
                   if (isBranchScoped && assignedWhId) {
                     defaultToWh = String(assignedWhId);
-                    const otherWh = warehouses.find(w => String(w.id) !== String(assignedWhId));
+                    const otherWh = warehouses.find((w) => String(w.id) !== String(assignedWhId));
                     defaultFromWh = otherWh ? String(otherWh.id) : (warehouses[0]?.id ? String(warehouses[0].id) : '');
                   } else {
                     defaultFromWh = String(warehouses[0]?.id || '');
@@ -900,17 +965,36 @@ export default function WarehousesPage() {
                   });
                   setIsTransferModalOpen(true);
                 }}
-                className="btn btn-secondary btn-sm"
+                className={isBranchScoped ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm"}
                 style={{
                   fontWeight: 600,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
                   borderRadius: '9px',
-                  border: '1px solid #cbd5e1'
+                  boxShadow: isBranchScoped ? '0 2px 10px var(--primary-glow)' : 'none'
                 }}
               >
                 <ArrowRightLeft size={14} /> {isBranchScoped ? 'Request Stock from Hub' : 'New Inter-Hub Transfer'}
+              </button>
+            )}
+
+            {isBranchScoped && canEditWarehouse && currentBranchWarehouse && (
+              <button
+                onClick={() => {
+                  setConfiguringWarehouse(currentBranchWarehouse);
+                  setIsEditModalOpen(true);
+                }}
+                className="btn btn-secondary btn-sm"
+                style={{
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  borderRadius: '9px'
+                }}
+              >
+                <Settings size={14} /> Configure Branch
               </button>
             )}
 
@@ -972,7 +1056,7 @@ export default function WarehousesPage() {
                 transition: 'all 0.15s ease'
               }}
             >
-              <Building2 size={15} /> Facilities Directory ({warehouses.length})
+              <Building2 size={15} /> {isBranchScoped ? 'Facility Profile & Specs' : `Facilities Directory (${warehouses.length})`}
             </button>
 
             <button
@@ -993,7 +1077,7 @@ export default function WarehousesPage() {
                 transition: 'all 0.15s ease'
               }}
             >
-              <Boxes size={15} /> Live Stock Matrix ({networkMetrics.totalUnits.toLocaleString()} Units)
+              <Boxes size={15} /> {isBranchScoped ? `Branch Live Stock (${networkMetrics.totalUnits.toLocaleString()} Units)` : `Live Stock Matrix (${networkMetrics.totalUnits.toLocaleString()} Units)`}
             </button>
 
             <button
@@ -1014,39 +1098,29 @@ export default function WarehousesPage() {
                 transition: 'all 0.15s ease'
               }}
             >
-              <Truck size={15} /> Logistics & Transfers ({transfers.length})
+              <Truck size={15} /> {isBranchScoped ? `Inbound & Transfers (${filteredTransfers.length})` : `Logistics & Transfers (${transfers.length})`}
             </button>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. NETWORK AT-A-GLANCE EXECUTIVE KPI CARDS                                */}
+      {/* 2. NETWORK / BRANCH AT-A-GLANCE EXECUTIVE KPI CARDS (INTERACTIVE)          */}
       {/* ========================================================================= */}
-      {/* ========================================================================= */}
-      {/* 2. NETWORK AT-A-GLANCE EXECUTIVE KPI CARDS (INTERACTIVE)                   */}
-      {/* ========================================================================= */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1.5rem'
-        }}
-      >
-        {/* KPI 1: Active Hubs -> Switch to Facilities Directory */}
+      <div className="wh-kpi-grid">
+        {/* KPI 1 */}
         <div
           role="button"
           tabIndex={0}
           onClick={() => setActiveTab('warehouses')}
           onKeyDown={(e) => e.key === 'Enter' && setActiveTab('warehouses')}
-          title="Click to view all fulfillment facilities"
+          title="Click to view facility details"
           style={{
             background: '#ffffff',
             borderRadius: '14px',
             border: activeTab === 'warehouses' ? '2px solid var(--primary)' : '1px solid #e2e8f0',
             padding: '1.15rem 1.25rem',
-            boxShadow: activeTab === 'warehouses' ? '0 4px 12px rgba(99, 102, 241, 0.15)' : '0 2px 6px rgba(15, 23, 42, 0.03)',
+            boxShadow: activeTab === 'warehouses' ? '0 4px 12px rgba(152, 42, 134, 0.15)' : '0 2px 6px rgba(15, 23, 42, 0.03)',
             position: 'relative',
             overflow: 'hidden',
             cursor: 'pointer',
@@ -1055,31 +1129,44 @@ export default function WarehousesPage() {
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-3px)';
-            e.currentTarget.style.boxShadow = '0 8px 16px rgba(99, 102, 241, 0.12)';
+            e.currentTarget.style.boxShadow = '0 8px 16px rgba(152, 42, 134, 0.12)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = activeTab === 'warehouses' ? '0 4px 12px rgba(99, 102, 241, 0.15)' : '0 2px 6px rgba(15, 23, 42, 0.03)';
+            e.currentTarget.style.boxShadow = activeTab === 'warehouses' ? '0 4px 12px rgba(152, 42, 134, 0.15)' : '0 2px 6px rgba(15, 23, 42, 0.03)';
           }}
         >
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, var(--primary), #a855f7)' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Fulfillment Facilities
+              {isBranchScoped ? 'Branch Terminal' : 'Fulfillment Facilities'}
             </span>
             <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Building2 size={16} />
             </div>
           </div>
-          <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>{networkMetrics.totalWarehouses}</span>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#059669' }}>
-              ({warehouses.filter((w) => w.status === 'ACTIVE').length} Operational)
-            </span>
+          <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+            {isBranchScoped ? (
+              <>
+                <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a' }}>
+                  {assignedWhName || currentBranchWarehouse?.name || 'Active'}
+                </span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '1px 6px', borderRadius: '4px' }}>
+                  Operational Hub
+                </span>
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>{networkMetrics.totalWarehouses}</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#059669' }}>
+                  ({warehouses.filter((w) => w.status === 'ACTIVE').length} Operational)
+                </span>
+              </>
+            )}
           </div>
         </div>
 
-        {/* KPI 2: Total Physical Floor Space -> Switch to Facilities Directory */}
+        {/* KPI 2 */}
         <div
           role="button"
           tabIndex={0}
@@ -1110,7 +1197,7 @@ export default function WarehousesPage() {
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #3b82f6, #06b6d4)' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Total Network Footprint
+              {isBranchScoped ? 'Facility Storage Area' : 'Total Network Footprint'}
             </span>
             <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Maximize2 size={16} />
@@ -1120,27 +1207,29 @@ export default function WarehousesPage() {
             <span style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
               {networkMetrics.totalCapacity.toLocaleString()}
             </span>
-            <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#64748b' }}>Sq. Ft Total Area</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#64748b' }}>
+              {isBranchScoped ? (currentBranchWarehouse?.capacity_unit || 'Sq. Ft Area') : 'Sq. Ft Total Area'}
+            </span>
           </div>
         </div>
 
-        {/* KPI 3: Live Units on Hand -> Switch to Live Inventory Matrix */}
+        {/* KPI 3 */}
         <div
           role="button"
           tabIndex={0}
           onClick={() => {
             setActiveTab('inventory');
-            setSelectedInventoryWhId('ALL');
+            if (!isBranchScoped) setSelectedInventoryWhId('ALL');
             setInventoryStatusFilter('ALL');
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               setActiveTab('inventory');
-              setSelectedInventoryWhId('ALL');
+              if (!isBranchScoped) setSelectedInventoryWhId('ALL');
               setInventoryStatusFilter('ALL');
             }
           }}
-          title="Click to view all stored physical inventory in stock matrix"
+          title="Click to view stored physical inventory in stock matrix"
           style={{
             background: '#ffffff',
             borderRadius: '14px',
@@ -1165,7 +1254,7 @@ export default function WarehousesPage() {
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #10b981, #14b8a6)' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Stored Physical Inventory
+              {isBranchScoped ? 'Branch Inventory on Hand' : 'Stored Physical Inventory'}
             </span>
             <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Boxes size={16} />
@@ -1179,21 +1268,21 @@ export default function WarehousesPage() {
           </div>
         </div>
 
-        {/* KPI 4: Valuation -> Switch to Live Inventory Matrix */}
+        {/* KPI 4 */}
         <div
           role="button"
           tabIndex={0}
           onClick={() => {
             setActiveTab('inventory');
-            setSelectedInventoryWhId('ALL');
+            if (!isBranchScoped) setSelectedInventoryWhId('ALL');
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               setActiveTab('inventory');
-              setSelectedInventoryWhId('ALL');
+              if (!isBranchScoped) setSelectedInventoryWhId('ALL');
             }
           }}
-          title="Click to view network asset valuation & SKU breakdown"
+          title="Click to view asset valuation & SKU breakdown"
           style={{
             background: '#ffffff',
             borderRadius: '14px',
@@ -1218,7 +1307,7 @@ export default function WarehousesPage() {
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, #f59e0b, #e11d48)' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Network Asset Valuation
+              {isBranchScoped ? 'Branch Asset Worth' : 'Network Asset Valuation'}
             </span>
             <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '1px 6px', borderRadius: '4px' }}>
               Live
@@ -1234,328 +1323,627 @@ export default function WarehousesPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: FACILITIES & HUBS DIRECTORY                                        */}
+      {/* TAB 1: FACILITIES & HUBS DIRECTORY / BRANCH FACILITY PROFILE              */}
       {/* ========================================================================= */}
       {activeTab === 'warehouses' && (
         <div>
-          {warehouses.length === 0 && !loading ? (
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: '16px',
-                border: '1px dashed #cbd5e1',
-                padding: '4rem 2rem',
-                textAlign: 'center'
-              }}
-            >
-              <div
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  margin: '0 auto 1.25rem',
-                  borderRadius: '16px',
-                  background: 'var(--primary-light)',
-                  color: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <Warehouse size={32} />
-              </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
-                No Fulfillment Hubs Registered Yet
-              </h3>
-              <p style={{ color: '#64748b', fontSize: '0.9rem', maxWidth: '460px', margin: '0 auto 1.5rem' }}>
-                Register your central distribution facility or regional transit warehouses to begin tracking multi-location stocks and dispatch routes.
-              </p>
-              {canManageWarehouse && (
-                <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary btn-md">
-                  <Plus size={16} /> Register First Facility Hub
-                </button>
-              )}
-            </div>
-          ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '1.25rem'
-              }}
-            >
-              {visibleWarehouses.map((w) => {
-                const capacityUnit = w.capacity_unit || 'Square Feet (Sq. Ft)';
-                const stats = getWarehouseStats(w);
-                const isDefault = Boolean(w.is_default);
+          {isBranchScoped && currentBranchWarehouse ? (
+            /* Dedicated Branch Operations Hub Profile (StockPilot Signature 2-Column Split Layout) */
+            <div className="branch-overview-grid">
+              {/* Left Column: Branch Identity Card */}
+              <div className="branch-identity-card">
+                <div className="branch-identity-summary">
+                  <div className="branch-avatar">
+                    {getInitials(currentBranchWarehouse.name)}
+                  </div>
+                  <h2 className="branch-facility-name">
+                    {currentBranchWarehouse.name}
+                  </h2>
+                  <div className="branch-code-pill">
+                    <Hash size={12} />
+                    <span>{currentBranchWarehouse.code || 'FACILITY_CODE'}</span>
+                  </div>
+                  <div className="branch-status-badge">
+                    <ShieldCheck size={12} />
+                    <span>{currentBranchWarehouse.status || 'ACTIVE'} OPERATIONAL HUB</span>
+                  </div>
+                </div>
 
-                return (
-                  <div
-                    key={w.id}
+                <div className="branch-quick-info">
+                  <div className="branch-quick-info-item">
+                    <MapPin size={15} style={{ color: '#982A86', flexShrink: 0, marginTop: '2px' }} />
+                    <span>
+                      {currentBranchWarehouse.address
+                        ? `${currentBranchWarehouse.address}${currentBranchWarehouse.city ? `, ${currentBranchWarehouse.city}` : ''}`
+                        : currentBranchWarehouse.city || 'Central Operations Location'}
+                    </span>
+                  </div>
+
+                  <div className="branch-quick-info-item">
+                    <Maximize2 size={15} style={{ color: '#982A86', flexShrink: 0, marginTop: '2px' }} />
+                    <span>
+                      Capacity:{' '}
+                      <strong>
+                        {currentBranchWarehouse.capacity
+                          ? parseInt(currentBranchWarehouse.capacity, 10).toLocaleString()
+                          : '10,000'}
+                      </strong>{' '}
+                      <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                        {currentBranchWarehouse.capacity_unit || 'Square Feet (Sq. Ft)'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="branch-quick-info-item">
+                    <User size={15} style={{ color: '#982A86', flexShrink: 0, marginTop: '2px' }} />
+                    <span>
+                      Branch Incharge: <strong>{currentUser?.name || 'Branch Administrator'}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {canEditWarehouse && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfiguringWarehouse(currentBranchWarehouse);
+                      setIsEditModalOpen(true);
+                    }}
+                    className="btn btn-secondary"
                     style={{
-                      background: '#ffffff',
-                      borderRadius: '16px',
-                      border: '1px solid #e2e8f0',
-                      boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(152, 42, 134, 0.4)';
-                      e.currentTarget.style.transform = 'translateY(-3px)';
-                      e.currentTarget.style.boxShadow = '0 12px 24px -4px rgba(152, 42, 134, 0.12), 0 4px 12px rgba(15, 23, 42, 0.04)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#e2e8f0';
-                      e.currentTarget.style.transform = 'translateY(-3px)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(15, 23, 42, 0.04)';
+                      width: '100%',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      fontWeight: 600,
+                      borderRadius: '10px',
+                      padding: '0.65rem 1rem'
                     }}
                   >
-                    {/* Top Accent Strip */}
-                    <div
-                      style={{
-                        height: '4px',
-                        background: isDefault
-                          ? 'linear-gradient(90deg, var(--primary), #a855f7)'
-                          : 'linear-gradient(90deg, #cbd5e1, #94a3b8)'
-                      }}
-                    />
+                    <Settings size={15} /> Configure Facility Settings
+                  </button>
+                )}
+              </div>
 
-                    <div style={{ padding: '1.35rem 1.4rem 1rem' }}>
-                      {/* Facility Header */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem' }}>
-                        <div style={{ flex: 1, minWidth: 0, paddingRight: '0.5rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            <h3
-                              style={{
-                                fontSize: '1.15rem',
-                                fontWeight: 700,
-                                color: '#0f172a',
-                                margin: 0,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}
-                            >
-                              {w.name}
-                            </h3>
-                            {isDefault && (
+              {/* Right Column: Branch Specifications & Interactive Highlights */}
+              <div className="branch-details-panel">
+                {/* Panel 1: Facility Specifications */}
+                <div className="branch-card">
+                  <div className="branch-card-header">
+                    <div className="branch-card-icon">
+                      <Building2 size={18} />
+                    </div>
+                    <div>
+                      <h2 className="branch-card-title">Facility Specifications & Address</h2>
+                      <p className="branch-card-subtitle">Primary facility details, jurisdiction, and storage parameters</p>
+                    </div>
+                  </div>
+
+                  <div className="branch-specs-grid">
+                    <div className="branch-spec-tile">
+                      <div className="branch-spec-label">Facility Hub Name</div>
+                      <div className="branch-spec-value">{currentBranchWarehouse.name}</div>
+                    </div>
+
+                    <div className="branch-spec-tile">
+                      <div className="branch-spec-label">Facility Terminal Code</div>
+                      <div className="branch-spec-value" style={{ fontFamily: 'monospace' }}>
+                        {currentBranchWarehouse.code || 'N/A'}
+                      </div>
+                    </div>
+
+                    <div className="branch-spec-tile">
+                      <div className="branch-spec-label">Operating City / Jurisdiction</div>
+                      <div className="branch-spec-value">{currentBranchWarehouse.city || 'Tamil Nadu'}</div>
+                    </div>
+
+                    <div className="branch-spec-tile">
+                      <div className="branch-spec-label">Floor / Usable Footprint</div>
+                      <div className="branch-spec-value">
+                        {currentBranchWarehouse.capacity
+                          ? parseInt(currentBranchWarehouse.capacity, 10).toLocaleString()
+                          : '10,000'}{' '}
+                        <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>
+                          {currentBranchWarehouse.capacity_unit || 'Square Feet (Sq. Ft)'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="branch-spec-tile full-width">
+                      <div className="branch-spec-label">Registered Physical Address</div>
+                      <div className="branch-spec-value">
+                        {currentBranchWarehouse.address
+                          ? `${currentBranchWarehouse.address}${currentBranchWarehouse.city ? `, ${currentBranchWarehouse.city}` : ''}`
+                          : 'Central Operations Location'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel 2: Operational Quick Actions */}
+                <div className="branch-card">
+                  <div className="branch-card-header">
+                    <div className="branch-card-icon" style={{ background: '#eff6ff', borderColor: '#bfdbfe', color: '#2563eb' }}>
+                      <Truck size={18} />
+                    </div>
+                    <div>
+                      <h2 className="branch-card-title">Operational Quick Actions</h2>
+                      <p className="branch-card-subtitle">Manage inventory movements, inspect local stock, or raise requisitions</p>
+                    </div>
+                  </div>
+
+                  <div className="branch-actions-row">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setActiveTab('inventory')}
+                      onKeyDown={(e) => e.key === 'Enter' && setActiveTab('inventory')}
+                      className="branch-action-tile purple"
+                    >
+                      <div>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#fdf2fb', color: '#982A86', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                          <Boxes size={18} />
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>Live Stock Matrix</div>
+                        <div style={{ fontSize: '0.785rem', color: '#64748b', marginTop: '3px' }}>
+                          {branchStats?.distinctProducts || 0} SKU lines ({branchStats?.totalUnits || 0} Units stored)
+                        </div>
+                      </div>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: '#982A86', marginTop: '1rem' }}>
+                        <span>View Stock Ledger</span>
+                        <ChevronRight size={13} />
+                      </div>
+                    </div>
+
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setActiveTab('transfers')}
+                      onKeyDown={(e) => e.key === 'Enter' && setActiveTab('transfers')}
+                      className="branch-action-tile blue"
+                    >
+                      <div>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                          <Truck size={18} />
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>Logistics & Transfers</div>
+                        <div style={{ fontSize: '0.785rem', color: '#64748b', marginTop: '3px' }}>
+                          {filteredTransfers.length} Total Movements ({pendingInboundTransfers.length} Pending Inbound)
+                        </div>
+                      </div>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: '#2563eb', marginTop: '1rem' }}>
+                        <span>Track Shipments</span>
+                        <ChevronRight size={13} />
+                      </div>
+                    </div>
+
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleQuickTransferFromWarehouse(currentBranchWarehouse.id)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleQuickTransferFromWarehouse(currentBranchWarehouse.id)}
+                      className="branch-action-tile emerald"
+                    >
+                      <div>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                          <ArrowRightLeft size={18} />
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>Request Replenishment</div>
+                        <div style={{ fontSize: '0.785rem', color: '#64748b', marginTop: '3px' }}>
+                          Requisition goods from central distribution hub
+                        </div>
+                      </div>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: '#059669', marginTop: '1rem' }}>
+                        <span>Raise Transfer Request</span>
+                        <ChevronRight size={13} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel 3: Inbound Shipments Requiring Receipt (if any) */}
+                {pendingInboundTransfers.length > 0 && (
+                  <div className="branch-card" style={{ borderColor: '#fbcfe8', background: 'linear-gradient(to bottom, #ffffff, #fdf2fb)' }}>
+                    <div className="branch-card-header" style={{ borderBottomColor: '#f3c7ec' }}>
+                      <div className="branch-card-icon" style={{ background: '#fdf2f8', borderColor: '#fbcfe8', color: '#982A86' }}>
+                        <PackageCheck size={18} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h2 className="branch-card-title">Inbound Shipments Requiring Attention</h2>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, background: '#982A86', color: '#ffffff', padding: '1px 7px', borderRadius: '9999px' }}>
+                            {pendingInboundTransfers.length}
+                          </span>
+                        </div>
+                        <p className="branch-card-subtitle">Active inbound consignments consigned to {currentBranchWarehouse.name}</p>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('transfers')}
+                        className="btn btn-ghost btn-xs"
+                        style={{ color: '#982A86', fontWeight: 700 }}
+                      >
+                        View All <ChevronRight size={12} />
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {pendingInboundTransfers.slice(0, 3).map((trf) => (
+                        <div
+                          key={trf.id}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '10px',
+                            padding: '0.75rem 1rem',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '0.75rem'
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#0f172a' }}>{trf.transfer_number}</span>
                               <span
                                 style={{
                                   fontSize: '0.675rem',
                                   fontWeight: 700,
-                                  background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
-                                  color: '#065f46',
-                                  border: '1px solid #a7f3d0',
-                                  padding: '2px 7px',
-                                  borderRadius: '9999px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '3px'
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  background: trf.status === 'IN_TRANSIT' ? '#eff6ff' : '#fef3c7',
+                                  color: trf.status === 'IN_TRANSIT' ? '#1d4ed8' : '#b45309'
                                 }}
                               >
-                                <ShieldCheck size={11} /> DEFAULT HUB
+                                {trf.status}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.775rem', color: '#64748b', marginTop: '2px' }}>
+                              Origin: <strong>{trf.from_warehouse?.name || 'Main Hub'}</strong> &bull; Items: {trf.items?.length || 1} SKU(s)
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            {trf.status === 'IN_TRANSIT' && (
+                              <button
+                                onClick={() => handleReceiveTransfer(trf)}
+                                className="btn btn-primary btn-xs"
+                                style={{ fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                              >
+                                <PackageCheck size={13} /> Receive Goods
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleOpenChallan(trf)}
+                              className="btn btn-secondary btn-xs"
+                              style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <FileText size={12} /> Challan
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Multi-Facility Directory Grid for Global Admins */
+            warehouses.length === 0 && !loading ? (
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1px dashed #cbd5e1',
+                  padding: '4rem 2rem',
+                  textAlign: 'center'
+                }}
+              >
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    margin: '0 auto 1.25rem',
+                    borderRadius: '16px',
+                    background: 'var(--primary-light)',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Warehouse size={32} />
+                </div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                  No Fulfillment Hubs Registered Yet
+                </h3>
+                <p style={{ color: '#64748b', fontSize: '0.9rem', maxWidth: '460px', margin: '0 auto 1.5rem' }}>
+                  Register your central distribution facility or regional transit warehouses to begin tracking multi-location stocks and dispatch routes.
+                </p>
+                {canManageWarehouse && (
+                  <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary btn-md">
+                    <Plus size={16} /> Register First Facility Hub
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="wh-directory-grid">
+                {visibleWarehouses.map((w) => {
+                  const capacityUnit = w.capacity_unit || 'Square Feet (Sq. Ft)';
+                  const stats = getWarehouseStats(w);
+                  const isDefault = Boolean(w.is_default);
+
+                  return (
+                    <div
+                      key={w.id}
+                      style={{
+                        background: '#ffffff',
+                        borderRadius: '16px',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'rgba(152, 42, 134, 0.4)';
+                        e.currentTarget.style.transform = 'translateY(-3px)';
+                        e.currentTarget.style.boxShadow = '0 12px 24px -4px rgba(152, 42, 134, 0.12), 0 4px 12px rgba(15, 23, 42, 0.04)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(15, 23, 42, 0.04)';
+                      }}
+                    >
+                      {/* Top Accent Strip */}
+                      <div
+                        style={{
+                          height: '4px',
+                          background: isDefault
+                            ? 'linear-gradient(90deg, var(--primary), #a855f7)'
+                            : 'linear-gradient(90deg, #cbd5e1, #94a3b8)'
+                        }}
+                      />
+
+                      <div style={{ padding: '1.35rem 1.4rem 1rem' }}>
+                        {/* Facility Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem' }}>
+                          <div style={{ flex: 1, minWidth: 0, paddingRight: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <h3
+                                style={{
+                                  fontSize: '1.15rem',
+                                  fontWeight: 700,
+                                  color: '#0f172a',
+                                  margin: 0,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}
+                              >
+                                {w.name}
+                              </h3>
+                              {isDefault && (
+                                <span
+                                  style={{
+                                    fontSize: '0.675rem',
+                                    fontWeight: 700,
+                                    background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
+                                    color: '#065f46',
+                                    border: '1px solid #a7f3d0',
+                                    padding: '2px 7px',
+                                    borderRadius: '9999px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                >
+                                  <ShieldCheck size={11} /> DEFAULT HUB
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Top Right Actions: Delete on left of Edit */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {canDeleteWarehouse && (
+                              <button
+                                type="button"
+                                onClick={() => setDeletingWarehouse(w)}
+                                style={{
+                                  border: '1px solid #fee2e2',
+                                  background: '#fef2f2',
+                                  color: '#dc2626',
+                                  borderRadius: '8px',
+                                  padding: '5px 8px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '0.725rem',
+                                  fontWeight: 600,
+                                  transition: 'all 0.15s ease'
+                                }}
+                                title="Delete Facility"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+
+                            {canEditWarehouse && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setConfiguringWarehouse(w);
+                                  setIsEditModalOpen(true);
+                                }}
+                                style={{
+                                  border: '1px solid #e2e8f0',
+                                  background: '#ffffff',
+                                  color: '#334155',
+                                  borderRadius: '8px',
+                                  padding: '5px 10px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '0.725rem',
+                                  fontWeight: 600,
+                                  transition: 'all 0.15s ease'
+                                }}
+                                title="Edit facility parameters"
+                              >
+                                <Settings size={13} /> Configure
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* City & Address info */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748b', fontSize: '0.775rem', marginBottom: '0.85rem' }}>
+                          <MapPin size={13} />
+                          <span>{w.address ? `${w.address}${w.city ? `, ${w.city}` : ''}` : w.city || 'Central Operations Location'}</span>
+                        </div>
+
+                        {/* Space Capacity Spec Line */}
+                        <div
+                          style={{
+                            background: '#f8fafc',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '8px',
+                            border: '1px solid #f1f5f9',
+                            marginBottom: '0.85rem',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <div style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Floor / Storage Capacity</div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
+                            {w.capacity ? (
+                              <>
+                                {parseInt(w.capacity, 10).toLocaleString()} <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>{w.capacity_unit || ''}</span>
+                              </>
+                            ) : (
+                              <span
+                                onClick={() => {
+                                  if (canEditWarehouse) {
+                                    setConfiguringWarehouse(w);
+                                    setIsEditModalOpen(true);
+                                  }
+                                }}
+                                style={{
+                                  fontSize: '0.725rem',
+                                  fontWeight: 600,
+                                  color: '#d97706',
+                                  background: '#fef3c7',
+                                  border: '1px solid #fde68a',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  cursor: canEditWarehouse ? 'pointer' : 'default',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title={canEditWarehouse ? 'Click to configure physical storage footprint' : 'Storage footprint not configured'}
+                              >
+                                <Maximize2 size={11} /> Setup Storage Area
                               </span>
                             )}
                           </div>
                         </div>
 
-                        {/* Top Right Actions: Delete on left of Edit */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {canDeleteWarehouse && (
-                            <button
-                              type="button"
-                              onClick={() => setDeletingWarehouse(w)}
-                              style={{
-                                border: '1px solid #fee2e2',
-                                background: '#fef2f2',
-                                color: '#dc2626',
-                                borderRadius: '8px',
-                                padding: '5px 8px',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                fontSize: '0.725rem',
-                                fontWeight: 600,
-                                transition: 'all 0.15s ease'
-                              }}
-                              title="Delete Facility"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
+                        {/* Key Warehouse Metrics Grid */}
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gap: '0.65rem',
+                            paddingTop: '0.5rem',
+                            borderTop: '1px dashed #e2e8f0'
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: '0.675rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
+                              Stored Stock Units
+                            </div>
+                            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)', marginTop: '2px' }}>
+                              {stats.totalUnits.toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>Units</span>
+                            </div>
+                          </div>
 
-                          {canEditWarehouse && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setConfiguringWarehouse(w);
-                                setIsEditModalOpen(true);
-                              }}
-                              style={{
-                                border: '1px solid #e2e8f0',
-                                background: '#ffffff',
-                                color: '#334155',
-                                borderRadius: '8px',
-                                padding: '5px 10px',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                fontSize: '0.725rem',
-                                fontWeight: 600,
-                                transition: 'all 0.15s ease'
-                              }}
-                              title="Edit facility parameters"
-                            >
-                              <Settings size={13} /> Configure
-                            </button>
-                          )}
+                          <div>
+                            <div style={{ fontSize: '0.675rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
+                              Asset Valuation
+                            </div>
+                            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
+                              ₹{stats.totalAssetValuation.toLocaleString()}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      {/* City & Address info */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748b', fontSize: '0.775rem', marginBottom: '0.85rem' }}>
-                        <MapPin size={13} />
-                        <span>{w.address ? `${w.address}${w.city ? `, ${w.city}` : ''}` : w.city || 'Central Operations Location'}</span>
-                      </div>
-
-                      {/* Space Capacity Spec Line */}
+                      {/* Facility Footer Actions */}
                       <div
                         style={{
+                          padding: '0.85rem 1.4rem',
                           background: '#f8fafc',
-                          padding: '0.5rem 0.75rem',
-                          borderRadius: '8px',
-                          border: '1px solid #f1f5f9',
-                          marginBottom: '0.85rem',
+                          borderTop: '1px solid #f1f5f9',
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center'
                         }}
                       >
-                        <div style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600 }}>Floor / Storage Capacity</div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
-                          {w.capacity ? (
-                            <>
-                              {parseInt(w.capacity, 10).toLocaleString()} <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>{w.capacity_unit || ''}</span>
-                            </>
-                          ) : (
-                            <span
-                              onClick={() => {
-                                if (canEditWarehouse) {
-                                  setConfiguringWarehouse(w);
-                                  setIsEditModalOpen(true);
-                                }
-                              }}
-                              style={{
-                                fontSize: '0.725rem',
-                                fontWeight: 600,
-                                color: '#d97706',
-                                background: '#fef3c7',
-                                border: '1px solid #fde68a',
-                                padding: '2px 8px',
-                                borderRadius: '6px',
-                                cursor: canEditWarehouse ? 'pointer' : 'default',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                              title={canEditWarehouse ? 'Click to configure physical storage footprint' : 'Storage footprint not configured'}
-                            >
-                              <Maximize2 size={11} /> Setup Storage Area
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Key Warehouse Metrics Grid */}
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(2, 1fr)',
-                          gap: '0.65rem',
-                          paddingTop: '0.5rem',
-                          borderTop: '1px dashed #e2e8f0'
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: '0.675rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-                            Stored Stock Units
-                          </div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)', marginTop: '2px' }}>
-                            {stats.totalUnits.toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>Units</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div style={{ fontSize: '0.675rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-                            Asset Valuation
-                          </div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
-                            ₹{stats.totalAssetValuation.toLocaleString()}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Facility Footer Actions */}
-                    <div
-                      style={{
-                        padding: '0.85rem 1.4rem',
-                        background: '#f8fafc',
-                        borderTop: '1px solid #f1f5f9',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleInspectWarehouseInventory(w.id)}
-                        className="btn btn-ghost btn-sm"
-                        style={{
-                          fontWeight: 700,
-                          fontSize: '0.775rem',
-                          color: 'var(--primary)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          padding: '0.35rem 0.5rem'
-                        }}
-                      >
-                        <Boxes size={14} /> View Stored Stock ({stats.distinctProducts}) <ChevronRight size={13} />
-                      </button>
-
-                      {canInitiateTransfer && (
                         <button
                           type="button"
-                          onClick={() => handleQuickTransferFromWarehouse(w.id)}
+                          onClick={() => handleInspectWarehouseInventory(w.id)}
+                          className="btn btn-ghost btn-sm"
                           style={{
-                            border: '1px solid #cbd5e1',
-                            background: '#ffffff',
-                            color: '#334155',
-                            borderRadius: '7px',
-                            padding: '0.35rem 0.65rem',
-                            fontSize: '0.725rem',
-                            fontWeight: 600,
-                            cursor: 'pointer',
+                            fontWeight: 700,
+                            fontSize: '0.775rem',
+                            color: 'var(--primary)',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '4px'
+                            gap: '5px',
+                            padding: '0.35rem 0.5rem'
                           }}
                         >
-                          <ArrowRightLeft size={12} /> {isBranchScoped ? 'Transfer Goods' : 'Transfer Out'}
+                          <Boxes size={14} /> View Stored Stock ({stats.distinctProducts}) <ChevronRight size={13} />
                         </button>
-                      )}
+
+                        {canInitiateTransfer && (
+                          <button
+                            type="button"
+                            onClick={() => handleQuickTransferFromWarehouse(w.id)}
+                            style={{
+                              border: '1px solid #cbd5e1',
+                              background: '#ffffff',
+                              color: '#334155',
+                              borderRadius: '7px',
+                              padding: '0.35rem 0.65rem',
+                              fontSize: '0.725rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <ArrowRightLeft size={12} /> {isBranchScoped ? 'Transfer Goods' : 'Transfer Out'}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )
           )}
         </div>
       )}
