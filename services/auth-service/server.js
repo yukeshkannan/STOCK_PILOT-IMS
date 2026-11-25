@@ -4,7 +4,11 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override
 const bcrypt = require('bcryptjs');
 const app = require('./src/app');
 const { sequelize, User } = require('./src/models');
-const { initDatabase, eventBus } = require('@stockpilot/common');
+const { initDatabase, eventBus, validateProductionSecrets } = require('@stockpilot/common');
+
+if (typeof validateProductionSecrets === 'function') {
+  validateProductionSecrets();
+}
 
 const PORT = (assignedPort && String(assignedPort) !== "5000") ? assignedPort : (process.env.PORT && String(process.env.PORT) !== "5000" ? process.env.PORT : 5001);
 

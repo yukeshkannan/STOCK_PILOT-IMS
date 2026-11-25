@@ -119,9 +119,19 @@ All published events conform to this JSON schema:
 
 ---
 
-## 5. Resilience & Connection Management
+## 5. Resilience & Dead-Letter Queue (DLQ) Architecture
 
-The shared event bus client (`services/common/src/events/eventBus.js`) includes:
-- **Automatic Reconnection**: Re-attempts connection upon broker disconnection.
-- **Graceful Fallback**: If `RABBITMQ_URL` is omitted in development, operations log a warning and fallback gracefully without crashing HTTP endpoints.
-- **Durable Exchanges**: `stockpilot.events` is asserted with `{ durable: true }` to survive broker restarts.
+The shared event bus client (`services/common/src/events/eventBus.js`) implements enterprise-grade resilience:
+
+- **Dead-Letter Exchange (DLX)**: A durable direct exchange named `stockpilot.dlx` is automatically provisioned.
+- **Dead-Letter Queues (DLQ)**: Every consumer queue asserts with:
+  - `x-dead-letter-exchange: "stockpilot.dlx"`
+  - `x-dead-letter-routing-key: "<queueName>.dead"`
+  A paired queue `<queueName>.dlq` is bound to `stockpilot.dlx` with routing key `<queueName>.dead`.
+- **Exponential Retry Backoff**: When message consumption throws an unhandled error:
+  1. The consumer retries up to **3 attempts** with exponential backoff (`1000ms * 2^(attempt - 1)`).
+  2. If all 3 attempts fail, the message is permanently rejected (`nack(msg, false, false)`).
+  3. RabbitMQ automatically forwards the rejected message into the DLQ with full original headers (`x-death`, error stack, retry count).
+- **Zero Silent Data Loss**: Failed checkout, stock sync, or accounting events never disappear into void; SREs and developers can inspect the `.dlq` queues and replay messages after bug fixes.
+- **Automatic Reconnection**: Re-attempts connection upon broker disconnection with graceful fallback if broker is temporarily unavailable.
+- **Durable Exchanges & Queues**: `stockpilot.events` and all consumer queues are asserted with `{ durable: true }` to survive broker restarts.

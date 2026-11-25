@@ -57,8 +57,8 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 > [!NOTE]
 > Microservices feature built-in auto-retry loops (`waitForMysqlConnection`) during cold-starts to wait gracefully while MySQL initializes.
 
-### Step 3: Configure Ingress Reverse Proxy
-Copy and apply the production Nginx configuration with SSL:
+### Step 3: Configure Ingress Reverse Proxy & HTTPS Enforcement
+The production Nginx template (`deploy/nginx/stockpilot.conf`) automatically enforces HTTPS termination, passes ACME challenge tokens for Certbot, redirects all plain HTTP (Port 80) traffic to HTTPS (Port 443) via `301 Moved Permanently`, and adds high-security headers including a 2-year `Strict-Transport-Security` (HSTS):
 ```bash
 sudo cp deploy/nginx/stockpilot.conf /etc/nginx/sites-available/stockpilot
 sudo ln -s /etc/nginx/sites-available/stockpilot /etc/nginx/sites-enabled/
@@ -73,18 +73,35 @@ docker-compose -f docker-compose.prod.yml ps
 
 ---
 
-## 3. Environment Variables Reference
+## 3. Dynamic Database Connection Pools
+
+To prevent database bottlenecking during flash sales or heavy inventory adjustments, connection pools are profiled dynamically per microservice (`services/common/src/db/connection.js`):
+
+| Service Tier | Databases | Max Pool | Min Pool | Idle Timeout |
+| :--- | :--- | :---: | :---: | :---: |
+| **High Concurrency** | `stockpilot_sales`, `stockpilot_inventory` | **20** | **5** | 10,000 ms |
+| **Core Admin & Catalog** | `stockpilot_auth`, `stockpilot_tenants`, `stockpilot_products`, `stockpilot_purchases` | **12** | **2** | 10,000 ms |
+| **Auxiliary & Read-Light**| `stockpilot_warehouse`, `stockpilot_finance`, `stockpilot_notifications`, `stockpilot_ai` | **8** | **1** | 10,000 ms |
+
+> [!TIP]
+> You can globally override pool limits in any service container by providing `DB_POOL_MAX` and `DB_POOL_MIN` environment variables.
+
+---
+
+## 4. Environment Variables Reference
 
 | Variable | Description | Sample Production Value |
 | :--- | :--- | :--- |
 | `NODE_ENV` | Runtime environment | `production` |
 | `PORT` | API Gateway Port | `5000` |
-| `JWT_SECRET` | Primary JWT signing secret | `3f9a7c8... (64 hex characters)` |
-| `JWT_REFRESH_SECRET`| Refresh token signing secret | `8e2b1d0... (64 hex characters)` |
+| `JWT_SECRET` | Primary JWT signing secret (256-bit) | `3f9a7c8... (64 hex characters)` |
+| `JWT_REFRESH_SECRET`| Refresh token signing secret (256-bit) | `8e2b1d0... (64 hex characters)` |
 | `DB_HOST` | MySQL hostname | `mysql` (Docker container name) or AWS RDS endpoint |
 | `DB_PORT` | MySQL port | `3306` |
 | `DB_USER` | MySQL username | `root` or dedicated app user |
 | `DB_PASSWORD` | MySQL password | *[Strong Secret]* |
+| `DB_POOL_MAX` | Global override for DB connection pool max | `25` (optional) |
+| `DB_POOL_MIN` | Global override for DB connection pool min | `5` (optional) |
 | `RABBITMQ_URL` | AMQP connection string | `amqp://user:pass@rabbitmq:5672` or CloudAMQP URI |
 | `REDIS_URL` | Redis connection string | `redis://redis:6379` |
 | `CORS_ORIGIN` | Allowed web origins | `https://app.stockpilot.io` |
@@ -94,7 +111,7 @@ docker-compose -f docker-compose.prod.yml ps
 
 ---
 
-## 4. Health Checks & Monitoring
+## 5. Health Checks & Monitoring
 
 The API Gateway provides a consolidated health check endpoint:
 ```http

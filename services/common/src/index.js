@@ -16,6 +16,7 @@ const logger = require('./utils/logger');
 const sequence = require('./utils/sequence');
 const cache = require('./cache/cacheClient');
 const http = require('./utils/http');
+const security = require('./utils/securityValidator');
 
 module.exports = {
   ...constants,
@@ -30,5 +31,6 @@ module.exports = {
   ...logger,
   ...sequence,
   ...cache,
-  ...http
+  ...http,
+  ...security
 };

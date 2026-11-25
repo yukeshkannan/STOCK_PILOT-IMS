@@ -24,7 +24,8 @@
     "init:prod": "node scripts/init-production-db.js",
     "flush:cache": "node scripts/flush-cache.js",
     "optimize:server": "bash scripts/optimize-server.sh",
-    "set-demo-ip": "node scripts/set-demo-ip.js"
+    "set-demo-ip": "node scripts/set-demo-ip.js",
+    "generate:secrets": "node scripts/generate-secrets.js"
   },
   "keywords": [
     "inventory",

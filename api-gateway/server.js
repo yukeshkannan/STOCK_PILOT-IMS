@@ -2,6 +2,15 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env'), override: true });
 const app = require('./src/app');
 
+// Validate production security tokens
+if (process.env.NODE_ENV === 'production') {
+  const jwtSecret = (process.env.JWT_SECRET || '').trim();
+  if (!jwtSecret || jwtSecret.length < 32 || jwtSecret.includes('stockpilot_super_secret')) {
+    console.error('❌ FATAL SECURITY VIOLATION: Insecure or default JWT_SECRET detected in production! Run "npm run generate:secrets" to create 256-bit keys.');
+    process.exit(1);
+  }
+}
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

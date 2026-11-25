@@ -161,12 +161,25 @@ StockPilot enforces clean segregation between Central Business Executives and Fa
 ### 6. Parameterized SQL Queries
 - All databases use Sequelize ORM with prepared statements, preventing SQL injection vulnerabilities.
 
+### 7. Production Fail-Fast Secret Validation
+- Both the API Gateway and Auth Service invoke `validateProductionSecurity()` on startup (`services/common/src/utils/securityValidator.js`).
+- If `NODE_ENV === 'production'`, the process exits immediately (`process.exit(1)`) if:
+  - `JWT_SECRET` or `JWT_REFRESH_SECRET` is missing.
+  - Secrets are under 32 characters in length.
+  - Secrets match known default templates (e.g. `stockpilot_super_secret_jwt_key_2026` or placeholder values).
+- An automated cryptographic secret generator is provided:
+  ```bash
+  npm run generate:secrets        # Dry-run: inspect generated 256-bit keys
+  npm run generate:secrets -- --apply # Automatically writes to .env
+  ```
+
 ---
 
 ## 6. Production Security Checklist
 
 - [x] Run `npm run validate:env` (or `node scripts/validate-env.js`) to verify all production keys and secrets.
-- [ ] Change default `JWT_SECRET` and `JWT_REFRESH_SECRET` from `.env.example` defaults.
+- [x] Rotate secrets with `npm run generate:secrets -- --apply` (generates high-entropy 256-bit crypto strings).
+- [x] Fail-fast secret validator enforces 256-bit secrets on startup in API Gateway and Auth Service.
+- [x] Enforce HTTPS termination via Nginx (`deploy/nginx/stockpilot.conf`) with modern TLSv1.2/1.3 and 2-year HSTS headers.
 - [ ] Ensure database root password is unique and not committed to git repository.
-- [ ] Enforce HTTPS termination via Nginx (`deploy/nginx/stockpilot.conf`) or Cloudflare reverse proxy in front of port 5000.
 - [ ] Rotate demo passwords (`password123`) before connecting to public networks.

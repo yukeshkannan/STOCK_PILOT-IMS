@@ -29,10 +29,49 @@ function resolveDbHost() {
   return host === 'localhost' ? '127.0.0.1' : host;
 }
 
+/**
+ * Resolves optimized database connection pool limits tuned per microservice load profile.
+ * High-concurrency transaction services (Sales, Inventory) receive larger pools,
+ * while auxiliary services maintain lean connection footprints to avoid MySQL exhaustion.
+ */
+function resolvePoolConfig(dbName) {
+  const envMax = parseInt(process.env.DB_POOL_MAX, 10);
+  const envMin = parseInt(process.env.DB_POOL_MIN, 10);
+
+  // High-frequency write & stock checkout databases
+  if (['sales_db', 'inventory_db'].includes(dbName)) {
+    return {
+      max: !isNaN(envMax) ? envMax : 20,
+      min: !isNaN(envMin) ? envMin : 5,
+      acquire: 30000,
+      idle: 10000
+    };
+  }
+
+  // Core administrative and catalog databases
+  if (['auth_db', 'tenant_db', 'product_db', 'warehouse_db', 'purchase_db'].includes(dbName)) {
+    return {
+      max: !isNaN(envMax) ? envMax : 12,
+      min: !isNaN(envMin) ? envMin : 2,
+      acquire: 25000,
+      idle: 10000
+    };
+  }
+
+  // Auxiliary & background services (Finance, Notifications, AI)
+  return {
+    max: !isNaN(envMax) ? envMax : 8,
+    min: !isNaN(envMin) ? envMin : 1,
+    acquire: 20000,
+    idle: 10000
+  };
+}
+
 function createDbConnection(dbName, options = {}) {
   const isMysql = process.env.DB_DIALECT === 'mysql' || Boolean(process.env.DB_HOST);
 
   if (isMysql) {
+    const poolConfig = resolvePoolConfig(dbName);
     return new Sequelize(
       dbName,
       process.env.DB_USER || 'root',
@@ -43,10 +82,8 @@ function createDbConnection(dbName, options = {}) {
         dialect: 'mysql',
         logging: process.env.DB_LOGGING === 'true' ? (msg) => logger.debug(msg) : false,
         pool: {
-          max: 4,
-          min: 1,
-          acquire: 20000,
-          idle: 10000
+          ...poolConfig,
+          ...(options.pool || {})
         },
         ...options
       }
