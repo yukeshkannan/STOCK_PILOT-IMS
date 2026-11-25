@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import api from '../../services/api';
 import { updateProfile } from '../../app/authSlice';
 import { openRazorpayCheckout } from '../../services/razorpay';
@@ -19,6 +19,10 @@ export default function SubscriptionPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const assignedWhId = user?.warehouseId || user?.warehouse_id;
+  if (assignedWhId || user?.roleName === 'STAFF') {
+    return <Navigate to="/warehouses" replace />;
+  }
 
   const [currentPlan, setCurrentPlan] = useState(user?.plan || 'TRIAL');
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'

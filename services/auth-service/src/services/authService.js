@@ -322,7 +322,7 @@ class AuthService {
         if (tenantUser) {
           const tenant = await sendInternalGet(`${TENANT_SERVICE_URL}/api/v1/tenants/internal/${tenantUser.tenant_id}`);
           const salt = await bcrypt.genSalt(10);
-          const defaultHash = await bcrypt.hash(password || 'password123', salt);
+          const defaultHash = await bcrypt.hash('password123', salt);
           user = await User.create({
             tenant_id: tenantUser.tenant_id,
             company_code: tenant ? tenant.company_code : '',

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSelector } from 'react-redux';
+import { Navigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
 import Modal from '../../components/Modal';
@@ -20,6 +22,12 @@ import {
 } from 'lucide-react';
 
 export default function FinancePage() {
+  const { user } = useSelector((state) => state.auth);
+  const assignedWhId = user?.warehouseId || user?.warehouse_id;
+  if (assignedWhId || user?.roleName === 'STAFF') {
+    return <Navigate to="/warehouses" replace />;
+  }
+
   const [activeTab, setActiveTab] = useState('expenses'); // 'expenses' | 'sales_inflow'
   const [expenses, setExpenses] = useState([]);
   const [sales, setSales] = useState([]);

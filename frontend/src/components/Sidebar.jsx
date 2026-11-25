@@ -641,15 +641,35 @@ export default function Sidebar({ isOpen = false, onClose }) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
-              {/* Direct Dashboard Link */}
-              <NavLink
-                to="/dashboard"
-                onClick={handleNavClick}
-                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-              >
-                <LayoutDashboard size={18} />
-                <span>Dashboard</span>
-              </NavLink>
+              {/* Context-Aware Primary Workspace Link */}
+              {isGlobalAdmin ? (
+                <NavLink
+                  to="/dashboard"
+                  onClick={handleNavClick}
+                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                >
+                  <LayoutDashboard size={18} />
+                  <span>Executive Dashboard</span>
+                </NavLink>
+              ) : isBranchScoped && !isStaff ? (
+                <NavLink
+                  to="/warehouses"
+                  onClick={handleNavClick}
+                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                >
+                  <Warehouse size={18} />
+                  <span>{user?.warehouseName || 'Branch'} Operations Hub</span>
+                </NavLink>
+              ) : (
+                <NavLink
+                  to="/sales/new"
+                  onClick={handleNavClick}
+                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                >
+                  <ShoppingBag size={18} />
+                  <span>POS Billing Terminal</span>
+                </NavLink>
+              )}
 
               {/* Grouped Links with Clickable Dropdown Menu */}
               {getFilteredNavItems().map((grp, idx) => {

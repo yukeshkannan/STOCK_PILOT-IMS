@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import api from '../../services/api';
 import StatCard from '../../components/StatCard';
 import Badge from '../../components/Badge';
@@ -77,6 +77,14 @@ export default function DashboardPage() {
   const isGlobalAdmin = isSuperAdmin || (userRole === 'ADMIN' && !assignedWhId);
   const isBranchScoped = Boolean(assignedWhId);
   const isStaff = userRole === 'STAFF';
+
+  // Strict Scope Isolation: Only Central Shop Owner (Global Admin) can access the Executive Whole Shop Control Console
+  if (!isGlobalAdmin) {
+    if (isStaff) {
+      return <Navigate to="/sales/new" replace />;
+    }
+    return <Navigate to="/warehouses" replace />;
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -460,7 +468,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Live Online Storefront Banner */}
-      {(user?.companyCode || user?.companyName) && !isStaff && (
+      {(user?.companyCode || user?.companyName) && isGlobalAdmin && (
         <div
           style={{
             background: 'var(--bg-card, #ffffff)',

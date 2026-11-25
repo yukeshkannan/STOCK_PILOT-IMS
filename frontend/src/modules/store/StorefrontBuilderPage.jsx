@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
+import { Navigate } from 'react-router-dom';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 import {
@@ -664,6 +665,11 @@ export const DEFAULT_FOOTER = {
 
 export default function StorefrontBuilderPage() {
   const { user } = useSelector((state) => state.auth);
+  const assignedWhId = user?.warehouseId || user?.warehouse_id;
+  if (assignedWhId || user?.roleName === 'STAFF') {
+    return <Navigate to="/warehouses" replace />;
+  }
+
   const companyCode = user?.companyCode || user?.company_code || (user?.companyName ? user.companyName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : 'STORE');
   const liveStoreUrl = `${window.location.origin}/store/${companyCode}`;
 

@@ -113,13 +113,19 @@ StockPilot enforces clean segregation between Central Business Executives and Fa
   - Retains full Global HQ jurisdiction across all fulfillment hubs, storefront builder, multi-branch finances, organization-wide user management, and company subscription settings.
   - Automatically lands on `/dashboard` (Executive Multi-Warehouse Overview).
 - **Branch Admin / Facility Incharge (Location Admin)**:
-  - Identified by `role: ADMIN` or `role: MANAGER` with an explicitly assigned `warehouse_id: INTEGER` (e.g., Chennai HUB, Karur Depot).
+  - Identified by `role: ADMIN` with an explicitly assigned `warehouse_id: INTEGER` (e.g., Chennai HUB, Karur Depot).
   - Navigation is strictly scoped to physical facility operations: *Inventory & Hub Logistics*, *Operations & Invoicing*, and facility-level *Reports & Alerts*.
-  - Global executive functions (Storefront Builder, Users & RBAC, Company Settings, Subscription & Billing, Company Finances) are completely hidden and inaccessible.
+  - Global executive functions (Storefront Builder, Users & RBAC, Company Settings, Subscription & Billing, Company Finances) are completely hidden and guarded by automatic URL redirects to `/warehouses`.
   - Automatically lands on `/warehouses` (Facility Logistics Hub).
 - **Store Staff / Cashier**:
   - Identified by `role: STAFF` with `warehouse_id: INTEGER`.
-  - Limited to POS billing counter (`/sales/new`), inventory lookup, and view-only transfer telemetry. Prohibited from confirming inventory intake or stock adjustments.
+  - Limited to POS billing counter (`/sales/new`), inventory lookup, and view-only transfer telemetry. Prohibited from confirming inventory intake, stock adjustments, or accessing dashboard/settings.
+  - Automatically redirected to `/sales/new` on login or direct navigation.
+
+### 🔒 Super Admin Tenant Provisioning & Password Security
+- When a Super Admin provisions a new organization, an explicit, strong initial administrator password (minimum 6 characters) is strictly required.
+- The organization and primary administrator are synchronously provisioned across both `tenant_db` and `auth_db` simultaneously.
+- On-the-fly login fallback strictly refuses arbitrary password generation: any credential not matching the verified database hash is immediately rejected with `401 Unauthorized`.
 
 ### 🔒 Inter-Hub Transfers: Segregation of Duties
 - **Origin Dispatch Protection**: Personnel or managers assigned to the origin warehouse who dispatched a transfer are prohibited from confirming destination goods receipt (`Receive Goods into Stock`).

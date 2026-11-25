@@ -827,7 +827,16 @@ class TenantService {
   }
 
   async createTenant(tenantData) {
-    let { company_name, company_code, email, phone, address, tax_number } = tenantData;
+    let { company_name, company_code, email, phone, address, tax_number, password, admin_name } = tenantData;
+    const cleanEmail = (email || '').toLowerCase().trim();
+    if (!cleanEmail) {
+      throw { statusCode: 400, message: 'Primary Admin Email is required' };
+    }
+    const adminPassword = (password && password.trim().length >= 6) ? password.trim() : null;
+    if (!adminPassword) {
+      throw { statusCode: 400, message: 'A secure Initial Admin Password (minimum 6 characters) is required' };
+    }
+
     let formattedCode = (company_code || '').trim().toUpperCase();
     if (!formattedCode) {
       const cleanBase = company_name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'ORG';
@@ -846,23 +855,107 @@ class TenantService {
 
     const tenant = await Tenant.create({
       company_code: formattedCode,
-      company_name,
-      email,
+      company_name: company_name.trim(),
+      email: cleanEmail,
       phone: phone || null,
       address: address || null,
       tax_number: tax_number || null,
       status: 'ACTIVE'
     });
 
+    const adminFirst = admin_name ? admin_name.trim().split(' ')[0] : company_name.trim();
+    const adminLast = admin_name && admin_name.trim().split(' ').slice(1).join(' ') ? admin_name.trim().split(' ').slice(1).join(' ') : 'Admin';
+
     await TenantUser.create({
       tenant_id: tenant.id,
-      first_name: company_name,
-      last_name: 'Admin',
-      email: email,
+      first_name: adminFirst,
+      last_name: adminLast,
+      email: cleanEmail,
       phone: phone || null,
       role_name: ROLES.ADMIN,
+      warehouse_id: null,
+      warehouse_name: null,
       status: 'ACTIVE'
     });
+
+    // 1. Cross-service HTTP Sync to auth-service
+    await fetchFromAuth('/api/v1/auth/internal/sync-user', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenantId: tenant.id,
+        companyCode: formattedCode,
+        firstName: adminFirst,
+        lastName: adminLast,
+        email: cleanEmail,
+        password: adminPassword,
+        roleName: ROLES.ADMIN,
+        warehouseId: null,
+        warehouseName: null,
+        status: 'ACTIVE'
+      })
+    });
+
+    // 2. Direct local DB fallback
+    try {
+      const authModels = require('../../../auth-service/src/models');
+      if (authModels?.User) {
+        const bcrypt = require('bcryptjs');
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(adminPassword, salt);
+        await authModels.User.findOrCreate({
+          where: { tenant_id: tenant.id, email: cleanEmail },
+          defaults: {
+            tenant_id: tenant.id,
+            company_code: formattedCode,
+            first_name: adminFirst,
+            last_name: adminLast,
+            email: cleanEmail,
+            password: hashedPassword,
+            role_name: ROLES.ADMIN,
+            warehouse_id: null,
+            warehouse_name: null,
+            is_super_admin: false,
+            status: 'ACTIVE'
+          }
+        });
+
+        if (authModels.TenantLookup) {
+          await authModels.TenantLookup.findOrCreate({
+            where: { tenant_id: tenant.id },
+            defaults: {
+              tenant_id: tenant.id,
+              company_code: formattedCode,
+              company_name: company_name.trim(),
+              status: 'ACTIVE',
+              plan: 'TRIAL'
+            }
+          });
+        }
+      }
+    } catch (e) {
+      // Safe to ignore in containerized microservices
+    }
+
+    // 3. Initialize default primary warehouse in warehouse-service
+    const WAREHOUSE_SERVICE_URL = process.env.WAREHOUSE_SERVICE_URL || 'http://127.0.0.1:5005';
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3500);
+      await fetch(`${WAREHOUSE_SERVICE_URL}/api/v1/warehouses/internal/init-default`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: tenant.id,
+          companyName: company_name.trim(),
+          address: address || 'Primary Logistics Facility',
+          city: 'HQ'
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+    } catch (e) {
+      // ignore
+    }
 
     await AuditLog.create({
       tenant_id: tenant.id,

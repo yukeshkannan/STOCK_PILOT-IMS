@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
 import { updateProfile } from '../../app/authSlice';
@@ -23,6 +23,10 @@ import './SettingsPage.css';
 export default function SettingsPage() {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const assignedWhId = user?.warehouseId || user?.warehouse_id;
+  if (assignedWhId || user?.roleName === 'STAFF') {
+    return <Navigate to="/warehouses" replace />;
+  }
 
   const initialFormState = {
     companyName: user?.companyName || '',

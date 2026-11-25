@@ -40,6 +40,7 @@ export default function SuperAdminTenants() {
   const [formData, setFormData] = useState({
     company_name: '',
     email: '',
+    password: '',
     phone: '',
     address: '',
     tax_number: ''
@@ -83,6 +84,10 @@ export default function SuperAdminTenants() {
       toast.warning('Please fill in Company Name and Primary Admin Email');
       return;
     }
+    if (!formData.password || formData.password.trim().length < 6) {
+      toast.warning('Please specify an Initial Admin Password (minimum 6 characters)');
+      return;
+    }
 
     try {
       setFormLoading(true);
@@ -92,6 +97,7 @@ export default function SuperAdminTenants() {
       setFormData({
         company_name: '',
         email: '',
+        password: '',
         phone: '',
         address: '',
         tax_number: ''
@@ -569,6 +575,20 @@ export default function SuperAdminTenants() {
               </div>
 
               <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Initial Admin Password * (min 6 characters)</label>
+                  <input
+                    type="password"
+                    name="password"
+                    required
+                    minLength={6}
+                    placeholder="Set strong initial password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="form-input"
+                  />
+                </div>
+
                 <div className="form-group">
                   <label className="form-label">Contact Phone</label>
                   <input

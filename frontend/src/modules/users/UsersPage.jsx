@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { Navigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
 import Modal from '../../components/Modal';
@@ -8,6 +10,12 @@ import ConfirmModal from '../../components/ConfirmModal';
 import { Users, Plus, Shield, Check, X, Mail, Phone, Lock, RefreshCw, Building2, Edit3, Trash2 } from 'lucide-react';
 
 export default function UsersPage() {
+  const { user } = useSelector((state) => state.auth);
+  const assignedWhId = user?.warehouseId || user?.warehouse_id;
+  if (assignedWhId || user?.roleName === 'STAFF') {
+    return <Navigate to="/warehouses" replace />;
+  }
+
   const [users, setUsers] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,8 +106,8 @@ export default function UsersPage() {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (userForm.roleName !== 'ADMIN' && !userForm.warehouseId) {
-      toast.error('Please assign a specific warehouse/branch for this staff or manager');
+    if (!userForm.warehouseId) {
+      toast.error('Please assign a specific warehouse / branch facility for this team member');
       return;
     }
     try {
@@ -147,8 +155,8 @@ export default function UsersPage() {
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     if (!editingUserId) return;
-    if (editForm.roleName !== 'ADMIN' && !editForm.warehouseId) {
-      toast.error('Please assign a specific warehouse/branch for this staff or manager');
+    if (!editForm.warehouseId) {
+      toast.error('Please assign a specific warehouse / branch facility for this team member');
       return;
     }
     try {
@@ -466,16 +474,15 @@ export default function UsersPage() {
                 value={userForm.roleName}
                 onChange={(e) => setUserForm({ ...userForm, roleName: e.target.value })}
                 options={[
-                  { value: 'ADMIN', label: 'ADMIN — Full Company & Branch Admin (Transfers, Receiving, Purchases, Team & Settings)' },
-                  { value: 'MANAGER', label: 'MANAGER — Warehouse & Branch Supervisor (Approve Transfers, Fleet Dispatch, Inward Receiving & Audits)' },
-                  { value: 'STAFF', label: 'STAFF — Floor Associate & Cashier (POS Billing, Invoicing & Stock Lookup — Read-Only for Transfers)' }
+                  { value: 'ADMIN', label: 'Warehouse Admin (Facility Incharge — Stock Requisitions, Goods Inward/Outward & Fleet Dispatches)' },
+                  { value: 'STAFF', label: 'Store Staff / Cashier (POS Counter Billing, Invoicing & Stock Lookup)' }
                 ]}
               />
             </div>
 
             <div className="form-group">
               <label className="form-label">
-                Assigned Facility / Branch {userForm.roleName === 'ADMIN' ? '(Optional - Global HQ by Default)' : '*'}
+                Assigned Facility / Branch *
               </label>
               <CustomSelect
                 value={userForm.warehouseId ? String(userForm.warehouseId) : ''}
@@ -550,9 +557,8 @@ export default function UsersPage() {
                 value={editForm.roleName}
                 onChange={(e) => setEditForm({ ...editForm, roleName: e.target.value })}
                 options={[
-                  { value: 'ADMIN', label: 'ADMIN — Full Company & Branch Admin (Transfers, Receiving, Purchases, Team & Settings)' },
-                  { value: 'MANAGER', label: 'MANAGER — Warehouse & Branch Supervisor (Approve Transfers, Fleet Dispatch, Inward Receiving & Audits)' },
-                  { value: 'STAFF', label: 'STAFF — Floor Associate & Cashier (POS Billing, Invoicing & Stock Lookup — Read-Only for Transfers)' }
+                  { value: 'ADMIN', label: 'Warehouse Admin (Facility Incharge — Stock Requisitions, Goods Inward/Outward & Fleet Dispatches)' },
+                  { value: 'STAFF', label: 'Store Staff / Cashier (POS Counter Billing, Invoicing & Stock Lookup)' }
                 ]}
               />
             </div>
@@ -560,7 +566,7 @@ export default function UsersPage() {
 
           <div className="form-group" style={{ marginBottom: '1rem' }}>
             <label className="form-label">
-              Assigned Facility / Branch {editForm.roleName === 'ADMIN' ? '(Optional - Global HQ by Default)' : '*'}
+              Assigned Facility / Branch *
             </label>
             <CustomSelect
               value={editForm.warehouseId ? String(editForm.warehouseId) : ''}
