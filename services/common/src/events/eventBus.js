@@ -121,14 +121,28 @@ class EventBus {
       await this.channel.assertQueue(dlqQueueName, { durable: true });
       await this.channel.bindQueue(dlqQueueName, this.dlxExchange, `${queueName}.dead`);
 
-      // 2. Assert Primary Queue with dead-letter exchange configuration
-      const q = await this.channel.assertQueue(queueName, {
-        durable: true,
-        arguments: {
-          'x-dead-letter-exchange': this.dlxExchange,
-          'x-dead-letter-routing-key': `${queueName}.dead`
+      // 2. Assert Primary Queue with dead-letter exchange configuration (with fallback for legacy queues)
+      let q;
+      try {
+        q = await this.channel.assertQueue(queueName, {
+          durable: true,
+          arguments: {
+            'x-dead-letter-exchange': this.dlxExchange,
+            'x-dead-letter-routing-key': `${queueName}.dead`
+          }
+        });
+      } catch (queueErr) {
+        logger.warn(`[RabbitMQ] Queue [${queueName}] DLX argument fallback: ${queueErr.message}`);
+        try {
+          if (!this.channel || this.channel.connection === null) {
+            this.channel = await this.connection.createChannel();
+          }
+          q = await this.channel.assertQueue(queueName, { durable: true });
+        } catch (fallbackErr) {
+          logger.error(`[RabbitMQ] Queue [${queueName}] assert failed: ${fallbackErr.message}`);
+          return;
         }
-      });
+      }
 
       await this.channel.bindQueue(q.queue, this.exchange, pattern);
 
