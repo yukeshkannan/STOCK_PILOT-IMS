@@ -56,44 +56,48 @@ async function startServer() {
       console.warn('Support ticket tables bootstrap note:', tblErr.message);
     }
     await seedDefaultRolesAndPermissions();
-    await eventBus.connect();
 
-    // Event Consumer for TENANT_CREATED
-    await eventBus.subscribe('tenant-service-queue', EVENTS.TENANT_CREATED, async (data) => {
-      try {
-        const [tenant] = await Tenant.findOrCreate({
-          where: { id: data.tenantId },
-          defaults: {
-            id: data.tenantId,
-            company_code: data.companyCode,
-            company_name: data.companyName,
-            email: data.email,
-            phone: data.phone || null,
-            status: 'ACTIVE'
-          }
-        });
+    try {
+      await eventBus.connect();
+      // Event Consumer for TENANT_CREATED
+      await eventBus.subscribe('tenant-service-queue', EVENTS.TENANT_CREATED, async (data) => {
+        try {
+          const [tenant] = await Tenant.findOrCreate({
+            where: { id: data.tenantId },
+            defaults: {
+              id: data.tenantId,
+              company_code: data.companyCode,
+              company_name: data.companyName,
+              email: data.email,
+              phone: data.phone || null,
+              status: 'ACTIVE'
+            }
+          });
 
-        // Create initial admin user
-        const adminRole = await Role.findOne({ where: { name: ROLES.ADMIN, is_system: true } });
-        await TenantUser.findOrCreate({
-          where: { tenant_id: data.tenantId, email: data.email },
-          defaults: {
-            tenant_id: data.tenantId,
-            first_name: 'Admin',
-            last_name: '',
-            email: data.email,
-            phone: data.phone || null,
-            role_id: adminRole ? adminRole.id : null,
-            role_name: ROLES.ADMIN,
-            status: 'ACTIVE'
-          }
-        });
+          // Create initial admin user
+          const adminRole = await Role.findOne({ where: { name: ROLES.ADMIN, is_system: true } });
+          await TenantUser.findOrCreate({
+            where: { tenant_id: data.tenantId, email: data.email },
+            defaults: {
+              tenant_id: data.tenantId,
+              first_name: 'Admin',
+              last_name: '',
+              email: data.email,
+              phone: data.phone || null,
+              role_id: adminRole ? adminRole.id : null,
+              role_name: ROLES.ADMIN,
+              status: 'ACTIVE'
+            }
+          });
 
-        console.log(`[Tenant Service] Processed TENANT_CREATED for tenant [${data.companyCode}]`);
-      } catch (err) {
-        console.error('[Tenant Service] Error handling TENANT_CREATED:', err.message);
-      }
-    });
+          console.log(`[Tenant Service] Processed TENANT_CREATED for tenant [${data.companyCode}]`);
+        } catch (err) {
+          console.error('[Tenant Service] Error handling TENANT_CREATED:', err.message);
+        }
+      });
+    } catch (busErr) {
+      console.warn('[Tenant Service] Event bus initialization notice:', busErr.message);
+    }
 
     app.listen(PORT, () => {
       console.log(`🏢 Tenant & User Service running on port ${PORT}`);

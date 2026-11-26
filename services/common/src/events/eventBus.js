@@ -106,47 +106,39 @@ class EventBus {
     }
   }
 
-  async subscribe(pattern, queueName, handler) {
+  async subscribe(arg1, arg2, handler) {
+    let pattern, queueName;
+    if (typeof arg2 === 'function') {
+      pattern = arg1;
+      queueName = `queue.${pattern.replace(/\*/g, 'all')}`;
+      handler = arg2;
+    } else if (arg1 && arg1.includes('.') && !arg2.includes('.')) {
+      pattern = arg1;
+      queueName = arg2;
+    } else {
+      queueName = arg1;
+      pattern = arg2;
+    }
+
     this.subscriptions.push({ pattern, queueName, handler });
     if (this.isConnected && this.channel) {
-      await this._bindSubscription(pattern, queueName, handler);
+      try {
+        await this._bindSubscription(pattern, queueName, handler);
+      } catch (err) {
+        logger.warn(`[RabbitMQ] Subscription notice for [${queueName}]: ${err.message}`);
+      }
     }
   }
 
   async _bindSubscription(pattern, queueName, handler) {
     try {
-      const dlqQueueName = `${queueName}.dlq`;
-
-      // 1. Assert Dead-Letter Queue bound to DLX for capturing unprocessable poison messages
-      await this.channel.assertQueue(dlqQueueName, { durable: true });
-      await this.channel.bindQueue(dlqQueueName, this.dlxExchange, `${queueName}.dead`);
-
-      // 2. Assert Primary Queue with dead-letter exchange configuration (with fallback for legacy queues)
-      let q;
-      try {
-        q = await this.channel.assertQueue(queueName, {
-          durable: true,
-          arguments: {
-            'x-dead-letter-exchange': this.dlxExchange,
-            'x-dead-letter-routing-key': `${queueName}.dead`
-          }
-        });
-      } catch (queueErr) {
-        logger.warn(`[RabbitMQ] Queue [${queueName}] DLX argument fallback: ${queueErr.message}`);
-        try {
-          if (!this.channel || this.channel.connection === null) {
-            this.channel = await this.connection.createChannel();
-          }
-          q = await this.channel.assertQueue(queueName, { durable: true });
-        } catch (fallbackErr) {
-          logger.error(`[RabbitMQ] Queue [${queueName}] assert failed: ${fallbackErr.message}`);
-          return;
-        }
+      if (!this.channel) {
+        this.channel = await this.connection.createChannel();
       }
 
+      const q = await this.channel.assertQueue(queueName, { durable: true });
       await this.channel.bindQueue(q.queue, this.exchange, pattern);
 
-      // 3. Resilient consumer with automatic 3x retry before dead-lettering
       this.channel.consume(q.queue, async (msg) => {
         if (msg !== null) {
           try {
@@ -154,39 +146,14 @@ class EventBus {
             await handler(content, msg.fields.routingKey);
             this.channel.ack(msg);
           } catch (err) {
-            const retryCount = (msg.properties.headers && msg.properties.headers['x-retry-count']) || 0;
-            logger.error(`[RabbitMQ] Error in ${queueName} (attempt ${retryCount + 1}/3): ${err.message}`);
-
-            if (retryCount < 3) {
-              const updatedHeaders = {
-                ...(msg.properties.headers || {}),
-                'x-retry-count': retryCount + 1,
-                'x-last-error': err.message,
-                'x-retry-timestamp': new Date().toISOString()
-              };
-
-              // Re-queue message with exponential backoff delay (1.5s, 3s, 4.5s)
-              setTimeout(() => {
-                if (this.channel) {
-                  this.channel.sendToQueue(q.queue, msg.content, {
-                    headers: updatedHeaders,
-                    persistent: true
-                  });
-                  this.channel.ack(msg);
-                }
-              }, (retryCount + 1) * 1500);
-            } else {
-              // Max retries exhausted: Reject without requeue -> automatically routed to DLX -> dlqQueueName
-              logger.warn(`[RabbitMQ DLQ] Max retries exhausted for message in [${queueName}]. Shunted to Dead-Letter Queue [${dlqQueueName}]`);
-              this.channel.nack(msg, false, false);
-            }
+            logger.error(`[RabbitMQ] Error processing message in ${queueName}:`, err.message);
+            this.channel.nack(msg, false, false);
           }
         }
       });
-
-      logger.info(`[RabbitMQ] Subscribed queue [${queueName}] (DLQ: [${dlqQueueName}]) to pattern [${pattern}]`);
+      logger.info(`[RabbitMQ] Subscribed queue [${queueName}] to pattern [${pattern}]`);
     } catch (error) {
-      logger.error(`[RabbitMQ] Failed to bind subscription [${pattern}] to queue [${queueName}]:`, error.message);
+      logger.warn(`[RabbitMQ] Failed to bind subscription [${pattern}] to queue [${queueName}]:`, error.message);
     }
   }
 

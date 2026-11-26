@@ -11,7 +11,9 @@ const PORT = (assignedPort && String(assignedPort) !== "5000") ? assignedPort : 
 async function startServer() {
   try {
     await initDatabase(sequelize, process.env.DB_NAME || 'notification_db');
-    await eventBus.connect();
+
+    try {
+      await eventBus.connect();
 
     // 1. Stock & Inventory Events
     await eventBus.subscribe('notification-stock-low', EVENTS.STOCK_LOW, async (data) => {
@@ -258,6 +260,9 @@ async function startServer() {
         console.error('Error handling PAYMENT_OVERDUE notification:', err.message);
       }
     });
+    } catch (busErr) {
+      console.warn('[Notification Service] Event bus initialization notice:', busErr.message);
+    }
 
     app.listen(PORT, () => {
       console.log(`In-App Notification Service running on port ${PORT}`);
