@@ -80,7 +80,7 @@ echo "  ✓ Microservices active with aggressive V8 GC."
 
 # 7. Verify Health of all 11 ports
 echo "[7/7] Verifying all service endpoints..."
-sleep 4
+sleep 6
 echo "----------------------------------------------------------"
 printf "%-8s %-25s %-10s\n" "PORT" "SERVICE" "STATUS"
 echo "----------------------------------------------------------"
@@ -102,8 +102,17 @@ declare -A SERVICES_MAP=(
 ALL_HEALTHY=true
 for port in 5000 5001 5002 5003 5004 5005 5006 5007 5008 5009 5010; do
     NAME="${SERVICES_MAP[$port]}"
-    RESPONSE=$(curl -s -m 2 "http://127.0.0.1:$port/health" 2>/dev/null || true)
-    if [[ "$RESPONSE" =~ "UP" ]]; then
+    HEALTHY=false
+    for attempt in 1 2 3; do
+        RESPONSE=$(curl -s -m 2 "http://127.0.0.1:$port/health" 2>/dev/null || true)
+        if [[ "$RESPONSE" =~ "UP" ]]; then
+            HEALTHY=true
+            break
+        fi
+        sleep 1
+    done
+
+    if [ "$HEALTHY" = true ]; then
         printf "%-8s %-25s \e[32m[ UP ]\e[0m\n" "$port" "$NAME"
     else
         printf "%-8s %-25s \e[31m[ DOWN ]\e[0m\n" "$port" "$NAME"
